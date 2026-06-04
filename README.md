@@ -1,6 +1,6 @@
 # App Store Connect MCP Server
 
-> **The App Store Connect intelligence layer for your coding agent.** 11 tools that think, 3 slash-command workflows, and a bundled Claude Skill. Not another API wrapper.
+> **The App Store Connect intelligence layer for your coding agent.** 13 tools that think, 3 slash-command workflows, and a bundled Claude Skill. Not another API wrapper.
 
 Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Different angle, same API surface plus more.
 
@@ -27,7 +27,11 @@ No context switching. No portal. Just ask.
 
 ## Setup (3 minutes)
 
-**Step 1.** Create an API key in [App Store Connect > Keys](https://appstoreconnect.apple.com/access/integrations/api) (Admin or App Manager role). Download the `.p8` file.
+**Step 1.** Create an API key in [App Store Connect > Integrations > App Store Connect API](https://appstoreconnect.apple.com/access/integrations/api) (Admin or App Manager role), then grab three things from that same page:
+
+- **Issuer ID** (`ASC_ISSUER_ID`): the UUID shown at the top of the page, with a copy button next to it.
+- **Key ID** (`ASC_KEY_ID`): the 10-character ID next to your key, also in the filename `AuthKey_XXXXXXXXXX.p8`.
+- **`.p8` file** (`ASC_PRIVATE_KEY_PATH`): click **Download** and point this at the saved file. Apple lets you download it only once, so keep it safe.
 
 **Step 2.** Install:
 

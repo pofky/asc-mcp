@@ -349,6 +349,7 @@ async function handleKeyLookup(
       <h1>No active license found</h1>
       <p>No active Pro license found for <strong>${escapeHtml(email)}</strong>.</p>
       <p>If you just purchased, it may take a minute for the webhook to process. <a href="/key">Try again</a>.</p>
+      <p>Still nothing after a few minutes? Email <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a> with the email you checked out with and we will sort it out quickly.</p>
       <p>Need to subscribe? <a href="https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu">Get Pro</a></p>
     `, headers);
   }
@@ -360,6 +361,7 @@ async function handleKeyLookup(
     </div>
     <p>Add this to your MCP server configuration:</p>
     <pre style="background:#1a1a2e;padding:15px;border-radius:8px;overflow-x:auto">"ASC_LICENSE_KEY": "${escapeHtml(row.key)}"</pre>
+    <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.) so it reloads with the key. Then ask it to "list my App Store Connect apps" to confirm Pro is active.</p>
     <p style="color:#888;font-size:14px">Keep this key private. It unlocks Pro tools on your machine.</p>
   `, headers);
 }
