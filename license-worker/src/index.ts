@@ -13,6 +13,11 @@
 interface Env {
   DB: D1Database;
   POLAR_WEBHOOK_SECRET: string;
+  // Optional: Brevo transactional email. If BREVO_API_KEY is unset, the worker
+  // simply skips emailing the key (self-service /key still works).
+  BREVO_API_KEY?: string;
+  BREVO_SENDER_EMAIL?: string;
+  BREVO_SENDER_NAME?: string;
 }
 
 interface ValidateRequest {
@@ -183,6 +188,27 @@ async function handlePolarWebhook(
       .bind(licenseKey, email, sub.id, expiresAt, active)
       .run();
 
+    // Email the key once, the first time the row is active. The key_emailed
+    // flag makes this idempotent across created/active/updated retries.
+    if (active && email) {
+      const row = await env.DB.prepare(
+        "SELECT key, key_emailed FROM licenses WHERE polar_subscription_id = ?",
+      )
+        .bind(sub.id)
+        .first<{ key: string; key_emailed: number }>();
+
+      if (row && !row.key_emailed) {
+        const sent = await sendLicenseEmail(env, email, row.key);
+        if (sent) {
+          await env.DB.prepare(
+            "UPDATE licenses SET key_emailed = 1 WHERE polar_subscription_id = ?",
+          )
+            .bind(sub.id)
+            .run();
+        }
+      }
+    }
+
     // Don't leak the license key in the response
     return json({ ok: true }, headers);
   }
@@ -198,6 +224,60 @@ async function handlePolarWebhook(
   }
 
   return json({ ok: true }, headers);
+}
+
+/**
+ * Email a buyer their license key via Brevo's transactional API.
+ * Returns true on success. No-ops (returns false) if BREVO_API_KEY is unset,
+ * so the worker is safe to deploy before email is configured.
+ */
+async function sendLicenseEmail(
+  env: Env,
+  email: string,
+  key: string,
+): Promise<boolean> {
+  if (!env.BREVO_API_KEY) return false;
+
+  const senderEmail = env.BREVO_SENDER_EMAIL || "license@brewist.app";
+  const senderName = env.BREVO_SENDER_NAME || "App Store Connect MCP";
+  const safeKey = escapeHtml(key);
+
+  const htmlContent = `
+    <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
+      <h1 style="font-size:20px">Your App Store Connect MCP Pro license</h1>
+      <p>Thanks for subscribing. Here is your license key:</p>
+      <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
+      <p>Add it to your MCP server config alongside your App Store Connect credentials:</p>
+      <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">"ASC_LICENSE_KEY": "${safeKey}"</pre>
+      <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.), then ask it to "list my App Store Connect apps" to confirm Pro is active.</p>
+      <p style="color:#666;font-size:14px">You can also retrieve this key any time at <a href="https://asc-mcp-license.remewdy.workers.dev/key">the license page</a>. Keep it private; it unlocks Pro tools on your machine.</p>
+      <p style="color:#666;font-size:14px">Questions or trouble? Just reply to this email.</p>
+    </div>`;
+
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": env.BREVO_API_KEY,
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        sender: { name: senderName, email: senderEmail },
+        to: [{ email }],
+        subject: "Your App Store Connect MCP Pro license key",
+        htmlContent,
+      }),
+    });
+    if (!res.ok) {
+      console.error("Brevo send failed", res.status);
+      return false;
+    }
+    return true;
+  } catch {
+    console.error("Brevo send error");
+    return false;
+  }
 }
 
 /**
