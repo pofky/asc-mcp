@@ -35,7 +35,7 @@ export async function salesReport(
 ): Promise<string> {
   if (tier !== "pro") {
     return (
-      "Sales reports require a Pro license ($19/mo).\n" +
+      "Sales reports require a Pro license ($9/mo).\n" +
       "Get your license at: https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu\n\n" +
       "Set ASC_LICENSE_KEY in your MCP server config to unlock."
     );

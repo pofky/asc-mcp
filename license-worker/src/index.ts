@@ -424,7 +424,7 @@ function handleTerms(headers: Record<string, string>): Response {
     </ul>
 
     <h2>Free and Pro tiers</h2>
-    <p>Three tools are free with no account needed. Pro tools (customer reviews, sales reports) require a $19/month subscription managed through <a href="https://polar.sh">Polar.sh</a>.</p>
+    <p>Three tools are free with no account needed. Pro tools (customer reviews, sales reports) require a $9/month subscription managed through <a href="https://polar.sh">Polar.sh</a>.</p>
 
     <h2>Subscriptions</h2>
     <p>Pro subscriptions are billed monthly through Polar. You can cancel anytime through Polar's subscription management. Polar's terms of service apply to the payment process.</p>
