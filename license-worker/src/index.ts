@@ -125,41 +125,29 @@ async function handleValidate(
   );
 }
 
+const ACTIVE_EVENTS = new Set([
+  "subscription.created",
+  "subscription.updated",
+  "subscription.active",
+]);
+const CANCEL_EVENTS = new Set([
+  "subscription.canceled",
+  "subscription.revoked",
+]);
+
 async function handlePolarWebhook(
   request: Request,
   env: Env,
   headers: Record<string, string>,
 ): Promise<Response> {
-  const signature = request.headers.get("x-polar-signature");
-  if (!signature) {
-    return json({ error: "Missing signature" }, headers, 401);
-  }
-
   const rawBody = await request.text();
 
-  // Timing-safe HMAC verification using crypto.subtle.verify
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(env.POLAR_WEBHOOK_SECRET),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["verify"],
+  const verified = await verifyPolarSignature(
+    request.headers,
+    rawBody,
+    env.POLAR_WEBHOOK_SECRET,
   );
-
-  // Convert the hex signature from Polar to an ArrayBuffer for comparison
-  const sigBytes = new Uint8Array(
-    (signature.match(/.{2}/g) || []).map((b) => parseInt(b, 16)),
-  );
-
-  const valid = await crypto.subtle.verify(
-    "HMAC",
-    key,
-    sigBytes,
-    encoder.encode(rawBody),
-  );
-
-  if (!valid) {
+  if (!verified) {
     return json({ error: "Invalid signature" }, headers, 401);
   }
 
@@ -167,32 +155,39 @@ async function handlePolarWebhook(
     type: string;
     data: {
       id: string;
-      customer_email?: string;
       status?: string;
       current_period_end?: string;
+      customer?: { email?: string };
     };
   };
 
-  if (event.type === "subscription.created" || event.type === "subscription.updated") {
+  if (ACTIVE_EVENTS.has(event.type)) {
     const sub = event.data;
-    const licenseKey = generateLicenseKey();
+    const email = sub.customer?.email || "";
     const expiresAt = sub.current_period_end || null;
+    // active=1 unless Polar tells us the sub is not currently usable
+    const active =
+      !sub.status || sub.status === "active" || sub.status === "trialing"
+        ? 1
+        : 0;
+    const licenseKey = generateLicenseKey();
 
     await env.DB.prepare(
       `INSERT INTO licenses (key, tier, email, polar_subscription_id, expires_at, active, created_at)
-       VALUES (?, 'pro', ?, ?, ?, 1, datetime('now'))
+       VALUES (?, 'pro', ?, ?, ?, ?, datetime('now'))
        ON CONFLICT(polar_subscription_id) DO UPDATE SET
+         email = excluded.email,
          expires_at = excluded.expires_at,
-         active = 1`,
+         active = excluded.active`,
     )
-      .bind(licenseKey, sub.customer_email || "", sub.id, expiresAt)
+      .bind(licenseKey, email, sub.id, expiresAt, active)
       .run();
 
     // Don't leak the license key in the response
     return json({ ok: true }, headers);
   }
 
-  if (event.type === "subscription.canceled" || event.type === "subscription.revoked") {
+  if (CANCEL_EVENTS.has(event.type)) {
     await env.DB.prepare(
       "UPDATE licenses SET active = 0 WHERE polar_subscription_id = ?",
     )
@@ -203,6 +198,72 @@ async function handlePolarWebhook(
   }
 
   return json({ ok: true }, headers);
+}
+
+/**
+ * Verify a Polar webhook using the Standard Webhooks spec
+ * (https://www.standardwebhooks.com). Polar signs `${id}.${timestamp}.${body}`
+ * with HMAC-SHA256 using the base64 secret (whsec_ prefix), and sends the
+ * result base64-encoded as space-delimited `v1,<sig>` entries.
+ */
+async function verifyPolarSignature(
+  reqHeaders: Headers,
+  rawBody: string,
+  secret: string,
+): Promise<boolean> {
+  const id = reqHeaders.get("webhook-id");
+  const timestamp = reqHeaders.get("webhook-timestamp");
+  const sigHeader = reqHeaders.get("webhook-signature");
+  if (!id || !timestamp || !sigHeader || !secret) return false;
+
+  // Replay protection: reject timestamps more than 5 minutes from now.
+  const ts = Number(timestamp);
+  if (!Number.isFinite(ts)) return false;
+  const skew = Math.abs(Math.floor(Date.now() / 1000) - ts);
+  if (skew > 300) return false;
+
+  const secretBytes = base64ToBytes(
+    secret.startsWith("whsec_") ? secret.slice(6) : secret,
+  );
+  const key = await crypto.subtle.importKey(
+    "raw",
+    secretBytes,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sigBuf = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(`${id}.${timestamp}.${rawBody}`),
+  );
+  const expected = bytesToBase64(new Uint8Array(sigBuf));
+
+  // Header may carry multiple space-delimited signatures (key rotation).
+  return sigHeader.split(" ").some((part) => {
+    const [version, sig] = part.split(",");
+    return version === "v1" && sig != null && timingSafeEqual(sig, expected);
+  });
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
 }
 
 function generateLicenseKey(): string {
