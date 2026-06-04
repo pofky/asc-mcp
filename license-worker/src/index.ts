@@ -222,9 +222,10 @@ async function verifyPolarSignature(
   const skew = Math.abs(Math.floor(Date.now() / 1000) - ts);
   if (skew > 300) return false;
 
-  const secretBytes = base64ToBytes(
-    secret.startsWith("whsec_") ? secret.slice(6) : secret,
-  );
+  // Polar's validateEvent base64-encodes the secret string then hands it to the
+  // Standard Webhooks lib, which base64-decodes it back -- so the HMAC key is
+  // simply the raw UTF-8 bytes of the full secret (e.g. "polar_whs_...").
+  const secretBytes = new TextEncoder().encode(secret);
   const key = await crypto.subtle.importKey(
     "raw",
     secretBytes,
@@ -244,13 +245,6 @@ async function verifyPolarSignature(
     const [version, sig] = part.split(",");
     return version === "v1" && sig != null && timingSafeEqual(sig, expected);
   });
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
