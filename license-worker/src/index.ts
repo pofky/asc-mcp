@@ -18,6 +18,8 @@ interface Env {
   BREVO_API_KEY?: string;
   BREVO_SENDER_EMAIL?: string;
   BREVO_SENDER_NAME?: string;
+  // Guards POST /admin/provision (manual activation + re-email).
+  ADMIN_TOKEN?: string;
 }
 
 interface ValidateRequest {
@@ -61,6 +63,10 @@ export default {
 
       if (url.pathname === "/webhook/polar" && request.method === "POST") {
         return handlePolarWebhook(request, env, corsHeaders);
+      }
+
+      if (url.pathname === "/admin/provision" && request.method === "POST") {
+        return handleAdminProvision(request, env, corsHeaders);
       }
 
       if (url.pathname === "/success") {
@@ -139,6 +145,16 @@ const CANCEL_EVENTS = new Set([
   "subscription.canceled",
   "subscription.revoked",
 ]);
+// Statuses that mean the subscription is NOT usable even though an
+// active-type event fired. Anything else (active, trialing, past_due,
+// incomplete, or absent) is treated as active so a paying customer is
+// never left without a key.
+const DEAD_STATUSES = new Set([
+  "canceled",
+  "revoked",
+  "incomplete_expired",
+  "unpaid",
+]);
 
 async function handlePolarWebhook(
   request: Request,
@@ -166,15 +182,17 @@ async function handlePolarWebhook(
     };
   };
 
+  console.log("polar webhook", event.type, "status:", event.data?.status);
+
   if (ACTIVE_EVENTS.has(event.type)) {
     const sub = event.data;
     const email = sub.customer?.email || "";
     const expiresAt = sub.current_period_end || null;
-    // active=1 unless Polar tells us the sub is not currently usable
-    const active =
-      !sub.status || sub.status === "active" || sub.status === "trialing"
-        ? 1
-        : 0;
+    // active=1 unless Polar reports a genuinely dead status. Earlier this
+    // required status to be exactly "active"/"trialing", which left real
+    // paying customers at active=0 (e.g. status "incomplete" while payment
+    // settled), silently suppressing the license email too.
+    const active = sub.status && DEAD_STATUSES.has(sub.status) ? 0 : 1;
     const licenseKey = generateLicenseKey();
 
     await env.DB.prepare(
@@ -224,6 +242,58 @@ async function handlePolarWebhook(
   }
 
   return json({ ok: true }, headers);
+}
+
+/**
+ * Manual provisioning / re-email for an existing subscription, guarded by the
+ * Polar webhook secret. Used to recover customers whose webhook landed before
+ * the activation logic was correct. Activates the row and emails the key once.
+ */
+async function handleAdminProvision(
+  request: Request,
+  env: Env,
+  headers: Record<string, string>,
+): Promise<Response> {
+  const auth = request.headers.get("x-admin-secret") || "";
+  if (!env.ADMIN_TOKEN || auth !== env.ADMIN_TOKEN) {
+    return json({ error: "Unauthorized" }, headers, 401);
+  }
+
+  const body = (await request.json()) as { subscription_id?: string };
+  if (!body.subscription_id) {
+    return json({ error: "subscription_id required" }, headers, 400);
+  }
+
+  const row = await env.DB.prepare(
+    "SELECT key, email, key_emailed FROM licenses WHERE polar_subscription_id = ?",
+  )
+    .bind(body.subscription_id)
+    .first<{ key: string; email: string | null; key_emailed: number }>();
+
+  if (!row) {
+    return json({ error: "Not found" }, headers, 404);
+  }
+
+  await env.DB.prepare(
+    "UPDATE licenses SET active = 1 WHERE polar_subscription_id = ?",
+  )
+    .bind(body.subscription_id)
+    .run();
+
+  let emailed = Boolean(row.key_emailed);
+  if (!emailed && row.email) {
+    const sent = await sendLicenseEmail(env, row.email, row.key);
+    if (sent) {
+      await env.DB.prepare(
+        "UPDATE licenses SET key_emailed = 1 WHERE polar_subscription_id = ?",
+      )
+        .bind(body.subscription_id)
+        .run();
+      emailed = true;
+    }
+  }
+
+  return json({ ok: true, active: 1, emailed, email: row.email }, headers);
 }
 
 /**
