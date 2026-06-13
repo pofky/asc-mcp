@@ -3,5 +3,7 @@ dist/
 .DS_Store
 *.p8
 .env
+.dev.vars
+*.dev.vars
 .wrangler/
 .mcpregistry_*

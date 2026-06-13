@@ -156,6 +156,25 @@ const DEAD_STATUSES = new Set([
   "unpaid",
 ]);
 
+/**
+ * Decide whether a subscription should be active given the status on an
+ * active-type Polar event. Exported for regression tests: this is the exact
+ * logic that twice left paying customers at active=0. Anything that is not a
+ * known-dead status (including an absent status, "active", "trialing",
+ * "past_due", "incomplete") activates the license.
+ */
+export function computeActiveFlag(status?: string): 0 | 1 {
+  return status && DEAD_STATUSES.has(status) ? 0 : 1;
+}
+
+export function classifyPolarEvent(
+  type: string,
+): "activate" | "cancel" | "ignore" {
+  if (ACTIVE_EVENTS.has(type)) return "activate";
+  if (CANCEL_EVENTS.has(type)) return "cancel";
+  return "ignore";
+}
+
 async function handlePolarWebhook(
   request: Request,
   env: Env,
@@ -192,7 +211,7 @@ async function handlePolarWebhook(
     // required status to be exactly "active"/"trialing", which left real
     // paying customers at active=0 (e.g. status "incomplete" while payment
     // settled), silently suppressing the license email too.
-    const active = sub.status && DEAD_STATUSES.has(sub.status) ? 0 : 1;
+    const active = computeActiveFlag(sub.status);
     const licenseKey = generateLicenseKey();
 
     await env.DB.prepare(
