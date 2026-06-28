@@ -145,5 +145,45 @@ export function registerPrompts(server: McpServer): PromptRegistration[] {
     description: goNoGo.description ?? "",
   });
 
+  const ship = server.registerPrompt(
+    "asc-ship-release",
+    {
+      title: "Ship a release end to end",
+      description:
+        "Drive a full release from the current state to submitted: create/locate the editable version, push metadata, attach the newest build, upload screenshots if provided, run preflight, and submit. Asks before every outward-facing step. Pro feature.",
+      argsSchema: { app_id: APP_ID_SCHEMA },
+    },
+    ({ app_id }) => ({
+      description: `Ship a release for app ${app_id}`,
+      messages: [
+        {
+          role: "user" as const,
+          content: {
+            type: "text" as const,
+            text: [
+              `Ship a release for App Store Connect app ${app_id}. Use the asc-mcp tools in this order, and STOP to confirm with me before any outward-facing step (submit, upload, release):`,
+              "",
+              `1. Call \`app_details\` with \`app_id: "${app_id}"\` to read the current version + state.`,
+              "2. If there is no editable version (current one is in review or live), call `create_version` with the next version number.",
+              "3. If I gave you metadata to change, call `update_version_metadata` (it validates Apple's character limits and refuses over-limit writes).",
+              "4. Call `list_builds`. If the build I want is VALID, call `attach_build`. If no build exists, tell me to upload one (or use build_and_archive + upload_binary if I have an Xcode project).",
+              "5. If I provided screenshot files, call `upload_screenshots` for each display type.",
+              `6. Call \`release_preflight\` with \`app_id: "${app_id}"\` and show me any blocking issues.`,
+              "7. Only after I confirm, call `submit_for_review` with `confirm: true`.",
+              "8. After approval, ask whether to `release_version` (confirm:true) or start `manage_phased_release`.",
+              "",
+              "Never call submit_for_review, upload_binary, or release_version without my explicit confirmation in the chat. Report the result of each step before moving on.",
+            ].join("\n"),
+          },
+        },
+      ],
+    }),
+  );
+  registered.push({
+    name: "asc-ship-release",
+    title: ship.title ?? "",
+    description: ship.description ?? "",
+  });
+
   return registered;
 }

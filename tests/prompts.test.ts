@@ -17,6 +17,7 @@ describe("registerPrompts", () => {
     expect(names).toEqual([
       "asc-rejection-audit",
       "asc-release-go-no-go",
+      "asc-ship-release",
       "asc-weekly-review",
     ]);
   });

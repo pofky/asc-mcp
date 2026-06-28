@@ -1,7 +1,7 @@
 {
   "name": "@pofky/asc-mcp",
-  "version": "1.3.0",
-  "description": "The App Store Connect intelligence layer for your coding agent. 13 tools (including Sampling-powered review triage and locale-aware response drafts), 3 slash-command Prompts, and a bundled Claude Skill. Works with Claude Code, Claude Desktop, Cursor, Windsurf, or any MCP-compatible client. Free tier included.",
+  "version": "1.6.0",
+  "description": "Full control of your App Store Connect from your coding agent. 26 tools: read intelligence (reviews, sales, preflight) plus Pro write/control (edit metadata, upload screenshots, attach builds, TestFlight, submit + release, and local build/upload). 4 slash-command Prompts and a bundled Claude Skill. Works with Claude Code, Claude Desktop, Cursor, Windsurf, or any MCP client. Free read tier included.",
   "main": "dist/index.js",
   "bin": {
     "asc-mcp": "dist/index.js",

@@ -1,6 +1,6 @@
 # App Store Connect MCP Server
 
-> **The App Store Connect intelligence layer for your coding agent.** 13 tools that think, 3 slash-command workflows, and a bundled Claude Skill. Not another API wrapper.
+> **Full control of App Store Connect from your coding agent.** 36 tools: read intelligence that thinks, plus write/control that ships your app end to end (edit metadata, upload screenshots, attach builds, TestFlight, submit, release, even build and upload the binary locally). 4 slash-command workflows and a bundled Claude Skill. Not another API wrapper.
 
 Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Different angle, same API surface plus more.
 
@@ -11,7 +11,9 @@ asc-mcp install-skill   # one-line, optional, for auto-routed review questions
 
 ## What Makes This Different
 
-Other ASC MCP servers wrap the API and give you 80 to 293 raw endpoints. This one gives you 13 opinionated tools, 3 slash-command Prompts, and a Claude Skill that all think. Two of the tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
+Other ASC MCP servers wrap the API and give you 80 to 293 raw endpoints. This one gives you 36 opinionated tools, 4 slash-command Prompts, and a Claude Skill that all think. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
+
+**Why full control is possible without fastlane:** fastlane's `deliver` and `pilot` are just calls to the same App Store Connect REST API this server authenticates against with your `.p8`. So nearly everything you would script with fastlane is a tool here, no Ruby toolchain required. The only step that needs your Mac is building and signing the binary, which `build_and_archive` and `upload_binary` drive via Xcode.
 
 | You say | What happens |
 |---------|-------------|
@@ -39,7 +41,15 @@ No context switching. No portal. Just ask.
 npm install -g @pofky/asc-mcp
 ```
 
-Add to `~/.claude/settings.json` (Claude Code) or your agent's MCP config:
+**Fastest setup (recommended).** Drop your `.p8` into Apple's standard path `~/.appstoreconnect/private_keys/` (the file is named `AuthKey_XXXXXXXXXX.p8`, and the Key ID is in the filename). Then run:
+
+```bash
+asc-mcp init
+```
+
+It auto-detects the key, asks for your Issuer ID (and optional license key), and prints a ready-to-paste MCP config. The server also auto-discovers that same path at runtime, so you only ever need to set `ASC_ISSUER_ID` (and `ASC_LICENSE_KEY` for Pro).
+
+**Manual setup.** Add to `~/.claude/settings.json` (Claude Code) or your agent's MCP config:
 
 ```json
 {
@@ -85,7 +95,40 @@ Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-com
 | `triage_reviews` | Pulls recent reviews and clusters them into 3 to 5 themes with counts, action buckets, and quotes, using MCP Sampling | Zero extra cost: your client's model does the clustering |
 | `draft_review_response` | Drafts a public reply to a single review in the review's locale, via Sampling. Elicits tone if your client supports it. Never auto-posts. | Apple guideline 1.2 respected; you paste into ASC yourself |
 
-**Coming next (Week 3):** rejection-risk scoring against the 2026 corpus (guideline 2.3 metadata, 4.0 design, privacy-AI 5.1.2).
+### Control & Ship (Pro)
+
+These tools write to App Store Connect. Every outward-facing action (submit, release, upload binary) requires an explicit `confirm: true`, so nothing leaves your machine by accident.
+
+| Tool | What it does |
+|------|-------------|
+| `create_version` | Create a new editable App Store version for your next release |
+| `update_version_metadata` | Edit description, keywords, what's-new, promo text, URLs, app name, subtitle. Validates Apple's character limits and refuses over-limit writes |
+| `upload_screenshots` | Upload screenshots for a device display type (reserve, upload, commit, with checksum) |
+| `list_builds` | List recent builds and their processing state (VALID = ready) |
+| `attach_build` | Attach a build to the editable version (defaults to newest processed build) |
+| `submit_for_review` | Submit the version to App Review (modern reviewSubmissions flow). `confirm: true` required |
+| `release_version` | Release an approved version to the public App Store. `confirm: true` required |
+| `manage_phased_release` | Start, pause, resume, or complete the 7-day phased rollout |
+| `list_beta_groups` | List your TestFlight beta groups |
+| `assign_build_to_group` | Push a build to a beta group so testers can install it |
+| `invite_beta_tester` | Invite an external tester by email and add them to a group |
+| `set_app_metadata` | Set primary/secondary category, copyright, content-rights, and export-compliance (encryption) in one call |
+| `set_app_price` | Set the base price by creating the price schedule (`price_usd: 0` for free), auto-equalized to all territories |
+| `set_app_availability` | Make the app available in all App Store territories (or a subset), with auto-include for future ones |
+| `set_review_contact` | Set the App Review contact and optional demo account on the version |
+| `set_age_rating` | Set the v2 age-rating declaration (full content-descriptor set) |
+| `set_privacy_nutrition` | Guidance + deep link for the App Privacy nutrition labels (not API-addressable) |
+| `set_eu_trader_status` | Guidance + deep link for the EU DSA trader status (not API-addressable) |
+| `create_iap` | Create a non-consumable/consumable IAP with localization, availability, and an auto-equalized price |
+| `create_subscription` | Create a subscription group, sub, localization, availability, price, and free trial |
+| `set_iap_review_screenshot` | Attach the App Review screenshot to a subscription or IAP |
+| `setup_app_store_signing` | Download the app's App Store provisioning profiles and write a manual-signing `ExportOptions.plist` (works with a least-privilege API key) |
+| `build_and_archive` | Build, archive, and export a signed `.ipa` via xcodebuild (needs Xcode on your Mac) |
+| `upload_binary` | Upload the `.ipa` to App Store Connect via altool, using your API key. `confirm: true` required |
+
+The whole flow chains: `setup_app_store_signing` to `build_and_archive` to `upload_binary` to `list_builds` (wait for VALID) to `attach_build` to `update_version_metadata` to `upload_screenshots` to `set_app_metadata`/`set_app_price`/`set_app_availability`/`set_age_rating`/`set_review_contact` to `release_preflight` to `submit_for_review` to `release_version`. The `/asc-ship-release` slash command drives it for you.
+
+`release_preflight` is the single source of truth for "is this submittable": it checks every API-addressable field and ends with a tailored "Manual steps to finish" list for the few things Apple only allows in the website (first-IAP bundling, App Privacy nutrition labels, EU trader status).
 
 [Get Pro](https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu) | [Retrieve your license key](https://asc-mcp-license.remewdy.workers.dev/key)
 
@@ -106,6 +149,7 @@ Type these in Claude Desktop or Claude Code and the agent runs a pre-built multi
 | `/asc-weekly-review` | Calls `daily_briefing` then `list_reviews` (low-rating, last 7 days) for every app, clusters themes, returns a single digest with 3-bullet action list. |
 | `/asc-rejection-audit` | Given an `app_id`, calls `release_preflight` + `metadata_diff` + `review_status`, reads the result against the top 2026 rejection drivers (guideline 2.3 metadata, 4.0 design, privacy-AI 5.1.2). Produces Blocking / Likely-flagged / Safe sections. |
 | `/asc-release-go-no-go` | Given an `app_id`, combines preflight + review queue + metadata diff + top competitors in the same category. Returns a direct GO or NO-GO with three supporting reasons. |
+| `/asc-ship-release` | Given an `app_id`, drives the full release: locate or create the editable version, push metadata, attach the newest build, upload screenshots, run preflight, then submit. Stops to confirm before every outward-facing step. |
 
 These are MCP Prompts per the [spec](https://modelcontextprotocol.io/docs/concepts/prompts/). Zero other App Store Connect MCP ships with them.
 
@@ -185,7 +229,7 @@ Lead with the most impactful change. Keep under 4000 chars.
 
 | | Raw API wrappers (free) | This server |
 |---|---|---|
-| **Tool count** | 80 to 293 | 13 opinionated tools |
+| **Tool count** | 80 to 293 | 36 opinionated tools (read + control) |
 | **MCP Prompts (slash commands)** | No | Yes, 3 pre-built workflows |
 | **MCP Sampling (zero server-side LLM cost)** | No | Yes, review triage + response drafts |
 | **Claude Skill bundled** | No | Yes, one-line install |

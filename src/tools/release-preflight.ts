@@ -335,6 +335,148 @@ export async function releasePreflight(
     });
   }
 
+  // 5b. Age rating configured (a fresh app has all content declarations null).
+  try {
+    const infoRes = await client.get<Record<string, never>>(
+      `/v1/apps/${args.app_id}/appInfos`,
+      { include: "ageRatingDeclaration", limit: "1" },
+    );
+    const included = (infoRes as { included?: Array<{ type: string; attributes?: Record<string, unknown> }> }).included;
+    const ard = included?.find((x) => x.type === "ageRatingDeclarations")?.attributes ?? {};
+    const declared = Object.entries(ard).filter(
+      ([k, v]) => v !== null && v !== undefined && !/^(ageRatingOverride|koreaAgeRatingOverride)/.test(k),
+    );
+    checks.push(
+      declared.length
+        ? { status: "pass", message: "Age rating configured." }
+        : { status: "fail", message: "Age rating not configured. Run set_age_rating before submission." },
+    );
+  } catch {
+    // non-fatal
+  }
+
+  // 5c. Privacy policy URL (app-level localization).
+  try {
+    const appInfoRes = await client.get<Record<string, never>>(`/v1/apps/${args.app_id}/appInfos`, { limit: "1" });
+    const appInfo = Array.isArray(appInfoRes.data) ? appInfoRes.data[0] : appInfoRes.data;
+    if (appInfo) {
+      const ilRes = await client.get<{ locale: string; privacyPolicyUrl: string | null }>(
+        `/v1/appInfos/${(appInfo as { id: string }).id}/appInfoLocalizations`,
+        { "fields[appInfoLocalizations]": "locale,privacyPolicyUrl", limit: "30" },
+      );
+      const ils = (Array.isArray(ilRes.data) ? ilRes.data : [ilRes.data]).filter(Boolean);
+      const anyUrl = ils.some((l) => l.attributes.privacyPolicyUrl && l.attributes.privacyPolicyUrl.trim().length);
+      checks.push(
+        anyUrl
+          ? { status: "pass", message: "Privacy policy URL set." }
+          : { status: "warn", message: "No privacy policy URL set. Required for apps with accounts or data collection; set via update_version_metadata privacy_policy_url." },
+      );
+    }
+  } catch {
+    // non-fatal
+  }
+
+  // 5d. In-app purchase / subscription readiness.
+  try {
+    const iapRes = await client.get<{ productId: string; state: string }>(
+      `/v1/apps/${args.app_id}/inAppPurchasesV2`,
+      { "fields[inAppPurchases]": "productId,state", limit: "100" },
+    );
+    const subRes = await client.get<Record<string, never>>(
+      `/v1/apps/${args.app_id}/subscriptionGroups`,
+      { include: "subscriptions", limit: "25" },
+    );
+    const subs = ((subRes as { included?: Array<{ type: string; attributes: { productId: string; state: string } }> }).included ?? [])
+      .filter((x) => x.type === "subscriptions")
+      .map((s) => ({ productId: s.attributes.productId, state: s.attributes.state }));
+    const iaps = (Array.isArray(iapRes.data) ? iapRes.data : [iapRes.data])
+      .filter(Boolean)
+      .map((i) => ({ productId: i.attributes.productId, state: i.attributes.state }));
+    const ready = new Set(["READY_TO_SUBMIT", "APPROVED", "WAITING_FOR_REVIEW", "IN_REVIEW", "DEVELOPER_ACTION_NEEDED"]);
+    for (const p of [...iaps, ...subs]) {
+      checks.push(
+        ready.has(p.state)
+          ? { status: "pass", message: `Product ${p.productId} is ${p.state}.` }
+          : { status: "fail", message: `Product ${p.productId} is ${p.state} (needs localization, availability, price in all territories, and a review screenshot).` },
+      );
+    }
+  } catch {
+    // non-fatal
+  }
+
+  // 5e. Primary category, base price, and review contact, all required before
+  // submission and all API-addressable (set_app_metadata / set_app_price /
+  // set_review_contact). Track product/build facts for the manual-steps section.
+  let readyProducts: string[] = [];
+  let hasBuild = false;
+  const editableForSubmit = ["PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED"].includes(versionState);
+  try {
+    const infoRes = await client.get<Record<string, never>>(`/v1/apps/${args.app_id}/appInfos`, { include: "primaryCategory", limit: "1" });
+    const inc = (infoRes as { included?: Array<{ type: string }> }).included ?? [];
+    checks.push(
+      inc.some((x) => x.type === "appCategories")
+        ? { status: "pass", message: "Primary category set." }
+        : { status: "fail", message: "Primary category not set. Run set_app_metadata with primary_category." },
+    );
+  } catch { /* non-fatal */ }
+  try {
+    const priceRes = await client.get<Record<string, never>>(`/v1/apps/${args.app_id}/appPriceSchedule`).catch(() => null);
+    checks.push(
+      priceRes && (priceRes as { data?: unknown }).data
+        ? { status: "pass", message: "Price schedule set." }
+        : { status: "fail", message: "No price schedule. Run set_app_price (price_usd: 0 for free)." },
+    );
+  } catch { /* non-fatal */ }
+  try {
+    const rd = await client.get<{ contactEmail: string | null }>(`/v1/appStoreVersions/${versionId}/appStoreReviewDetail`).catch(() => null);
+    const email = rd && (rd as { data?: { attributes?: { contactEmail?: string | null } } }).data?.attributes?.contactEmail;
+    checks.push(
+      email
+        ? { status: "pass", message: "App Review contact set." }
+        : { status: "warn", message: "App Review contact not set. Run set_review_contact (recommended; reviewers use it if they have questions)." },
+    );
+  } catch { /* non-fatal */ }
+
+  // Re-read product + build facts for the manual-steps section (cheap, exact).
+  try {
+    const iapRes = await client.get<{ productId: string; state: string }>(`/v1/apps/${args.app_id}/inAppPurchasesV2`, { "fields[inAppPurchases]": "productId,state", limit: "100" });
+    const subRes = await client.get<Record<string, never>>(`/v1/apps/${args.app_id}/subscriptionGroups`, { include: "subscriptions", limit: "25" });
+    const subs = ((subRes as { included?: Array<{ type: string; attributes: { productId: string; state: string } }> }).included ?? []).filter((x) => x.type === "subscriptions");
+    const all = [
+      ...(Array.isArray(iapRes.data) ? iapRes.data : [iapRes.data]).filter(Boolean).map((i) => ({ productId: i.attributes.productId, state: i.attributes.state })),
+      ...subs.map((s) => ({ productId: s.attributes.productId, state: s.attributes.state })),
+    ];
+    readyProducts = all.filter((p) => p.state === "READY_TO_SUBMIT").map((p) => p.productId);
+  } catch { /* non-fatal */ }
+  try {
+    const bRes = await client.get<BuildAttributes>(`/v1/appStoreVersions/${versionId}/build`, { "fields[builds]": "version" });
+    hasBuild = Boolean(Array.isArray(bRes.data) ? bRes.data[0] : bRes.data);
+  } catch { /* non-fatal */ }
+
+  // 5f. Manual steps: things Apple does NOT expose to the API. These are not
+  // failures of your setup; they are actions only the App Store Connect website
+  // or local Xcode can perform. Listed so "preflight clean" means "ready to
+  // finish", not "already submitted".
+  const manualSteps: string[] = [];
+  if (!hasBuild) {
+    manualSteps.push(
+      "No build attached. Uploading a binary needs local Xcode: setup_app_store_signing -> build_and_archive -> upload_binary -> attach_build.",
+    );
+  }
+  if (readyProducts.length && editableForSubmit) {
+    manualSteps.push(
+      `First in-app purchases must be submitted WITH the version in the website (Apple blocks this via API). ` +
+      `In App Store Connect open this version, add ${readyProducts.join(", ")} under "In-App Purchases and Subscriptions", ` +
+      `then Add for Review -> Submit. After the first release is live, later IAPs submit via the API (submit_for_review).`,
+    );
+  }
+  manualSteps.push(
+    "Confirm App Privacy (data-collection nutrition labels) is complete on the App Privacy page. Not API-addressable; see set_privacy_nutrition for the checklist.",
+  );
+  manualSteps.push(
+    "If distributing in the EU, confirm your DSA trader status on the App Information page. Not API-addressable; see set_eu_trader_status.",
+  );
+
   // 6. Compile report
   const fails = checks.filter((c) => c.status === "fail");
   const warns = checks.filter((c) => c.status === "warn");
@@ -371,8 +513,18 @@ export async function releasePreflight(
     }
   }
 
+  if (manualSteps.length > 0) {
+    result += "\n**Manual steps to finish (not API-addressable, do these in the website/Xcode):**\n";
+    for (const s of manualSteps) {
+      result += `- ${s}\n`;
+    }
+  }
+
   result += `\n---\nTotal: ${passes.length} pass, ${warns.length} warn, ${fails.length} fail\n`;
   result += `Locales checked: ${localizations.length}\n`;
+  if (fails.length === 0) {
+    result += "API-addressable setup is complete. Finish the manual steps above, then submit.\n";
+  }
 
   return result;
 }

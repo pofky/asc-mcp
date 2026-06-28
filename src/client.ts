@@ -40,6 +40,49 @@ export class ASCClient {
     return (await response.json()) as ASCResponse<T>;
   }
 
+  /** Make an authenticated write request (POST/PATCH/DELETE) to the ASC API. */
+  async write<T>(
+    method: "POST" | "PATCH" | "DELETE",
+    path: string,
+    body?: unknown,
+  ): Promise<ASCResponse<T> | null> {
+    const token = await getToken(
+      this.config.keyId,
+      this.config.issuerId,
+      this.config.privateKeyPath,
+    );
+
+    const response = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      throw new ASCAPIError(response.status, path, errBody);
+    }
+
+    // 204 No Content (typical for DELETE / some PATCH) has no JSON body.
+    if (response.status === 204) return null;
+    const text = await response.text();
+    if (!text) return null;
+    return JSON.parse(text) as ASCResponse<T>;
+  }
+
+  post<T>(path: string, body: unknown) {
+    return this.write<T>("POST", path, body);
+  }
+  patch<T>(path: string, body: unknown) {
+    return this.write<T>("PATCH", path, body);
+  }
+  del<T>(path: string) {
+    return this.write<T>("DELETE", path);
+  }
+
   /** Fetch all pages of a paginated response. */
   async getAll<T>(path: string, params?: Record<string, string>, maxPages = 10): Promise<ASCResponse<T>> {
     const firstPage = await this.get<T>(path, params);
