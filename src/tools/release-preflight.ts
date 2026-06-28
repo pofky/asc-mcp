@@ -438,16 +438,37 @@ export async function releasePreflight(
   } catch { /* non-fatal */ }
 
   // Re-read product + build facts for the manual-steps section (cheap, exact).
+  let hasSubscriptions = false;
   try {
     const iapRes = await client.get<{ productId: string; state: string }>(`/v1/apps/${args.app_id}/inAppPurchasesV2`, { "fields[inAppPurchases]": "productId,state", limit: "100" });
     const subRes = await client.get<Record<string, never>>(`/v1/apps/${args.app_id}/subscriptionGroups`, { include: "subscriptions", limit: "25" });
     const subs = ((subRes as { included?: Array<{ type: string; attributes: { productId: string; state: string } }> }).included ?? []).filter((x) => x.type === "subscriptions");
+    hasSubscriptions = subs.length > 0;
     const all = [
       ...(Array.isArray(iapRes.data) ? iapRes.data : [iapRes.data]).filter(Boolean).map((i) => ({ productId: i.attributes.productId, state: i.attributes.state })),
       ...subs.map((s) => ({ productId: s.attributes.productId, state: s.attributes.state })),
     ];
     readyProducts = all.filter((p) => p.state === "READY_TO_SUBMIT").map((p) => p.productId);
   } catch { /* non-fatal */ }
+
+  // 5e-bis. Guideline 3.1.2: auto-renewable subscriptions require a FUNCTIONAL
+  // Terms of Use (EULA) link in the App Description metadata. An in-app link is
+  // not enough; Apple auto-rejects without it. This is the single most common
+  // first-submission rejection for subscription apps.
+  if (hasSubscriptions && localizations.length) {
+    const eulaRe = /https?:\/\/\S*(terms|eula|stdeula)/i;
+    const missing = localizations.filter((l) => !(l.attributes.description && eulaRe.test(l.attributes.description)));
+    if (missing.length) {
+      checks.push({
+        status: "fail",
+        message:
+          `Subscriptions present but no Terms of Use (EULA) link in the description for: ${missing.map((l) => l.attributes.locale).join(", ")}. ` +
+          `Apple Guideline 3.1.2 auto-rejects this. Append a functional link (your own Terms URL or Apple's standard EULA https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) via update_version_metadata.`,
+      });
+    } else {
+      checks.push({ status: "pass", message: "Terms of Use (EULA) link present in description (required for subscriptions, Guideline 3.1.2)." });
+    }
+  }
   try {
     const bRes = await client.get<BuildAttributes>(`/v1/appStoreVersions/${versionId}/build`, { "fields[builds]": "version" });
     hasBuild = Boolean(Array.isArray(bRes.data) ? bRes.data[0] : bRes.data);
