@@ -20,6 +20,8 @@ interface Env {
   BREVO_SENDER_NAME?: string;
   // Guards POST /admin/provision (manual activation + re-email).
   ADMIN_TOKEN?: string;
+  // Guards POST /admin/announce (product announcement to an existing customer).
+  ANNOUNCE_TOKEN?: string;
 }
 
 interface ValidateRequest {
@@ -67,6 +69,10 @@ export default {
 
       if (url.pathname === "/admin/provision" && request.method === "POST") {
         return await handleAdminProvision(request, env, corsHeaders);
+      }
+
+      if (url.pathname === "/admin/announce" && request.method === "POST") {
+        return await handleAdminAnnounce(request, env, corsHeaders);
       }
 
       if (url.pathname === "/success") {
@@ -313,6 +319,68 @@ async function handleAdminProvision(
   }
 
   return json({ ok: true, active: 1, emailed, email: row.email }, headers);
+}
+
+/**
+ * Send a product announcement to one existing customer, guarded by
+ * ANNOUNCE_TOKEN. The recipient must already exist in the licenses table, so
+ * this can never be used to mail an arbitrary address.
+ */
+async function handleAdminAnnounce(
+  request: Request,
+  env: Env,
+  headers: Record<string, string>,
+): Promise<Response> {
+  const auth = request.headers.get("x-announce-token") || "";
+  if (!env.ANNOUNCE_TOKEN || auth !== env.ANNOUNCE_TOKEN) {
+    return json({ error: "Unauthorized" }, headers, 401);
+  }
+
+  const body = (await request.json()) as {
+    email?: string;
+    subject?: string;
+    html?: string;
+  };
+
+  if (!body.email || !body.subject || !body.html) {
+    return json({ error: "email, subject and html required" }, headers, 400);
+  }
+
+  const row = await env.DB.prepare("SELECT id FROM licenses WHERE email = ?")
+    .bind(body.email)
+    .first<{ id: number }>();
+
+  if (!row) {
+    return json({ error: "Not a known customer" }, headers, 404);
+  }
+
+  if (!env.BREVO_API_KEY) {
+    return json({ error: "Email not configured" }, headers, 503);
+  }
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": env.BREVO_API_KEY,
+      "Content-Type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender: {
+        name: env.BREVO_SENDER_NAME || "App Store Connect MCP",
+        email: env.BREVO_SENDER_EMAIL || "license@brewist.app",
+      },
+      to: [{ email: body.email }],
+      subject: body.subject,
+      htmlContent: body.html,
+    }),
+  });
+
+  if (!res.ok) {
+    return json({ error: "Send failed", status: res.status }, headers, 502);
+  }
+
+  return json({ ok: true, sent_to: body.email }, headers);
 }
 
 /**
