@@ -13,7 +13,7 @@ interface ReviewAttributes {
 export const listReviewsDefinition = {
   name: "list_reviews",
   description:
-    "List customer reviews for an app. Filter by rating (1-5 stars). Pro feature — requires license key.",
+    "List customer reviews for an app. Filter by rating (1-5 stars). Pro feature - requires license key.",
   inputSchema: {
     type: "object" as const,
     properties: {
@@ -92,7 +92,7 @@ export async function listReviews(
   for (const review of reviews) {
     const r = review.attributes;
     result += `### ${stars(r.rating)} ${r.title || "(No title)"}\n`;
-    result += `**By** ${r.reviewerNickname || "Anonymous"} — ${r.territory} — ${r.createdDate.split("T")[0]}\n\n`;
+    result += `**By** ${r.reviewerNickname || "Anonymous"} - ${r.territory} - ${r.createdDate.split("T")[0]}\n\n`;
     result += `${r.body || "(No body)"}\n\n---\n\n`;
   }
 

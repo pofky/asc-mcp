@@ -4,7 +4,7 @@ import type { Tier } from "../types.js";
 export const salesReportDefinition = {
   name: "sales_report",
   description:
-    "Download a sales/downloads summary report for a date range. Shows units sold, proceeds, and territory breakdown. Pro feature — requires license key.",
+    "Download a sales/downloads summary report for a date range. Shows units sold, proceeds, and territory breakdown. Pro feature - requires license key.",
   inputSchema: {
     type: "object" as const,
     properties: {
@@ -106,7 +106,7 @@ export async function salesReport(
   let totalUnits = 0;
   let totalProceeds = 0;
 
-  let result = `## Sales Report — ${frequency} — ${reportDate}\n\n`;
+  let result = `## Sales Report - ${frequency} - ${reportDate}\n\n`;
   result += `| App | Units | Proceeds |\n`;
   result += `|-----|------:|--------:|\n`;
 

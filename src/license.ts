@@ -38,7 +38,7 @@ export async function validateLicense(licenseKey?: string): Promise<Tier> {
 
     return status.valid ? status.tier : "free";
   } catch (err) {
-    // Network error — fail open to free tier (don't block the user)
+    // Network error - fail open to free tier (don't block the user)
     console.error("License validation network error:", err);
     return "free";
   }

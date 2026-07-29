@@ -1,7 +1,7 @@
 {
   "name": "@pofky/asc-mcp",
-  "version": "1.6.0",
-  "description": "Full control of your App Store Connect from your coding agent. 26 tools: read intelligence (reviews, sales, preflight) plus Pro write/control (edit metadata, upload screenshots, attach builds, TestFlight, submit + release, and local build/upload). 4 slash-command Prompts and a bundled Claude Skill. Works with Claude Code, Claude Desktop, Cursor, Windsurf, or any MCP client. Free read tier included.",
+  "version": "1.8.0",
+  "description": "Full control of your App Store Connect from your coding agent. 40 tools incl. asc_setup_check (self-diagnosing setup) and asc_guide (the in-agent playbook that flags every manual website step), read intelligence (reviews, sales, preflight), and Pro write/control (metadata, screenshots, builds, IAP/subscriptions, TestFlight, submit + release, local build/upload). 6 slash-command Prompts and a bundled Claude Skill. Works with Claude Code, Claude Desktop, Cursor, Windsurf, or any MCP client. Free read tier included.",
   "main": "dist/index.js",
   "bin": {
     "asc-mcp": "dist/index.js",
@@ -12,6 +12,7 @@
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest run",
+    "docs": "tsc && node scripts/gen-docs.mjs",
     "lint": "tsc --noEmit"
   },
   "keywords": [
@@ -59,6 +60,8 @@
     "dist/",
     "skills/",
     "README.md",
+    "USER_GUIDE.md",
+    "LIMITATIONS.md",
     "LICENSE"
   ]
 }

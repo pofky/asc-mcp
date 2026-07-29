@@ -15,9 +15,11 @@ describe("registerPrompts", () => {
     const out = registerPrompts(server);
     const names = out.map((p) => p.name).sort();
     expect(names).toEqual([
+      "asc-first-app",
       "asc-rejection-audit",
       "asc-release-go-no-go",
       "asc-ship-release",
+      "asc-start",
       "asc-weekly-review",
     ]);
   });

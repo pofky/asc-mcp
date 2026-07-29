@@ -168,8 +168,35 @@ export class ASCAPIError extends Error {
     public body: string,
   ) {
     const detail = tryParseErrorDetail(body);
-    super(`ASC API error ${status} on ${path}: ${detail}`);
+    const hint = friendlyHint(status, body);
+    super(
+      `ASC API error ${status} on ${path}: ${detail}` +
+        (hint ? `\n\nWhat this usually means: ${hint}` : ""),
+    );
     this.name = "ASCAPIError";
+  }
+}
+
+/**
+ * Translate Apple's terse HTTP errors into something a newcomer can act on.
+ * Returns "" when the raw detail is already clear enough (e.g. validation 422s
+ * carry their own message).
+ */
+function friendlyHint(status: number, body: string): string {
+  switch (status) {
+    case 401:
+      return "Authentication failed. Your Issuer ID, Key ID, or .p8 likely don't match. Re-check the Issuer ID (UUID on the Integrations page) and that the .p8 matches the Key ID. Run `asc-mcp doctor` to pinpoint it.";
+    case 403:
+      return "Your API key authenticated but lacks permission for this action. Its role is probably too low (needs App Manager or higher), or this specific capability (e.g. cloud signing, creating an app record) is not available to API keys at all. See `asc_guide topic:limitations`.";
+    case 404:
+      return "The resource wasn't found. Double-check the app_id / product_id (use `list_apps`), or the resource may not exist yet for this app.";
+    case 409:
+      return "State conflict: the version/product isn't in a state that allows this. For example, you can only edit/submit a version in PREPARE_FOR_SUBMISSION or a rejected state. Check current state with `app_details` or `review_status`.";
+    case 429:
+      return "Rate limited by Apple. Wait a minute and retry.";
+    default:
+      if (status >= 500) return "App Store Connect had a server-side error. This is on Apple's end; retry shortly.";
+      return "";
   }
 }
 

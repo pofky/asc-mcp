@@ -1,6 +1,7 @@
 import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
+import { EDITABLE_VERSION_STATES as EDITABLE } from "../editable.js";
 
 /**
  * PATCH a localization, but survive Apple's atomic-PATCH gotcha: a single
@@ -60,15 +61,6 @@ interface AppInfoLocAttrs {
   name: string | null;
   subtitle: string | null;
 }
-
-// States where metadata is still editable (not yet locked for review/release).
-const EDITABLE = new Set([
-  "PREPARE_FOR_SUBMISSION",
-  "DEVELOPER_REJECTED",
-  "REJECTED",
-  "METADATA_REJECTED",
-  "INVALID_BINARY",
-]);
 
 const LIMITS: Record<string, number> = {
   description: 4000,

@@ -123,6 +123,6 @@ export async function uploadBinary(
   }
   return (
     "Binary uploaded. Apple is now processing it (usually 5 to 30 min).\n" +
-    "Poll list_builds until it shows VALID, then attach_build."
+    "Run wait_for_build to block until it shows VALID (or list_builds to check once), then attach_build."
   );
 }

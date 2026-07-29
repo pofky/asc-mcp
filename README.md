@@ -41,30 +41,36 @@ No context switching. No portal. Just ask.
 npm install -g @pofky/asc-mcp
 ```
 
+No global install needed if you prefer `npx` (see the manual config below).
+
 **Fastest setup (recommended).** Drop your `.p8` into Apple's standard path `~/.appstoreconnect/private_keys/` (the file is named `AuthKey_XXXXXXXXXX.p8`, and the Key ID is in the filename). Then run:
 
 ```bash
-asc-mcp init
+asc-mcp init --write     # auto-detects the key, asks for your Issuer ID, and writes the config for you
+# or: asc-mcp init       # same, but prints the block to paste yourself
 ```
 
-It auto-detects the key, asks for your Issuer ID (and optional license key), and prints a ready-to-paste MCP config. The server also auto-discovers that same path at runtime, so you only ever need to set `ASC_ISSUER_ID` (and `ASC_LICENSE_KEY` for Pro).
+`init --write` finds your Claude Desktop / Claude Code config, backs it up, and merges in the server block, so there's no JSON editing. The server also auto-discovers the `.p8` path at runtime, so you only ever need `ASC_ISSUER_ID` (and `ASC_LICENSE_KEY` for Pro).
 
-**Manual setup.** Add to `~/.claude/settings.json` (Claude Code) or your agent's MCP config:
+**Stuck?** Run `asc-mcp doctor` (or ask your agent to call `asc_setup_check`). It checks your key, Issuer ID, a live connection to App Store Connect, and your license, and prints the exact fix for anything wrong. In your agent, the `/asc-start` command walks a first-time user through all of this.
+
+**Manual setup.** Add to your agent's MCP config (Claude Desktop config, or `~/.claude.json` for Claude Code). Use `npx` for zero-install, or `asc-mcp` if you installed globally:
 
 ```json
 {
   "mcpServers": {
     "appstore-connect": {
-      "command": "asc-mcp",
+      "command": "npx",
+      "args": ["-y", "@pofky/asc-mcp"],
       "env": {
-        "ASC_KEY_ID": "YOUR_KEY_ID",
-        "ASC_ISSUER_ID": "YOUR_ISSUER_ID",
-        "ASC_PRIVATE_KEY_PATH": "~/.appstore/AuthKey_XXXX.p8"
+        "ASC_ISSUER_ID": "YOUR_ISSUER_ID"
       }
     }
   }
 }
 ```
+
+With the `.p8` in `~/.appstoreconnect/private_keys/`, `ASC_ISSUER_ID` is the only required env var (Key ID and key path are auto-detected). Add `ASC_LICENSE_KEY` to unlock Pro.
 
 **Step 3.** Ask your agent: "List my App Store Connect apps"
 
@@ -76,6 +82,8 @@ Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-com
 
 | Tool | What it does |
 |------|-------------|
+| `asc_setup_check` | **Run first if anything's off.** Checks your key, Issuer ID, a live App Store Connect connection, and license tier, and prints the exact fix for each failure. |
+| `asc_guide` | **Start here.** The in-agent playbook for every flow (first release, update, IAP, subscriptions, reviews, TestFlight, binary), with each manual App Store Connect website step flagged inline. See also [USER_GUIDE.md](USER_GUIDE.md) and [LIMITATIONS.md](LIMITATIONS.md). |
 | `list_apps` | List all your apps with name, bundle ID, SKU, platform |
 | `app_details` | Version history, build status, release state, dates |
 | `review_status` | Current review state with human-readable context |
@@ -132,6 +140,18 @@ The whole flow chains: `setup_app_store_signing` to `build_and_archive` to `uplo
 
 [Get Pro](https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu) | [Retrieve your license key](https://asc-mcp-license.remewdy.workers.dev/key)
 
+## What stays manual (and why)
+
+A handful of things Apple does not expose to API keys. The MCP never pretends otherwise: it either returns the exact website steps plus a deep link, or detects the case and aborts so nothing is half-done. Full detail in [LIMITATIONS.md](LIMITATIONS.md) (and `asc_guide topic:limitations`):
+
+- **Create an app record / App Group.** `POST /v1/apps` is forbidden for API keys; do it once in the website.
+- **App Privacy nutrition label.** Not in the API. `set_privacy_nutrition` returns the checklist plus a deep link.
+- **EU DSA trader status.** Not in the API. `set_eu_trader_status` returns the steps. Legal decision.
+- **An app's first IAPs/subscriptions.** Must be submitted with the version in the website; `submit_for_review` aborts rather than orphan the version. Later products submit via the API.
+- **Certificate creation / cloud signing.** Least-privilege keys can't; `setup_app_store_signing` uses manual-signing profiles instead.
+- **Compiling the binary.** Needs Xcode on your Mac (`build_and_archive` runs it locally).
+- **Posting a public review reply.** `draft_review_response` writes it; you paste it in the website.
+
 ## How Sampling works (zero extra cost)
 
 `triage_reviews` and `draft_review_response` use the MCP Sampling primitive. When you call one of these tools, this server sends a `sampling/createMessage` request back to your own MCP client. Your client runs the LLM locally (Claude Desktop uses your account; Claude Code uses its session). We never call Anthropic from our side.
@@ -146,10 +166,12 @@ Type these in Claude Desktop or Claude Code and the agent runs a pre-built multi
 
 | Slash command | What it does |
 |---------------|--------------|
+| `/asc-start` | New here? Verifies the connection, lists your apps, explains free vs Pro in plain language, and recommends your next step. No App Store Connect knowledge assumed. |
 | `/asc-weekly-review` | Calls `daily_briefing` then `list_reviews` (low-rating, last 7 days) for every app, clusters themes, returns a single digest with 3-bullet action list. |
 | `/asc-rejection-audit` | Given an `app_id`, calls `release_preflight` + `metadata_diff` + `review_status`, reads the result against the top 2026 rejection drivers (guideline 2.3 metadata, 4.0 design, privacy-AI 5.1.2). Produces Blocking / Likely-flagged / Safe sections. |
 | `/asc-release-go-no-go` | Given an `app_id`, combines preflight + review queue + metadata diff + top competitors in the same category. Returns a direct GO or NO-GO with three supporting reasons. |
 | `/asc-ship-release` | Given an `app_id`, drives the full release: locate or create the editable version, push metadata, attach the newest build, upload screenshots, run preflight, then submit. Stops to confirm before every outward-facing step. |
+| `/asc-first-app` | Given an `app_id`, drives a brand-new app's first 1.0 from existing app record to submitted, handling every first-time-only constraint and stopping at each manual website step (privacy label, trader status, first-IAP bundling). |
 
 These are MCP Prompts per the [spec](https://modelcontextprotocol.io/docs/concepts/prompts/). Zero other App Store Connect MCP ships with them.
 

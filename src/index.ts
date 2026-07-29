@@ -37,13 +37,15 @@ import { setIapReviewScreenshot } from "./tools/review-screenshot.js";
 import { setAppMetadata, setAppPrice, setReviewContact } from "./tools/submission.js";
 import { setAppAvailability } from "./tools/availability.js";
 import { setupAppStoreSigning } from "./tools/signing.js";
+import { ascGuide } from "./tools/guide.js";
+import { runDoctor, formatDoctor } from "./doctor.js";
 import { discoverPrivateKey, runInit } from "./setup.js";
 
-const SERVER_VERSION = "1.6.0";
+const SERVER_VERSION = "1.8.0";
 
 function getConfig(): ASCConfig {
   // Auto-discover the .p8 in Apple's standard path so a dropped key + Issuer ID
-  // is enough — no need to hand-set ASC_KEY_ID / ASC_PRIVATE_KEY_PATH.
+  // is enough - no need to hand-set ASC_KEY_ID / ASC_PRIVATE_KEY_PATH.
   const discovered = discoverPrivateKey();
   const keyId = process.env.ASC_KEY_ID || discovered?.keyId;
   const issuerId = process.env.ASC_ISSUER_ID;
@@ -54,9 +56,9 @@ function getConfig(): ASCConfig {
       "Missing App Store Connect credentials.\n\n" +
         "Fastest path: run `asc-mcp init` (auto-detects your .p8, prints a paste-ready config).\n\n" +
         "Or set manually:\n" +
-        "  ASC_KEY_ID       — Your API key ID (auto-detected from a .p8 in ~/.appstoreconnect/private_keys)\n" +
-        "  ASC_ISSUER_ID    — Your team's issuer ID\n" +
-        "  ASC_PRIVATE_KEY_PATH — Path to your .p8 (auto-detected from the standard path)\n\n" +
+        "  ASC_KEY_ID       - Your API key ID (auto-detected from a .p8 in ~/.appstoreconnect/private_keys)\n" +
+        "  ASC_ISSUER_ID    - Your team's issuer ID\n" +
+        "  ASC_PRIVATE_KEY_PATH - Path to your .p8 (auto-detected from the standard path)\n\n" +
         "Create an API key at:\n" +
         "  https://appstoreconnect.apple.com/access/integrations/api",
     );
@@ -114,6 +116,37 @@ async function main() {
   }
 
   server.tool(
+    "asc_guide",
+    "START HERE. Returns the exact end-to-end playbook for an App Store task, with every manual ASC-website/Xcode step that no API can do flagged inline. Call with topic to orient before any multi-step flow. Free.",
+    {
+      topic: z
+        .enum([
+          "overview",
+          "setup",
+          "first-app",
+          "update",
+          "screenshots",
+          "iap",
+          "subscriptions",
+          "reviews",
+          "testflight",
+          "binary",
+          "limitations",
+        ])
+        .optional()
+        .describe("Which playbook. Omit for the overview + topic list."),
+    },
+    safe((args) => ascGuide(args)),
+  );
+
+  server.tool(
+    "asc_setup_check",
+    "Diagnose your setup: checks the .p8 key, Key ID, Issuer ID, a LIVE authenticated connection to App Store Connect, and your license tier. For anything wrong, returns the exact fix. Run this first if something isn't working. Free.",
+    {},
+    safe(async () => formatDoctor(await runDoctor())),
+  );
+
+  server.tool(
     "list_apps",
     "List all apps in your App Store Connect account with name, bundle ID, and platform.",
     { limit: z.number().optional().describe("Max apps to return (default 50, max 200)") },
@@ -129,7 +162,7 @@ async function main() {
 
   server.tool(
     "review_status",
-    "Check the current App Store review status — in review, waiting, approved, or rejected.",
+    "Check the current App Store review status - in review, waiting, approved, or rejected.",
     { app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID") },
     safe((args) => reviewStatus(client, args)),
   );
@@ -281,7 +314,7 @@ async function main() {
 
   server.tool(
     "update_version_metadata",
-    "Edit App Store metadata on the editable version: description, keywords, what's-new, promotional text, marketing/support URLs, plus app name and subtitle. Validates Apple character limits before writing. Pro feature.",
+    "Edit App Store metadata on the editable version: description, keywords, what's-new, promotional text, marketing/support/privacy-policy URLs, plus app name and subtitle. Validates Apple character limits before writing. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       locale: z.string().optional().describe("Locale to edit (e.g. en-US). Default: first/primary locale."),
@@ -312,7 +345,7 @@ async function main() {
 
   server.tool(
     "submit_for_review",
-    "Submit the editable version to Apple App Review. Outward-facing action: requires confirm:true. Pro feature.",
+    "Submit the editable version to Apple App Review. First submits any READY_TO_SUBMIT in-app purchases/subscriptions, then the version. If the app's FIRST in-app purchase is detected (which Apple requires be bundled with the version in the website), it ABORTS without submitting and returns the manual steps, so nothing is orphaned. Outward-facing action: requires confirm:true. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       platform: z.enum(["IOS", "MAC_OS", "TV_OS", "VISION_OS"]).optional().describe("Platform (default IOS)"),
@@ -446,7 +479,7 @@ async function main() {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       declarations: z
         .record(z.string(), z.union([z.string(), z.boolean()]))
-        .describe("Map of declaration key to value. Frequency keys take NONE/INFREQUENT_OR_MILD/FREQUENT_OR_INTENSE; capability keys take true/false."),
+        .describe("Map of declaration key to value. Frequency keys take NONE/INFREQUENT_OR_MILD/FREQUENT_OR_INTENSE (also INFREQUENT/FREQUENT for the few keys Apple uses those on); capability keys take true/false."),
     },
     safe((args) => setAgeRating(client, args, tier)),
   );
@@ -488,6 +521,8 @@ async function main() {
         .optional()
         .describe("Free-trial length. Omit for no trial."),
       locale: z.string().optional().describe("Localization locale (default en-US)"),
+      group_level: z.number().optional().describe("Rank within the group (1 = top tier; default 1). Higher-value plans get a lower number."),
+      family_sharable: z.boolean().optional().describe("Allow Family Sharing of this subscription (default false)."),
       review_note: z.string().optional().describe("Notes for App Review: how to reach the paywall, test instructions"),
     },
     safe((args) => createSubscription(client, args, tier)),
@@ -505,6 +540,7 @@ async function main() {
       type: z.enum(["NON_CONSUMABLE", "CONSUMABLE"]).describe("Purchase type"),
       price_usd: z.number().describe("USA price in dollars, e.g. 59.99"),
       locale: z.string().optional().describe("Localization locale (default en-US)"),
+      family_sharable: z.boolean().optional().describe("Allow Family Sharing of this purchase (default false)."),
       review_note: z.string().optional().describe("Notes for App Review: how to reach the paywall, test instructions"),
     },
     safe((args) => createIAP(client, args, tier)),
@@ -621,6 +657,8 @@ function dispatchCli(argv: string[]): number | null {
 Usage:
   asc-mcp                  Run as an MCP server on stdio (for Claude Desktop/Code).
   asc-mcp init             Auto-detect your .p8 and print a paste-ready MCP config.
+  asc-mcp init --write     Same, but write the config into your client file directly.
+  asc-mcp doctor           Diagnose setup: key, Issuer ID, live connection, license.
   asc-mcp install-skill    Install the asc-review-triage Claude Skill.
   asc-mcp uninstall-skill  Remove the asc-review-triage Claude Skill.
   asc-mcp version          Print version.
@@ -631,10 +669,20 @@ Usage:
 }
 
 if (process.argv[2] === "init") {
-  runInit()
+  runInit(process.argv.includes("--write"))
     .then((code) => process.exit(code))
     .catch((err) => {
       console.error("init failed:", err);
+      process.exit(1);
+    });
+} else if (process.argv[2] === "doctor") {
+  runDoctor()
+    .then((report) => {
+      console.log(formatDoctor(report));
+      process.exit(report.healthy ? 0 : 1);
+    })
+    .catch((err) => {
+      console.error("doctor failed:", err);
       process.exit(1);
     });
 } else {

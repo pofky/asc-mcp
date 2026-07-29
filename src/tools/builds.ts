@@ -1,6 +1,7 @@
 import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
+import { EDITABLE_VERSION_STATES as EDITABLE } from "../editable.js";
 
 interface BuildAttrs {
   version: string;
@@ -12,13 +13,6 @@ interface VersionAttrs {
   versionString: string;
   appStoreState: string;
 }
-
-const EDITABLE = new Set([
-  "PREPARE_FOR_SUBMISSION",
-  "DEVELOPER_REJECTED",
-  "REJECTED",
-  "METADATA_REJECTED",
-]);
 
 /** List recent builds for an app with their processing state. */
 export async function listBuilds(

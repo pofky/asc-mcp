@@ -107,8 +107,8 @@ function formatReviewState(state: string): string {
   const emoji: Record<string, string> = {
     WAITING_FOR_REVIEW: "Waiting for Review",
     IN_REVIEW: "In Review",
-    PENDING_APPLE_RELEASE: "Approved — Pending Release",
-    PENDING_DEVELOPER_RELEASE: "Approved — Pending Your Release",
+    PENDING_APPLE_RELEASE: "Approved - Pending Release",
+    PENDING_DEVELOPER_RELEASE: "Approved - Pending Your Release",
     READY_FOR_SALE: "Live",
     REJECTED: "Rejected",
     METADATA_REJECTED: "Metadata Rejected",

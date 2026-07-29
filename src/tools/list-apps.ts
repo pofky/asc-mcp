@@ -40,7 +40,7 @@ export async function listApps(
 
   const lines = apps.map(
     (app) =>
-      `- **${app.attributes.name}** (${app.attributes.bundleId}) — ID: ${app.id}`,
+      `- **${app.attributes.name}** (${app.attributes.bundleId}) - ID: ${app.id}`,
   );
 
   return `Found ${apps.length} app(s):\n\n${lines.join("\n")}`;

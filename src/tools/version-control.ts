@@ -1,6 +1,7 @@
 import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
+import { EDITABLE_VERSION_STATES as EDITABLE } from "../editable.js";
 
 interface VersionAttrs {
   versionString: string;
@@ -10,12 +11,6 @@ interface VersionAttrs {
 
 type Platform = "IOS" | "MAC_OS" | "TV_OS" | "VISION_OS";
 
-const EDITABLE = new Set([
-  "PREPARE_FOR_SUBMISSION",
-  "DEVELOPER_REJECTED",
-  "REJECTED",
-  "METADATA_REJECTED",
-]);
 
 /**
  * Apple does not let the API bundle an app's FIRST in-app purchases with the
@@ -31,7 +26,7 @@ function firstIapGuidance(appId: string, products: string[]): string {
     `1. Open https://appstoreconnect.apple.com/apps/${appId}/appstore\n` +
     `2. Open the editable version (1.0).\n` +
     `3. In the "In-App Purchases and Subscriptions" section, select: ${products.join(", ")}.\n` +
-    `4. Click "Add for Review", then "Submit for Review" — version + products go together.\n\n` +
+    `4. Click "Add for Review", then "Submit for Review" - version + products go together.\n\n` +
     "After this first release is live, future IAPs can be submitted via the API."
   );
 }
@@ -135,7 +130,7 @@ export async function submitForReview(
       return null;
     } catch (err) {
       if (err instanceof ASCAPIError && FIRST_IAP_BLOCK.test(err.body)) return "first-iap-block";
-      return null; // already submitted / not eligible — skip
+      return null; // already submitted / not eligible - skip
     }
   };
 

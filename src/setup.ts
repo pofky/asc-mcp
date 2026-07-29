@@ -1,4 +1,4 @@
-import { readdirSync, existsSync } from "node:fs";
+import { readdirSync, existsSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
@@ -30,6 +30,43 @@ export function discoverPrivateKey(dir = STANDARD_KEY_DIR): DiscoveredKey | null
   return { path: join(dir, match), keyId };
 }
 
+/** Known client MCP config files, in the order we offer them. */
+function clientConfigCandidates(): { label: string; path: string }[] {
+  const home = homedir();
+  return [
+    {
+      label: "Claude Desktop",
+      path: join(home, "Library", "Application Support", "Claude", "claude_desktop_config.json"),
+    },
+    { label: "Claude Code (global)", path: join(home, ".claude.json") },
+    { label: "Project-local (.mcp.json in this folder)", path: join(process.cwd(), ".mcp.json") },
+  ];
+}
+
+/**
+ * Merge the asc-mcp server block into an existing client config file without
+ * clobbering other servers. Backs up the original to <path>.bak first. Returns a
+ * status line for the user.
+ */
+function writeServerBlock(path: string, env: Record<string, string>): string {
+  let existing: Record<string, unknown> = {};
+  if (existsSync(path)) {
+    try {
+      existing = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+    } catch {
+      return `Could not parse ${path} (not valid JSON). Left it untouched; paste the block manually.`;
+    }
+    copyFileSync(path, `${path}.bak`);
+  }
+  const servers = (existing.mcpServers as Record<string, unknown>) ?? {};
+  servers["appstore-connect"] = { command: "asc-mcp", env };
+  existing.mcpServers = servers;
+  writeFileSync(path, JSON.stringify(existing, null, 2) + "\n");
+  return existsSync(`${path}.bak`)
+    ? `Wrote ${path} (backup at ${path}.bak). Restart the client.`
+    : `Created ${path}. Restart the client.`;
+}
+
 function prompt(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
@@ -45,7 +82,7 @@ function prompt(question: string): Promise<string> {
  * (and optional license key), then print a paste-ready MCP server config.
  * Writes nothing to disk; the user pastes the block into their client config.
  */
-export async function runInit(): Promise<number> {
+export async function runInit(write = false): Promise<number> {
   process.stdout.write("\nApp Store Connect MCP setup\n");
   process.stdout.write("─".repeat(40) + "\n\n");
 
@@ -95,14 +132,44 @@ export async function runInit(): Promise<number> {
     },
   };
 
-  process.stdout.write(
-    "\nDone. Paste this into ~/.claude/settings.json (or your client's MCP config):\n\n",
-  );
-  process.stdout.write(JSON.stringify(config, null, 2) + "\n\n");
+  let wrote = false;
+  if (write) {
+    const candidates = clientConfigCandidates();
+    process.stdout.write("\nWhich client config should I write to?\n");
+    candidates.forEach((c, i) => {
+      const exists = existsSync(c.path) ? " (exists)" : "";
+      process.stdout.write(`  ${i + 1}. ${c.label}: ${c.path}${exists}\n`);
+    });
+    process.stdout.write("  0. Skip (just print the block)\n");
+    const choice = await prompt("Choice [0]: ");
+    const idx = parseInt(choice, 10);
+    if (idx >= 1 && idx <= candidates.length) {
+      const status = writeServerBlock(candidates[idx - 1].path, env);
+      process.stdout.write(`\n${status}\n`);
+      wrote = true;
+    }
+  }
+
+  if (!wrote) {
+    process.stdout.write(
+      "\nDone. Paste this into your client's MCP config (e.g. Claude Desktop config, or ~/.claude.json):\n\n",
+    );
+    process.stdout.write(JSON.stringify(config, null, 2) + "\n\n");
+  }
   process.stdout.write(
     licenseKey
       ? "Pro license set, all control tools unlocked.\n"
       : "Free tier (read-only). Add ASC_LICENSE_KEY later to unlock write/control tools.\n",
+  );
+
+  process.stdout.write(
+    "\nNext steps:\n" +
+      (wrote
+        ? "  1. Restart your MCP client.\n"
+        : "  1. Paste the block above, then restart your MCP client.\n") +
+      "  2. Ask your agent to run `asc_setup_check` (or `asc-mcp doctor`) to confirm everything is wired.\n" +
+      "  3. Then `list_apps`, and `asc_guide` (topic:overview) for the map of every flow.\n" +
+      "  4. Optional: `asc-mcp install-skill` adds the bundled review-triage Claude Skill.\n",
   );
   return 0;
 }

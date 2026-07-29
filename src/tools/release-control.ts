@@ -54,8 +54,9 @@ const PHASED_STATE: Record<PhasedAction, string> = {
 };
 
 /**
- * Control the 7-day phased rollout for the most recent version that has one
- * (or start a new phased release on the editable/approved version).
+ * Control the 7-day phased rollout for the version that is releasing or live
+ * (PENDING_DEVELOPER_RELEASE or READY_FOR_SALE), or start a new phased release
+ * on it.
  */
 export async function managePhasedRelease(
   client: ASCClient,
@@ -70,7 +71,12 @@ export async function managePhasedRelease(
     { "fields[appStoreVersions]": "versionString,appStoreState", limit: "5" },
   );
   const versions = Array.isArray(versionsRes.data) ? versionsRes.data : [versionsRes.data];
-  const version = versions[0];
+  // Phased release only applies to a version that is releasing or live. Prefer
+  // one in those states rather than blindly taking versions[0] (the API does
+  // not guarantee ordering); fall back to the first version if none match.
+  const PHASED_TARGET = ["PENDING_DEVELOPER_RELEASE", "READY_FOR_SALE"];
+  const version =
+    versions.find((v) => PHASED_TARGET.includes(v.attributes.appStoreState)) ?? versions[0];
   if (!version) return "No version found.";
 
   // Look up existing phased release on this version.

@@ -58,15 +58,15 @@ export default {
       }
 
       if (url.pathname === "/validate" && request.method === "POST") {
-        return handleValidate(request, env, corsHeaders);
+        return await handleValidate(request, env, corsHeaders);
       }
 
       if (url.pathname === "/webhook/polar" && request.method === "POST") {
-        return handlePolarWebhook(request, env, corsHeaders);
+        return await handlePolarWebhook(request, env, corsHeaders);
       }
 
       if (url.pathname === "/admin/provision" && request.method === "POST") {
-        return handleAdminProvision(request, env, corsHeaders);
+        return await handleAdminProvision(request, env, corsHeaders);
       }
 
       if (url.pathname === "/success") {
@@ -78,7 +78,7 @@ export default {
       }
 
       if (url.pathname === "/key" && request.method === "POST") {
-        return handleKeyLookup(request, env, corsHeaders);
+        return await handleKeyLookup(request, env, corsHeaders);
       }
 
       if (url.pathname === "/privacy") {
@@ -90,7 +90,7 @@ export default {
       }
 
       if (url.pathname === "/delete" && request.method === "POST") {
-        return handleDeleteRequest(request, env, corsHeaders);
+        return await handleDeleteRequest(request, env, corsHeaders);
       }
 
       if (url.pathname === "/delete" && request.method === "GET") {

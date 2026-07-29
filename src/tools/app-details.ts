@@ -73,9 +73,9 @@ export async function appDetails(
     result += `### Recent Versions\n\n`;
     for (const v of versions) {
       const state = formatState(v.attributes.appStoreState);
-      result += `- **v${v.attributes.versionString}** (${v.attributes.platform}) — ${state}`;
+      result += `- **v${v.attributes.versionString}** (${v.attributes.platform}) - ${state}`;
       if (v.attributes.createdDate) {
-        result += ` — created ${v.attributes.createdDate.split("T")[0]}`;
+        result += ` - created ${v.attributes.createdDate.split("T")[0]}`;
       }
       result += "\n";
     }

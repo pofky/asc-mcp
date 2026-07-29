@@ -24,6 +24,42 @@ const APP_ID_SCHEMA = z
 export function registerPrompts(server: McpServer): PromptRegistration[] {
   const registered: PromptRegistration[] = [];
 
+  const start = server.registerPrompt(
+    "asc-start",
+    {
+      title: "Get started (new users start here)",
+      description:
+        "Zero-to-oriented for a first-time user: verifies the connection with asc_setup_check, lists your apps, explains what this MCP can and cannot do, and recommends the right next step for your situation. No App Store Connect knowledge assumed.",
+    },
+    () => ({
+      description: "Onboarding for a new asc-mcp user",
+      messages: [
+        {
+          role: "user" as const,
+          content: {
+            type: "text" as const,
+            text: [
+              "I'm new to this App Store Connect MCP. Get me oriented. Do this in order and keep it friendly and concise:",
+              "",
+              "1. Call `asc_setup_check`. If anything is [FAIL], stop and walk me through the printed fix (most often a wrong Issuer ID or a missing license). Do not continue until the connection is OK.",
+              "2. Call `list_apps` and show me my apps with their IDs.",
+              "3. Call `asc_guide` with `topic: \"overview\"` and summarize, in plain language, the 3 to 4 things I'm most likely to want: ship a first app, ship an update, handle reviews, manage IAP/subscriptions.",
+              "4. Tell me clearly what is FREE (reading: apps, reviews, status, guide) versus PRO (anything that writes: editing metadata, screenshots, builds, submit, IAP/subs) so I know when a paywall will appear and why.",
+              "5. Recommend ONE concrete next step based on what you saw: if I have a live app, offer a `release_preflight` or weekly review; if I have a draft app, point me at `asc_guide topic:first-app`; if I have no apps, tell me an app record must be created in the website first.",
+              "",
+              "Never assume I know App Store Connect jargon. Define terms the first time you use them.",
+            ].join("\n"),
+          },
+        },
+      ],
+    }),
+  );
+  registered.push({
+    name: "asc-start",
+    title: start.title ?? "",
+    description: start.description ?? "",
+  });
+
   const weekly = server.registerPrompt(
     "asc-weekly-review",
     {
@@ -183,6 +219,49 @@ export function registerPrompts(server: McpServer): PromptRegistration[] {
     name: "asc-ship-release",
     title: ship.title ?? "",
     description: ship.description ?? "",
+  });
+
+  const firstApp = server.registerPrompt(
+    "asc-first-app",
+    {
+      title: "Ship a brand-new app's first release (1.0)",
+      description:
+        "Drive a never-released app from an existing app record to submitted 1.0, handling every first-time-only Apple constraint and stopping at each manual ASC-website step (privacy label, trader status, first IAPs). Calls asc_guide first, then the metadata/pricing/age/contact/build/screenshot/preflight chain. Pro feature.",
+      argsSchema: { app_id: APP_ID_SCHEMA },
+    },
+    ({ app_id }) => ({
+      description: `First release for app ${app_id}`,
+      messages: [
+        {
+          role: "user" as const,
+          content: {
+            type: "text" as const,
+            text: [
+              `Ship the FIRST release (1.0) for App Store Connect app ${app_id}. This is the hardest flow because of first-time-only Apple constraints. Follow this exactly and STOP at every MANUAL step to hand me the deep link and wait, and before any outward-facing call (submit, upload, release):`,
+              "",
+              "1. Call `asc_guide` with `topic: \"first-app\"` and follow that playbook as the source of truth. Re-read it if you get confused mid-flow.",
+              `2. Call \`app_details\` with \`app_id: "${app_id}"\`. If the app record does not exist, STOP: it must be created in the ASC website (POST /v1/apps is forbidden for API keys).`,
+              `3. Set up submission basics: \`set_app_metadata\` (category, copyright, content rights, export compliance), \`set_app_price\`, \`set_app_availability\`, \`set_age_rating\` (pass only the declarations that apply), \`set_review_contact\`.`,
+              "4. `update_version_metadata` for description/keywords/promo/URLs/name/subtitle. Expect what's-new to be dropped on a 1.0 (no prior release); that is normal.",
+              "5. Ensure a VALID build is attached: `list_builds`, then `attach_build`. If none exists, drive the binary flow (asc_guide topic:binary) or tell me to upload one.",
+              "6. `upload_screenshots` for each display type I provide.",
+              "7. MANUAL: run `set_privacy_nutrition` and `set_eu_trader_status`, give me the deep links, and WAIT for me to confirm I set them in the website.",
+              "8. If the app has in-app purchases or subscriptions, create them (`create_iap` / `create_subscription` + `set_iap_review_screenshot`). Then MANUAL: the FIRST products must be submitted WITH the version in the ASC website. Give me those steps and do NOT try to submit the version alone.",
+              `9. Call \`release_preflight\` with \`app_id: "${app_id}"\` and fix every FAIL before continuing.`,
+              "10. Only after I confirm (and only if no first-IAP block applies), call `submit_for_review` with `confirm: true`.",
+              "11. After approval, ask whether to `release_version` (confirm:true) or `manage_phased_release` start.",
+              "",
+              "Never fake a manual step. If the API can't do something, hand me the exact website steps and the deep link, then wait.",
+            ].join("\n"),
+          },
+        },
+      ],
+    }),
+  );
+  registered.push({
+    name: "asc-first-app",
+    title: firstApp.title ?? "",
+    description: firstApp.description ?? "",
   });
 
   return registered;

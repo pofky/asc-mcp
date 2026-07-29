@@ -79,7 +79,7 @@ export async function setAgeRating(
     if (FREQUENCY_KEYS.has(key)) {
       const v = String(value).toUpperCase();
       if (!FREQUENCY_VALUES.has(v)) {
-        bad.push(`${key}: "${value}" (use NONE, INFREQUENT_OR_MILD, or FREQUENT_OR_INTENSE)`);
+        bad.push(`${key}: "${value}" (use NONE, INFREQUENT_OR_MILD, or FREQUENT_OR_INTENSE; a few keys also accept INFREQUENT or FREQUENT)`);
         continue;
       }
       attributes[key] = v;
