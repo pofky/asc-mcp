@@ -1,7 +1,17 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
-**Productization pass v1.7.0 (2026-06-30).** Glasyn was approved, validating the full flow. Turned
+**Shipped v1.8.0 to npm + customer #4 verified (2026-07-29).** New Pro buyer
+(knuesel.michael@gmail.com, sub 088dbba4) provisioned correctly: D1 row active, key emailed via
+Brevo, /validate returns pro, /key recovery returns the key. Found the real gap: npm `latest` was
+still 1.3.0 from 2026-04-15, so paying customers got 13 tools instead of 40. Committed master
+(ced1419) and published 1.8.0. Verified from a clean install: 40 tools, 6 prompts, all 11 asc_guide
+topics, both new prompts, asc_setup_check live-authenticated, list_apps returned all 9 apps.
+Worker: fixed un-awaited handlers (bad JSON body to /key returned CF error 1101 instead of a 500),
+added admin-guarded /admin/announce (ANNOUNCE_TOKEN secret, recipient must exist in licenses),
+and emailed the customer the update instructions.
+
+### Prior: **Productization pass v1.7.0 (2026-06-30).** Glasyn was approved, validating the full flow. Turned
 the control plane from a proven-but-raw surface into a premium, self-navigating tool for indie devs
 driving it through an agent.
 
