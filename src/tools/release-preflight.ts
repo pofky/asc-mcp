@@ -1,4 +1,5 @@
 import type { ASCClient } from "../client.js";
+import { fetchAppInfos, pickAuditAppInfo } from "../app-info.js";
 import type { Tier } from "../types.js";
 
 interface VersionAttributes {
@@ -337,12 +338,13 @@ export async function releasePreflight(
 
   // 5b. Age rating configured (a fresh app has all content declarations null).
   try {
-    const infoRes = await client.get<Record<string, never>>(
-      `/v1/apps/${args.app_id}/appInfos`,
-      { include: "ageRatingDeclaration", limit: "1" },
-    );
-    const included = (infoRes as { included?: Array<{ type: string; attributes?: Record<string, unknown> }> }).included;
-    const ard = included?.find((x) => x.type === "ageRatingDeclarations")?.attributes ?? {};
+    const { infos, included } = await fetchAppInfos(client, args.app_id, {
+      include: "ageRatingDeclaration",
+    });
+    const auditInfo = pickAuditAppInfo(infos);
+    const ardId = auditInfo?.raw.relationships?.ageRatingDeclaration?.data?.id;
+    const ard =
+      included?.find((x) => x.type === "ageRatingDeclarations" && (!ardId || x.id === ardId))?.attributes ?? {};
     const declared = Object.entries(ard).filter(
       ([k, v]) => v !== null && v !== undefined && !/^(ageRatingOverride|koreaAgeRatingOverride)/.test(k),
     );
@@ -357,11 +359,11 @@ export async function releasePreflight(
 
   // 5c. Privacy policy URL (app-level localization).
   try {
-    const appInfoRes = await client.get<Record<string, never>>(`/v1/apps/${args.app_id}/appInfos`, { limit: "1" });
-    const appInfo = Array.isArray(appInfoRes.data) ? appInfoRes.data[0] : appInfoRes.data;
+    const { infos } = await fetchAppInfos(client, args.app_id);
+    const appInfo = pickAuditAppInfo(infos);
     if (appInfo) {
       const ilRes = await client.get<{ locale: string; privacyPolicyUrl: string | null }>(
-        `/v1/appInfos/${(appInfo as { id: string }).id}/appInfoLocalizations`,
+        `/v1/appInfos/${appInfo.id}/appInfoLocalizations`,
         { "fields[appInfoLocalizations]": "locale,privacyPolicyUrl", limit: "30" },
       );
       const ils = (Array.isArray(ilRes.data) ? ilRes.data : [ilRes.data]).filter(Boolean);
@@ -411,8 +413,9 @@ export async function releasePreflight(
   let hasBuild = false;
   const editableForSubmit = ["PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED"].includes(versionState);
   try {
-    const infoRes = await client.get<Record<string, never>>(`/v1/apps/${args.app_id}/appInfos`, { include: "primaryCategory", limit: "1" });
-    const inc = (infoRes as { included?: Array<{ type: string }> }).included ?? [];
+    const { included: inc = [] } = await fetchAppInfos(client, args.app_id, {
+      include: "primaryCategory",
+    });
     checks.push(
       inc.some((x) => x.type === "appCategories")
         ? { status: "pass", message: "Primary category set." }

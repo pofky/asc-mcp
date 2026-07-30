@@ -2,6 +2,7 @@ import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
 import { EDITABLE_VERSION_STATES as EDITABLE } from "../editable.js";
+import { fetchAppInfos, pickEditableAppInfo, noEditableAppInfoMessage } from "../app-info.js";
 
 /**
  * PATCH a localization, but survive Apple's atomic-PATCH gotcha: a single
@@ -115,6 +116,7 @@ export async function updateVersionMetadata(
     `/v1/apps/${args.app_id}/appStoreVersions`,
     { "fields[appStoreVersions]": "versionString,appStoreState,platform", limit: "5" },
   );
+  let appInfoNote = "";
   const versions = Array.isArray(versionsRes.data) ? versionsRes.data : [versionsRes.data];
   const editable = versions.find((v) => EDITABLE.has(v.attributes.appStoreState));
   if (!editable) {
@@ -168,12 +170,18 @@ export async function updateVersionMetadata(
 
   // 3. App-level localization fields (name, subtitle, privacyPolicyUrl) live on appInfoLocalizations.
   if (args.name !== undefined || args.subtitle !== undefined || args.privacy_policy_url !== undefined) {
-    const appInfoRes = await client.get<Record<string, never>>(
-      `/v1/apps/${args.app_id}/appInfos`,
-      { limit: "1" },
-    );
-    const appInfo = Array.isArray(appInfoRes.data) ? appInfoRes.data[0] : appInfoRes.data;
-    if (appInfo) {
+    const { infos } = await fetchAppInfos(client, args.app_id);
+    const appInfo = pickEditableAppInfo(infos);
+    if (!appInfo) {
+      // Do not attempt the write: patching the live appInfo returns 409 and
+      // takes the whole call down with it.
+      const fields = [
+        args.name !== undefined ? "name" : null,
+        args.subtitle !== undefined ? "subtitle" : null,
+        args.privacy_policy_url !== undefined ? "privacy_policy_url" : null,
+      ].filter(Boolean) as string[];
+      appInfoNote = "\n\n" + noEditableAppInfoMessage(infos, fields.join(", "));
+    } else {
       const infoLocsRes = await client.get<AppInfoLocAttrs>(
         `/v1/appInfos/${appInfo.id}/appInfoLocalizations`,
         { "fields[appInfoLocalizations]": "locale,name,subtitle", limit: "50" },
@@ -187,10 +195,20 @@ export async function updateVersionMetadata(
         if (args.name !== undefined) attrs.name = args.name;
         if (args.subtitle !== undefined) attrs.subtitle = args.subtitle;
         if (args.privacy_policy_url !== undefined) attrs.privacyPolicyUrl = args.privacy_policy_url;
-        await client.patch(`/v1/appInfoLocalizations/${iloc.id}`, {
-          data: { type: "appInfoLocalizations", id: iloc.id, attributes: attrs },
-        });
-        changes.push(...Object.keys(attrs).map((f) => `${f} (${iloc.attributes.locale ?? targetLocale})`));
+        // Even on the editable record a single locked attribute 409s and takes
+        // the whole PATCH with it. Report it instead of throwing away the
+        // version-level fields that already landed.
+        try {
+          await client.patch(`/v1/appInfoLocalizations/${iloc.id}`, {
+            data: { type: "appInfoLocalizations", id: iloc.id, attributes: attrs },
+          });
+          changes.push(...Object.keys(attrs).map((f) => `${f} (${iloc.attributes.locale ?? targetLocale})`));
+        } catch (err) {
+          if (!(err instanceof ASCAPIError) || err.status !== 409) throw err;
+          appInfoNote =
+            `\n\nApple refused the app-level fields (${Object.keys(attrs).join(", ")}) on appInfo ` +
+            `${appInfo.id} (state ${appInfo.state ?? "unknown"}): ${err.body.slice(0, 200)}`;
+        }
       }
     }
   }
@@ -203,13 +221,15 @@ export async function updateVersionMetadata(
   if (!changes.length) {
     return (
       "No metadata fields were applied." +
-      (skipped.length ? skipNote : " No fields were provided.")
+      (skipped.length ? skipNote : appInfoNote ? "" : " No fields were provided.") +
+      appInfoNote
     );
   }
   return (
     `Updated version ${editable.attributes.versionString} (${editable.attributes.appStoreState}):\n` +
     changes.map((c) => `- ${c}`).join("\n") +
     skipNote +
+    appInfoNote +
     `\n\nRun release_preflight to validate, then submit_for_review when ready.`
   );
 }
