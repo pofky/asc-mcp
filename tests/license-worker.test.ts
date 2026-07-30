@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   computeActiveFlag,
   classifyPolarEvent,
+  isLicenseUsable,
+  GRACE_DAYS,
 } from "../license-worker/src/index.js";
 
 // Regression coverage for the bug that twice left paying customers at
@@ -52,5 +54,49 @@ describe("classifyPolarEvent", () => {
   it("ignores unrelated events", () => {
     expect(classifyPolarEvent("order.created")).toBe("ignore");
     expect(classifyPolarEvent("checkout.created")).toBe("ignore");
+  });
+});
+
+// A renewal reaches us as subscription.updated. If that webhook is late or
+// dropped, the stored expiry is already in the past and a paying customer gets
+// demoted mid-session. Grace covers our own plumbing, not unpaid time.
+describe("isLicenseUsable", () => {
+  const future = "2026-12-01T00:00:00Z";
+  const now = new Date("2026-07-30T12:00:00Z");
+
+  it("validates a live subscription", () => {
+    expect(isLicenseUsable({ expires_at: future, active: 1 }, now)).toEqual({ usable: true });
+  });
+
+  it("validates a licence with no expiry set", () => {
+    expect(isLicenseUsable({ expires_at: null, active: 1 }, now)).toEqual({ usable: true });
+  });
+
+  it("keeps a just-expired licence usable through the grace window, flagged", () => {
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    expect(isLicenseUsable({ expires_at: yesterday, active: 1 }, now)).toEqual({
+      usable: true,
+      grace: true,
+    });
+  });
+
+  it("stops validating once the grace window closes", () => {
+    const longGone = new Date(now.getTime() - (GRACE_DAYS + 1) * 24 * 60 * 60 * 1000).toISOString();
+    expect(isLicenseUsable({ expires_at: longGone, active: 1 }, now)).toEqual({
+      usable: false,
+      reason: "expired",
+    });
+  });
+
+  it("never validates a revoked licence, even inside the grace window", () => {
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    expect(isLicenseUsable({ expires_at: yesterday, active: 0 }, now)).toEqual({
+      usable: false,
+      reason: "inactive",
+    });
+  });
+
+  it("ignores an unparseable expiry rather than locking a customer out", () => {
+    expect(isLicenseUsable({ expires_at: "not-a-date", active: 1 }, now)).toEqual({ usable: true });
   });
 });

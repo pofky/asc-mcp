@@ -11,7 +11,7 @@ export const salesReportDefinition = {
       vendor_number: {
         type: "string",
         description:
-          "Your vendor number (found in App Store Connect under Payments and Financial Reports > Vendor ID).",
+          "Your vendor number, 8 to 9 digits, from App Store Connect > Sales and Trends (or Payments and Financial Reports > Vendor ID). Omit it and the tool tells you where to look.",
       },
       frequency: {
         type: "string",
@@ -24,13 +24,13 @@ export const salesReportDefinition = {
           "Report date in YYYY-MM-DD format. For WEEKLY reports, use any date in the desired week. For MONTHLY, use YYYY-MM. Default: yesterday.",
       },
     },
-    required: ["vendor_number"],
+    required: [],
   },
 };
 
 export async function salesReport(
   client: ASCClient,
-  args: { vendor_number: string; frequency?: string; report_date?: string },
+  args: { vendor_number?: string; frequency?: string; report_date?: string },
   tier: Tier,
 ): Promise<string> {
   if (tier !== "pro") {
@@ -38,6 +38,19 @@ export async function salesReport(
       "Sales reports require a Pro license ($9/mo).\n" +
       "Get your license at: https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu\n\n" +
       "Set ASC_LICENSE_KEY in your MCP server config to unlock."
+    );
+  }
+
+  // An agent cannot discover the vendor number: it is only shown in the ASC
+  // website. Say where it is instead of failing schema validation, which used to
+  // surface as a raw zod dump.
+  if (!args.vendor_number) {
+    return (
+      "Need your vendor number first. Find it in App Store Connect > Sales and Trends, " +
+      "top-left account picker (or Payments and Financial Reports > Vendor ID). " +
+      "It is 8 to 9 digits, the same for every app in the account, and worth saving: " +
+      "https://appstoreconnect.apple.com/trends\n\n" +
+      "Then call sales_report again with vendor_number set."
     );
   }
 

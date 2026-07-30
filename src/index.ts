@@ -41,7 +41,7 @@ import { ascGuide } from "./tools/guide.js";
 import { runDoctor, formatDoctor } from "./doctor.js";
 import { discoverPrivateKey, runInit } from "./setup.js";
 
-const SERVER_VERSION = "1.8.1";
+const SERVER_VERSION = "1.8.2";
 
 const MISSING_CREDS_MESSAGE =
   "Missing App Store Connect credentials.\n\n" +
@@ -221,7 +221,8 @@ async function main() {
     "sales_report",
     "Download sales/downloads summary. Shows units, proceeds, territory. Pro feature.",
     {
-      vendor_number: z.string().describe("Vendor number from Payments and Financial Reports"),
+      vendor_number: z.string().optional()
+        .describe("Vendor number (8-9 digits) from App Store Connect > Sales and Trends. Omit to be told where to find it."),
       frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).optional()
         .describe("Report frequency (default: DAILY)"),
       report_date: z.string().optional()
