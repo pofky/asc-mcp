@@ -1,4 +1,4 @@
-# Reply draft: Michael Knuesel, appInfo 409 (v1.8.2)
+# Reply draft: Michael Knuesel, appInfo 409 (reported against v1.8.2, fixed in v1.8.5)
 
 Not sent. Send from your mail client, or via `POST /admin/announce` with the ANNOUNCE_TOKEN
 secret (recipient must exist in the licenses table, which he does).
@@ -10,9 +10,9 @@ secret (recipient must exist in the licenses table, which he does).
 Hi Michael,
 
 Your diagnosis was exactly right, and thank you for writing it up that precisely. It is
-fixed in v1.8.3, on npm now:
+fixed. Please update:
 
-    npx @pofky/asc-mcp@latest --version   # 1.8.3
+    npx @pofky/asc-mcp@latest --version   # 1.8.5
 
 What I confirmed before changing anything: one of my own apps returns two appInfos,
 READY_FOR_SALE first and then the pending one, and patching that first record reproduces your
