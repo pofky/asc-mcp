@@ -1,6 +1,41 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**v1.8.4, live sweep of every write path (2026-07-30).** Ran all 40 tools against the real
+account: confirm guardrails, free-tier gating, instruction-only tools, reads on both a live and
+a draft app, reversible writes (read back and restored), and wrong-input paths. 5 of 25 checks
+failed; all five fixed, sweep now 25/25.
+
+- **set_app_availability was broken outright.** Create rejected any territory subset: Apple
+  requires a territoryAvailability for every territory and returns one 409 per missing one
+  ("expects an included resource with type 'territories' and id 'JOR'"), so it now sends all
+  175 with the choice in each `available` flag. Update PATCHed
+  `/v2/territoryAvailabilities/{id}`, which 404s because the rows are **v1** resources.
+  Probed the alternatives to be sure: `PATCH /v2/appAvailabilities/{id}` is 403 (CREATE and
+  GET_INSTANCE only), re-POST is 409, `/v1/apps/{id}/relationships/availableTerritories` does
+  not exist, `PATCH /v1/territoryAvailabilities/{id}` works. Verified live: all 175 on,
+  narrow to 3, back to 175, each state read back. `availableInNewTerritories` is create-only
+  and the tool now says so instead of swallowing a failed PATCH.
+- **409 hints were misleading.** Apple uses 409 both for state conflicts and for rejected
+  attribute values, so a bad phone format told the user to check their version state. The hint
+  now names the field from Apple's error pointer.
+- create_version threw Apple's raw 409; it now separates "version number already used" from
+  "a version is still open", which need different actions.
+- create_iap crashed with a TypeError on missing args; it names them.
+- list_builds said "no builds found" for a nonexistent app_id (filter[app] returns an empty
+  list, not a 404); it now checks whether the app exists.
+
+105 tests. Test app (Adaptale) left clean: availability back to 175/175, copyright restored to
+null, build 1 attached (its only build, normal for a draft), review contact set to the real
+owner name since the field was empty before the sweep and Apple needs one before submission.
+
+Still not exercised live, and honestly unverified since June: build_and_archive and
+upload_binary (need a full Xcode build), the TestFlight write calls (assign_build_to_group,
+invite_beta_tester), create_iap/create_subscription success paths (they create real products
+that cannot be cleanly deleted), setup_app_store_signing (creates certificates/profiles), and
+submit_for_review/release_version with confirm (outward-facing). The June 2026 Glasyn ship
+exercised all of those live.
+
 **v1.8.3, customer-reported appInfo bug (2026-07-30, same day as the report).**
 Michael Knuesel (the active Pro customer) reported that update_version_metadata's
 name/subtitle writes 409 for an app that already has a release, and diagnosed it correctly: an
