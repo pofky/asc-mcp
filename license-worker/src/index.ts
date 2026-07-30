@@ -128,18 +128,48 @@ async function handleValidate(
     .bind(body.key)
     .first<{ tier: string; expires_at: string | null; active: number }>();
 
-  if (!row || !row.active) {
+  if (!row) {
     return json({ valid: false, tier: "free" }, headers);
   }
 
-  if (row.expires_at && new Date(row.expires_at) < new Date()) {
-    return json({ valid: false, tier: "free", reason: "expired" }, headers);
+  const verdict = isLicenseUsable(row, new Date());
+  if (!verdict.usable) {
+    return json({ valid: false, tier: "free", reason: verdict.reason }, headers);
   }
 
   return json(
-    { valid: true, tier: row.tier, expires: row.expires_at },
+    { valid: true, tier: row.tier, expires: row.expires_at, ...(verdict.grace ? { grace: true } : {}) },
     headers,
   );
+}
+
+/**
+ * Renewals reach us as a `subscription.updated` webhook that pushes
+ * `expires_at` to the new period end. If that delivery is late or dropped, the
+ * old expiry is already in the past and a customer who paid gets demoted to the
+ * free tier mid-session. Polar's own dunning runs for days, so a few days of
+ * grace costs nothing and prevents a support ticket, or a cancellation, over
+ * our own webhook plumbing.
+ *
+ * Exported for regression tests.
+ */
+export const GRACE_DAYS = 4;
+
+export function isLicenseUsable(
+  row: { expires_at: string | null; active: number },
+  now: Date,
+): { usable: boolean; reason?: string; grace?: boolean } {
+  if (!row.active) return { usable: false, reason: "inactive" };
+  if (!row.expires_at) return { usable: true };
+
+  const expiry = new Date(row.expires_at);
+  if (Number.isNaN(expiry.getTime())) return { usable: true };
+  if (expiry >= now) return { usable: true };
+
+  const graceEnds = new Date(expiry.getTime() + GRACE_DAYS * 24 * 60 * 60 * 1000);
+  if (now <= graceEnds) return { usable: true, grace: true };
+
+  return { usable: false, reason: "expired" };
 }
 
 const ACTIVE_EVENTS = new Set([
@@ -147,10 +177,15 @@ const ACTIVE_EVENTS = new Set([
   "subscription.updated",
   "subscription.active",
 ]);
+// In Polar, `subscription.canceled` means "will not renew": the customer keeps
+// access until the period they already paid for ends. Only `revoked` means
+// access ends now. Treating both as immediate revocation took away time
+// customers had paid for, which is the one thing a licence server must not do.
 const CANCEL_EVENTS = new Set([
   "subscription.canceled",
   "subscription.revoked",
 ]);
+const IMMEDIATE_REVOKE_EVENTS = new Set(["subscription.revoked"]);
 // Statuses that mean the subscription is NOT usable even though an
 // active-type event fired. Anything else (active, trialing, past_due,
 // incomplete, or absent) is treated as active so a paying customer is
@@ -257,13 +292,28 @@ async function handlePolarWebhook(
   }
 
   if (CANCEL_EVENTS.has(event.type)) {
-    await env.DB.prepare(
-      "UPDATE licenses SET active = 0 WHERE polar_subscription_id = ?",
-    )
-      .bind(event.data.id)
-      .run();
+    if (IMMEDIATE_REVOKE_EVENTS.has(event.type)) {
+      await env.DB.prepare(
+        "UPDATE licenses SET active = 0 WHERE polar_subscription_id = ?",
+      )
+        .bind(event.data.id)
+        .run();
+      return json({ ok: true }, headers);
+    }
 
-    return json({ ok: true }, headers);
+    // Scheduled cancellation: leave the licence usable and let the paid period
+    // run out. Refresh the expiry if Polar sent one, so it ends exactly when
+    // the customer's paid time does.
+    const endsAt = event.data.current_period_end || null;
+    if (endsAt) {
+      await env.DB.prepare(
+        "UPDATE licenses SET expires_at = ? WHERE polar_subscription_id = ?",
+      )
+        .bind(endsAt, event.data.id)
+        .run();
+    }
+
+    return json({ ok: true, note: "cancellation scheduled, access kept until period end" }, headers);
   }
 
   return json({ ok: true }, headers);
