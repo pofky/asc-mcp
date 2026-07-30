@@ -170,6 +170,11 @@ footer{border-top:1px solid var(--line);padding:34px 0 54px;color:var(--dim);fon
 footer a{color:var(--muted)}
 .foot-links{display:flex;flex-wrap:wrap;gap:0 18px;font-family:var(--mono);font-size:.78rem;margin-bottom:10px}
 .foot-links a{display:inline-flex;align-items:center;min-height:44px}
+@media(max-width:560px){
+  .top{gap:0 14px}
+  .ver{display:none}
+  header.hero{padding:10px 0 48px}
+}
 @media(prefers-reduced-motion:no-preference){
   .stage{animation:rise .5s cubic-bezier(.2,.7,.3,1) both}
   .stage:nth-child(2){animation-delay:.05s}.stage:nth-child(3){animation-delay:.1s}
