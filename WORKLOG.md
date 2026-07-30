@@ -1,7 +1,69 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
-**Health audit (2026-07-30).** Green: 79/79 tests, `tsc --noEmit` clean, npm `latest` 1.8.0 matches
+**Distribution + revenue-path session (2026-07-30). Shipped v1.8.1 and v1.8.2.**
+
+The product was healthy; the way people find and keep paying for it was not. Fixed all of it.
+
+Public surfaces, all verified live:
+- **Landing page was down.** asc-mcp.pages.dev returned 522 with no working production
+  deployment, and the content was a 4 June draft selling "11 tools. 3 free, 8 Pro." Rebuilt
+  `site/` for the 40-tool control plane: self-contained inline CSS (no Tailwind CDN, no
+  webfont in the critical path), one h1, canonical/OG/Twitter, Organization + WebSite +
+  SoftwareApplication + FAQPage JSON-LD, robots.txt with an AI-crawler allowlist,
+  sitemap.xml, llms.txt, `_headers` with CSP, og.png generated from og.svg. Signature
+  element is App Store Connect's real state machine annotated with which tool drives each
+  transition and which stages only the website can do. Live: 457ms load, no console errors,
+  no horizontal overflow at 390px. Note: the Pages production branch is **master**;
+  deploying to `--branch main` silently lands as a preview, which is what the 522 was.
+- **GitHub Pages mirror retired** (workflow + Pages API). It duplicated the site under
+  /asc-mcp/ where the absolute asset paths 404.
+- **MCP registry was pointing customers at a dead package.** The only published entry was
+  `io.github.pofky/appstore-connect-mcp` v0.2.1 (April) referencing npm
+  `@pofky/appstore-connect-mcp`, not the real package. Published
+  `io.github.pofky/asc-mcp` (now v1.8.2) via a new tag-triggered GitHub Actions OIDC
+  workflow, deprecated the old registry entry, and deprecated the old npm package with a
+  pointer. Two CI gotchas: `mcp-publisher status` prompts for confirmation (pipe `yes`),
+  and republishing an existing version must not abort the deprecation step.
+- **npm had no homepage, repository or bugs fields**, so the package page linked nowhere.
+  Added.
+- **awesome-mcp-servers PR #11198** opened (91.6k stars, one line, alphabetical position).
+  Remaining directory work is in `launch/distribution-checklist.md`.
+- Launch drafts were all v1.2.0-era (11 tools, read-only positioning, an unsupportable
+  "40% of rejections" claim). Rewritten around the real submission plus the honest
+  limitation list; added an Indie Hackers draft; deleted a duplicate Reddit draft.
+
+Product fixes found by verifying rather than reading:
+- **Credential-less start killed the process before the MCP handshake**, so a first-time
+  user saw "server disconnected" and could never reach `asc_setup_check`. Now boots in
+  setup mode with `asc_setup_check` + `asc_guide` and a regression test that spawns the
+  built server.
+- **Licence fairness (revenue).** Polar's `subscription.canceled` means "will not renew",
+  but the worker set `active=0` immediately, taking away time customers had already paid
+  for. Only `revoked` deactivates now. Also added a 4-day grace window past `expires_at`,
+  because renewals arrive as `subscription.updated` and a late or dropped webhook was
+  demoting a paying customer to the free tier mid-session with no recourse. 6 tests.
+- `sales_report` required `vendor_number`, which is only visible in the ASC website and so
+  cannot be guessed by an agent; a missing value surfaced as a raw zod dump. Now optional
+  with a reply saying exactly where to find it.
+
+Verification actually run: 86 unit tests, `tsc --noEmit` clean, clean `npx` install of
+1.8.2 exposes 40 tools and 6 prompts, live doctor against the real account all OK, and 11
+read/intelligence Pro tools called live through the MCP protocol with a Pro licence
+(list_apps, app_details, review_status, list_reviews, release_preflight, daily_briefing,
+metadata_diff, keyword_insights, competitor_snapshot, list_builds, list_beta_groups) all
+returning real data. There is now an owner self-test licence in D1
+(`polar_subscription_id = 'owner-selftest'`) so the Pro surface can be checked without a
+customer's key.
+
+**Revenue reality check.** D1 has 4 customers: 1 active ($9 MRR, signed up 29 July) and 3
+whose subscriptions ended at their first period end (4 June, 11 June, 12 June cohort). The
+canceled-vs-revoked bug and the missing renewal grace both plausibly contributed, and both
+are now fixed, but retention past month one is the open question, not acquisition. Next
+concrete step is the directory checklist plus the Show HN and Indie Hackers posts, which
+need a human to post.
+
+### Prior: **Health audit (2026-07-30).** Green: 79/79 tests, `tsc --noEmit` clean, npm `latest` 1.8.0 matches
 repo, `npm run docs` produces zero drift, 40 tools + 6 prompts enumerated live off `dist/`, license
 worker responds (`/validate` bogus key returns free tier). Fixed (b38f059): credential-less start
 called `process.exit(1)` before the MCP handshake, so a new user saw "server disconnected" and could
