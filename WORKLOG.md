@@ -1,7 +1,18 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
-**Shipped v1.8.0 to npm + customer #4 verified (2026-07-29).** New Pro buyer
+**Health audit (2026-07-30).** Green: 79/79 tests, `tsc --noEmit` clean, npm `latest` 1.8.0 matches
+repo, `npm run docs` produces zero drift, 40 tools + 6 prompts enumerated live off `dist/`, license
+worker responds (`/validate` bogus key returns free tier). Fixed (b38f059): credential-less start
+called `process.exit(1)` before the MCP handshake, so a new user saw "server disconnected" and could
+never reach `asc_setup_check`; now boots in setup mode with `asc_setup_check` + `asc_guide` only
+(verified live: connects, prints exact per-check fixes). Also refreshed README's stale 36 tools /
+4 prompts and server.json's 1.0.0 pin.
+Open: `site/index.html` still advertises "11 tools. 3 free, 8 Pro." (Jun 4, pre-control-plane) and
+loads Tailwind from CDN. Not deployed to any domain yet, so nobody is being misinformed, but it
+blocks launch and needs a rewrite through the SEO/CRO/AEO gate.
+
+### Prior: **Shipped v1.8.0 to npm + customer #4 verified (2026-07-29).** New Pro buyer
 (knuesel.michael@gmail.com, sub 088dbba4) provisioned correctly: D1 row active, key emailed via
 Brevo, /validate returns pro, /key recovery returns the key. Found the real gap: npm `latest` was
 still 1.3.0 from 2026-04-15, so paying customers got 13 tools instead of 40. Committed master
