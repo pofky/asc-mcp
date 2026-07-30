@@ -1,0 +1,52 @@
+name: Publish to MCP Registry
+
+# The registry entry is what MCP clients read when a user searches for an
+# App Store Connect server, so it has to track the npm release. Run this after
+# every `npm publish`.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mcp-publisher
+        run: |
+          curl -sL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" \
+            | tar xz mcp-publisher
+          chmod +x mcp-publisher
+
+      - name: Check server.json matches package.json
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          SRV=$(node -p "require('./server.json').version")
+          echo "package.json=$PKG server.json=$SRV"
+          test "$PKG" = "$SRV"
+
+      - name: Validate
+        run: ./mcp-publisher validate
+
+      - name: Login (GitHub Actions OIDC)
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish
+        run: ./mcp-publisher publish
+
+      # The pre-1.0 entry points at @pofky/appstore-connect-mcp 0.2.1, a package
+      # that has not moved since April. Anyone installing from it gets a fraction
+      # of the tools, so retire it in favour of the entry above.
+      - name: Deprecate the superseded registry entry
+        continue-on-error: true
+        run: |
+          ./mcp-publisher status \
+            --status deprecated \
+            --message "Superseded by io.github.pofky/asc-mcp (npm @pofky/asc-mcp). Same maintainer, 40 tools." \
+            --all-versions io.github.pofky/appstore-connect-mcp
