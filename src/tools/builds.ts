@@ -31,7 +31,16 @@ export async function listBuilds(
   });
   const builds = Array.isArray(res.data) ? res.data : [res.data];
   if (!builds.length) {
-    return "No builds found. Upload one with upload_binary (or Xcode/Transporter) first.";
+    // filter[app] with a bogus id returns an empty list, not a 404, so "no
+    // builds" would send someone off to re-upload a build for an app that does
+    // not exist. Check which of the two it is.
+    const appExists = await client
+      .get(`/v1/apps/${args.app_id}`, { "fields[apps]": "name" })
+      .then(() => true)
+      .catch(() => false);
+    return appExists
+      ? "No builds found for this app. Upload one with upload_binary (or Xcode/Transporter) first."
+      : `No app with id ${args.app_id} in this account. Run list_apps to get the right app_id.`;
   }
   const lines = builds.map((b) => {
     const a = b.attributes;

@@ -41,7 +41,7 @@ import { ascGuide } from "./tools/guide.js";
 import { runDoctor, formatDoctor } from "./doctor.js";
 import { discoverPrivateKey, runInit } from "./setup.js";
 
-const SERVER_VERSION = "1.8.3";
+const SERVER_VERSION = "1.8.4";
 
 const MISSING_CREDS_MESSAGE =
   "Missing App Store Connect credentials.\n\n" +

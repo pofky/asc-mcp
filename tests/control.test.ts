@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { requirePro } from "../src/gate.js";
+import { ASCAPIError } from "../src/client.js";
+import { listBuilds } from "../src/tools/builds.js";
+import { createIAP } from "../src/tools/iap.js";
 import { discoverPrivateKey } from "../src/setup.js";
 import { updateVersionMetadata } from "../src/tools/update-version-metadata.js";
 import { createVersion, submitForReview } from "../src/tools/version-control.js";
@@ -172,5 +175,98 @@ describe("discoverPrivateKey", () => {
     const found = discoverPrivateKey(dir);
     expect(found?.keyId).toBe("ABCDE12345");
     expect(found?.path).toContain("AuthKey_ABCDE12345.p8");
+  });
+});
+
+// Apple returns 409 both for "wrong state" and for "you sent a bad value".
+// Telling someone to check their version state when Apple rejected their phone
+// number format sends them chasing the wrong thing (found by a live sweep).
+describe("ASCAPIError 409 hints", () => {
+  const attrBody = JSON.stringify({
+    errors: [
+      {
+        code: "ENTITY_ERROR.ATTRIBUTE.INVALID",
+        detail: "The phone number must be in a valid format.",
+        source: { pointer: "/data/attributes/contactPhone" },
+      },
+    ],
+  });
+  const stateBody = JSON.stringify({
+    errors: [{ code: "STATE_ERROR", detail: "The field 'name' can not be modified in the current state" }],
+  });
+
+  it("names the rejected field instead of blaming the version state", () => {
+    const err = new ASCAPIError(409, "/v1/appStoreReviewDetails", attrBody);
+    expect(err.message).toContain("contactPhone");
+    expect(err.message).not.toContain("PREPARE_FOR_SUBMISSION");
+  });
+
+  it("still explains a genuine state conflict", () => {
+    const err = new ASCAPIError(409, "/v1/appInfoLocalizations/x", stateBody);
+    expect(err.message).toContain("State conflict");
+  });
+});
+
+// Found by a live sweep of every write path: these all used to throw a raw API
+// error or a TypeError at the caller instead of explaining the problem.
+describe("write-path failure messages", () => {
+  const stub = (post: () => Promise<unknown>, get?: () => Promise<unknown>) =>
+    ({ post, get: get ?? (async () => ({ data: [] })), patch: async () => ({}) }) as never;
+
+  it("create_version explains a version number that was already used", async () => {
+    const body = JSON.stringify({
+      errors: [{ code: "ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE", detail: "The version number has been previously used." }],
+    });
+    const out = await createVersion(
+      stub(async () => {
+        throw new ASCAPIError(409, "/v1/appStoreVersions", body);
+      }),
+      { app_id: "1", version_string: "1.0" },
+      "pro",
+    );
+    expect(out).toContain("already used");
+    expect(out).toContain("higher version number");
+  });
+
+  it("create_version explains a version that is still open, separately", async () => {
+    const body = JSON.stringify({
+      errors: [{ code: "ENTITY_ERROR.RELATIONSHIP.INVALID", detail: "You cannot create a new version of the App in the current state." }],
+    });
+    const out = await createVersion(
+      stub(async () => {
+        throw new ASCAPIError(409, "/v1/appStoreVersions", body);
+      }),
+      { app_id: "1", version_string: "2.0" },
+      "pro",
+    );
+    expect(out).toContain("still open or in review");
+    expect(out).not.toContain("already used");
+  });
+
+  it("list_builds distinguishes an empty app from a wrong app_id", async () => {
+    const noApp = await listBuilds(
+      {
+        get: async (path: string) => {
+          if (path === "/v1/builds") return { data: [] };
+          throw new ASCAPIError(404, path, "{}");
+        },
+      } as never,
+      { app_id: "999" },
+      "pro",
+    );
+    expect(noApp).toContain("No app with id 999");
+
+    const emptyApp = await listBuilds(
+      { get: async (path: string) => (path === "/v1/builds" ? { data: [] } : { data: { id: "1" } }) } as never,
+      { app_id: "1" },
+      "pro",
+    );
+    expect(emptyApp).toContain("No builds found for this app");
+  });
+
+  it("create_iap names the missing arguments instead of throwing", async () => {
+    const out = await createIAP({} as never, { app_id: "1" } as never, "pro");
+    expect(out).toContain("product_id");
+    expect(out).toContain("display_name");
   });
 });

@@ -4,7 +4,7 @@
 
 ## Facts
 
-- Package: `@pofky/asc-mcp` on npm. Current version 1.8.3 (published 30 July 2026).
+- Package: `@pofky/asc-mcp` on npm. Current version 1.8.4 (published 30 July 2026).
 - Install: `npx @pofky/asc-mcp init` prints a paste-ready MCP config block. `init --write` merges it into your client config directly.
 - Tool count: 40 tools and 6 prompts. 5 tools are free, 35 require Pro.
 - Free tools: `asc_setup_check`, `asc_guide`, `list_apps`, `app_details`, `review_status`. No account or signup required.
@@ -53,4 +53,4 @@ A: Wrappers map endpoints one to one, which can mean hundreds of tools and leave
 
 ## Citation
 
-asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.8.3, updated 30 July 2026).
+asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.8.4, updated 30 July 2026).

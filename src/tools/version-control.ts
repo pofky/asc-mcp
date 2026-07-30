@@ -46,15 +46,41 @@ export async function createVersion(
   };
   if (args.copyright) attributes.copyright = args.copyright;
 
-  const res = await client.post<VersionAttrs>("/v1/appStoreVersions", {
-    data: {
-      type: "appStoreVersions",
-      attributes,
-      relationships: {
-        app: { data: { type: "apps", id: args.app_id } },
+  let res;
+  try {
+    res = await client.post<VersionAttrs>("/v1/appStoreVersions", {
+      data: {
+        type: "appStoreVersions",
+        attributes,
+        relationships: {
+          app: { data: { type: "apps", id: args.app_id } },
+        },
       },
-    },
-  });
+    });
+  } catch (err) {
+    // Apple answers 409 for two very different situations here and an agent
+    // needs to know which: the number is taken, or there is already an open
+    // version to edit.
+    if (!(err instanceof ASCAPIError) || err.status !== 409) throw err;
+    const duplicate = /DUPLICATE|previously used/i.test(err.body);
+    const badState = /current state/i.test(err.body);
+    if (duplicate && badState) {
+      return (
+        `Cannot create version ${args.version_string}: that number was already used, and this app already has a ` +
+        `version open for editing. Edit the open one with update_version_metadata, or pick a higher version number.`
+      );
+    }
+    if (duplicate) {
+      return `Version ${args.version_string} was already used for this app. Pick a higher version number.`;
+    }
+    if (badState) {
+      return (
+        "Cannot create a new version while the current one is still open or in review. " +
+        "Check it with review_status, then edit that version instead of creating another."
+      );
+    }
+    throw err;
+  }
   const created = res && !Array.isArray(res.data) ? res.data : null;
   return (
     `Created version ${args.version_string} (${attributes.platform}).` +

@@ -49,9 +49,13 @@ export async function setAppAvailability(
     if (!(err instanceof ASCAPIError && err.status === 404)) throw err;
   }
 
-  // Create path: no availability yet, build it inline with the wanted set.
+  // Create path: no availability yet. Apple requires a territoryAvailability
+  // for EVERY territory on create, not just the wanted ones: sending a subset
+  // returns one 409 per missing territory ("expects an included resource with
+  // type 'territories' and id 'JOR'"). So send them all and carry the choice in
+  // each `available` flag.
   if (!availId) {
-    const ids = [...wanted];
+    const ids = allIds;
     const lid = (id: string) => "${ta-" + id + "}";
     await client.post("/v2/appAvailabilities", {
       data: {
@@ -65,11 +69,15 @@ export async function setAppAvailability(
       included: ids.map((id) => ({
         type: "territoryAvailabilities",
         id: lid(id),
-        attributes: { available: true },
+        attributes: { available: wanted.has(id) },
         relationships: { territory: { data: { type: "territories", id } } },
       })),
     });
-    return `App availability created: ${ids.length} territories on, new-territory auto-include ${newTerr}.`;
+    const onCount = ids.filter((id) => wanted.has(id)).length;
+    return (
+      `App availability created: ${onCount} of ${ids.length} territories on, ` +
+      `new-territory auto-include ${newTerr}.`
+    );
   }
 
   // Update path: flip each territoryAvailability to match the wanted set.
@@ -97,25 +105,35 @@ export async function setAppAvailability(
   for (const row of rows) {
     const shouldBeOn = wanted.has(row.territory);
     if (shouldBeOn === row.on) continue;
-    await client.patch(`/v2/territoryAvailabilities/${row.id}`, {
+    // The individual rows are v1 resources: /v2/territoryAvailabilities/{id}
+    // returns 404 "path provided does not match a defined resource type".
+    await client.patch(`/v1/territoryAvailabilities/${row.id}`, {
       data: { type: "territoryAvailabilities", id: row.id, attributes: { available: shouldBeOn } },
     });
     if (shouldBeOn) turnedOn++;
     else turnedOff++;
   }
 
-  // Sync the new-territory flag.
-  try {
-    await client.patch(`/v1/appAvailabilities/${availId}`, {
-      data: { type: "appAvailabilities", id: availId, attributes: { availableInNewTerritories: newTerr } },
-    });
-  } catch {
-    // Some accounts reject this PATCH; the territory set is what matters.
+  // The new-territory flag can only be set when the availability is created:
+  // Apple allows CREATE and GET_INSTANCE on appAvailabilities and nothing else,
+  // so report the mismatch instead of pretending to write it.
+  let flagNote = "";
+  if (args.available_in_new_territories !== undefined) {
+    const current = await client
+      .get<{ availableInNewTerritories: boolean }>(`/v1/apps/${args.app_id}/appAvailabilityV2`)
+      .then((r) => (Array.isArray(r.data) ? undefined : r.data?.attributes?.availableInNewTerritories))
+      .catch(() => undefined);
+    if (current !== undefined && current !== newTerr) {
+      flagNote =
+        ` Note: auto-include for new territories is ${current} and Apple does not allow changing it after the ` +
+        `availability exists (appAvailabilities is create-only). Change it in App Store Connect > Pricing and Availability.`;
+    }
   }
 
   const onTotal = rows.filter((r) => wanted.has(r.territory)).length;
   return (
-    `App availability updated: ${onTotal} territories on (+${turnedOn} enabled, -${turnedOff} disabled), ` +
-    `new-territory auto-include ${newTerr}.`
+    `App availability updated: ${onTotal} of ${rows.length} territories on ` +
+    `(+${turnedOn} enabled, -${turnedOff} disabled).` +
+    flagNote
   );
 }
