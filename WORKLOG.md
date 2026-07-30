@@ -1,6 +1,26 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**v1.8.3, customer-reported appInfo bug (2026-07-30, same day as the report).**
+Michael Knuesel (the active Pro customer) reported that update_version_metadata's
+name/subtitle writes 409 for an app that already has a release, and diagnosed it correctly: an
+app holds two appInfos at once (live plus the draft attached to the version being prepared),
+Apple lists the live one first, and the code read appInfos with limit=1. Reproduced live:
+ClothTrace returns READY_FOR_SALE then WAITING_FOR_REVIEW, and patching the first gives the
+exact error "The field 'subtitle' can not be modified in the current state".
+
+Fixed in new `src/app-info.ts`: fetch all appInfos with their state (appStoreState, falling
+back to the newer `state`), `pickEditableAppInfo` for writes, `pickAuditAppInfo` for reads,
+and a message that names the states present when nothing is editable. The same limit=1
+assumption was in three more tools and is fixed there too: set_app_metadata (categories),
+set_age_rating (declaration hangs off the appInfo), and release_preflight, which had been
+auditing the live name and privacy URL instead of the pending ones. A 409 on the app-level
+patch is now a note on the result rather than an exception that discards the version-level
+fields that already landed. 13 unit tests; live end-to-end subtitle write verified by reading
+it back and restoring it. Published 1.8.3 to npm, registry, and the site.
+
+Open: reply to Michael (draft ready, needs a human to send; /admin/announce can deliver it).
+
 **Distribution + revenue-path session (2026-07-30). Shipped v1.8.1 and v1.8.2.**
 
 The product was healthy; the way people find and keep paying for it was not. Fixed all of it.
