@@ -41,7 +41,7 @@ import { ascGuide } from "./tools/guide.js";
 import { runDoctor, formatDoctor } from "./doctor.js";
 import { discoverPrivateKey, runInit } from "./setup.js";
 
-const SERVER_VERSION = "1.8.4";
+const SERVER_VERSION = "1.8.5";
 
 const MISSING_CREDS_MESSAGE =
   "Missing App Store Connect credentials.\n\n" +
@@ -641,13 +641,13 @@ async function main() {
 
   server.tool(
     "set_app_availability",
-    "Set the app's country/region availability. By default makes it available in ALL App Store territories and auto-includes future ones; pass a territories subset to restrict. Pro feature.",
+    "Set the app's country/region availability. By default makes it available in ALL App Store territories and auto-includes future ones; pass a territories subset to restrict, or an empty array to take it off sale everywhere. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       territories: z
         .array(z.string())
         .optional()
-        .describe('Territory ids to enable, e.g. ["USA","GBR"]. Omit for all territories.'),
+        .describe('Territory ids to enable, e.g. ["USA","GBR"]. Omit for all territories. Pass [] to turn every territory off, i.e. take the app off sale worldwide.'),
       available_in_new_territories: z
         .boolean()
         .optional()
