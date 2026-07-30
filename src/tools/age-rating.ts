@@ -1,6 +1,7 @@
 import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
+import { fetchAppInfos, pickEditableAppInfo, noEditableAppInfoMessage } from "../app-info.js";
 
 /**
  * Content-frequency declarations (NONE | INFREQUENT_OR_MILD | FREQUENT_OR_INTENSE).
@@ -98,17 +99,17 @@ export async function setAgeRating(
 
   // The ageRatingDeclaration id + current attributes come from the app's
   // appInfo with the declaration included.
-  const infoRes = await client.get<Record<string, never>>(
-    `/v1/apps/${args.app_id}/appInfos`,
-    { include: "ageRatingDeclaration", limit: "1" },
-  );
-  const appInfo = Array.isArray(infoRes.data) ? infoRes.data[0] : infoRes.data;
-  const ardId = (appInfo as { relationships?: { ageRatingDeclaration?: { data?: { id?: string } } } })
-    ?.relationships?.ageRatingDeclaration?.data?.id;
+  // A live app keeps its own locked appInfo, which Apple lists first, so the
+  // declaration has to be read off the editable record or the PATCH 409s.
+  const { infos, included } = await fetchAppInfos(client, args.app_id, {
+    include: "ageRatingDeclaration",
+  });
+  const appInfo = pickEditableAppInfo(infos);
+  if (!appInfo) return noEditableAppInfoMessage(infos, "the age rating");
+  const ardId = appInfo.raw.relationships?.ageRatingDeclaration?.data?.id;
   if (!ardId) {
     return "Could not resolve the app's age-rating declaration. Confirm the app_id is correct.";
   }
-  const included = (infoRes as { included?: Array<{ type: string; id: string; attributes?: Record<string, unknown> }> }).included;
   const current = included?.find((x) => x.type === "ageRatingDeclarations" && x.id === ardId)?.attributes ?? {};
 
   // The V2 declaration is not a partial PATCH: Apple requires the full set of

@@ -1,6 +1,7 @@
 import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
+import { fetchAppInfos, pickEditableAppInfo, noEditableAppInfoMessage } from "../app-info.js";
 
 const EDITABLE = new Set([
   "PREPARE_FOR_SUBMISSION",
@@ -48,10 +49,12 @@ export async function setAppMetadata(
 
   // Categories live on appInfos relationships.
   if (args.primary_category || args.secondary_category) {
-    const infoRes = await client.get<Record<string, never>>(`/v1/apps/${args.app_id}/appInfos`, { limit: "1" });
-    const appInfo = Array.isArray(infoRes.data) ? infoRes.data[0] : infoRes.data;
-    if (!appInfo) return "Could not resolve the app's appInfo.";
-    const infoId = (appInfo as { id: string }).id;
+    // An app in review or already live also has a locked appInfo, and Apple
+    // returns that one first, so pick the editable record explicitly.
+    const { infos } = await fetchAppInfos(client, args.app_id);
+    const appInfo = pickEditableAppInfo(infos);
+    if (!appInfo) return noEditableAppInfoMessage(infos, "app categories");
+    const infoId = appInfo.id;
     const rels: Record<string, unknown> = {};
     if (args.primary_category) rels.primaryCategory = { data: { type: "appCategories", id: args.primary_category } };
     if (args.secondary_category) rels.secondaryCategory = { data: { type: "appCategories", id: args.secondary_category } };
