@@ -3,6 +3,7 @@ import { requirePro } from "../src/gate.js";
 import { ASCAPIError } from "../src/client.js";
 import { listBuilds } from "../src/tools/builds.js";
 import { createIAP } from "../src/tools/iap.js";
+import { setAppAvailability } from "../src/tools/availability.js";
 import { discoverPrivateKey } from "../src/setup.js";
 import { updateVersionMetadata } from "../src/tools/update-version-metadata.js";
 import { createVersion, submitForReview } from "../src/tools/version-control.js";
@@ -268,5 +269,58 @@ describe("write-path failure messages", () => {
     const out = await createIAP({} as never, { app_id: "1" } as never, "pro");
     expect(out).toContain("product_id");
     expect(out).toContain("display_name");
+  });
+});
+
+// Taking an app off sale everywhere is the required first step before the
+// website lets you remove an app record, and an empty territory list used to
+// fall through to "all territories on", i.e. the exact opposite.
+describe("set_app_availability territory semantics", () => {
+  function stubClient(existing: boolean) {
+    const rows = ["USA", "GBR", "JPN"].map((t, i) => ({
+      id: `row${i}`,
+      attributes: { available: true },
+      relationships: { territory: { data: { id: t } } },
+    }));
+    const patched: Array<{ path: string; available: boolean }> = [];
+    const client = {
+      getAll: async () => ({ data: ["USA", "GBR", "JPN"].map((id) => ({ id })) }),
+      get: async (path: string) => {
+        if (path.includes("appAvailabilityV2")) {
+          if (!existing) throw new ASCAPIError(404, path, "{}");
+          return { data: { id: "avail1", attributes: { availableInNewTerritories: true } } };
+        }
+        return { data: rows };
+      },
+      patch: async (path: string, body: { data: { attributes: { available: boolean } } }) => {
+        patched.push({ path, available: body.data.attributes.available });
+        return {};
+      },
+      post: async () => ({}),
+    } as never;
+    return { client, patched };
+  }
+
+  it("turns every territory off when given an empty array", async () => {
+    const { client, patched } = stubClient(true);
+    const out = await setAppAvailability(client, { app_id: "1", territories: [] }, "pro");
+    expect(patched.every((p) => p.available === false)).toBe(true);
+    expect(patched).toHaveLength(3);
+    expect(out).toContain("0 of 3");
+    expect(out).toContain("Remove App");
+  });
+
+  it("still means all territories when the argument is omitted", async () => {
+    const { client, patched } = stubClient(true);
+    const out = await setAppAvailability(client, { app_id: "1" }, "pro");
+    expect(patched).toHaveLength(0); // already all on, nothing to change
+    expect(out).toContain("3 of 3");
+  });
+
+  it("patches the v1 territoryAvailabilities path, not v2", async () => {
+    const { client, patched } = stubClient(true);
+    await setAppAvailability(client, { app_id: "1", territories: ["USA"] }, "pro");
+    expect(patched.length).toBeGreaterThan(0);
+    expect(patched.every((p) => p.path.startsWith("/v1/territoryAvailabilities/"))).toBe(true);
   });
 });

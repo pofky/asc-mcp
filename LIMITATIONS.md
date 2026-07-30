@@ -8,6 +8,10 @@ Everything here is impossible via the App Store Connect API and must be done by 
 Why: POST /v1/apps is forbidden for API keys.
 Do instead: ASC website > Apps > + (one time).
 
+### Delete or remove an app record
+Why: DELETE /v1/apps is forbidden for API keys (probed live: apps allows GET and UPDATE only). Builds and appInfos cannot be deleted either.
+Do instead: First take it off sale everywhere, which IS automatable: set_app_availability with territories: [] turns all ~175 territories off (Apple requires this even for an app that was never released). Also remove any in-app purchases from sale. Then, in the ASC website: Apps > your app > App Information > Additional Information > Remove App. Needs the Account Holder or Admin role, and it will not appear while the app is in Ready for Review, Waiting for Review, In Review, Metadata Rejected or Rejected. Note the SKU can never be reused in the organisation, and the bundle ID cannot be reused if a build was ever uploaded.
+
 ### Create an App Group
 Why: Portal-only; no API.
 Do instead: Apple Developer portal > Identifiers.

@@ -6,7 +6,9 @@ export interface AppAvailabilityArgs {
   app_id: string;
   /**
    * Territory ids to make the app available in (e.g. ["USA","GBR"]). Omit to
-   * make it available in ALL App Store territories.
+   * make it available in ALL App Store territories. Pass an empty array to turn
+   * every territory OFF, which is how you take an app off sale worldwide and the
+   * required first step before removing an app record.
    */
   territories?: string[];
   /** Auto-include future new territories. Defaults to true. */
@@ -38,7 +40,8 @@ export async function setAppAvailability(
   const allIds = (Array.isArray(allTerrRes.data) ? allTerrRes.data : [allTerrRes.data])
     .filter(Boolean)
     .map((t) => (t as { id: string }).id);
-  const wanted = new Set(args.territories?.length ? args.territories : allIds);
+  // An empty array is a real instruction ("nowhere"), not a missing argument.
+  const wanted = new Set(args.territories === undefined ? allIds : args.territories);
 
   // Does an availability already exist for this app?
   let availId: string | null = null;
@@ -131,9 +134,14 @@ export async function setAppAvailability(
   }
 
   const onTotal = rows.filter((r) => wanted.has(r.territory)).length;
+  const offEverywhere = onTotal === 0 && rows.length > 0
+    ? " The app is now off sale in every territory. Removing the app record itself is website-only: " +
+      "App Store Connect > Apps > your app > App Information > Additional Information > Remove App."
+    : "";
   return (
     `App availability updated: ${onTotal} of ${rows.length} territories on ` +
     `(+${turnedOn} enabled, -${turnedOff} disabled).` +
+    offEverywhere +
     flagNote
   );
 }

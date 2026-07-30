@@ -202,6 +202,12 @@ const LIMITATIONS: { item: string; why: string; doInstead: string }[] = [
     doInstead: "ASC website > Apps > + (one time).",
   },
   {
+    item: "Delete or remove an app record",
+    why: "DELETE /v1/apps is forbidden for API keys (probed live: apps allows GET and UPDATE only). Builds and appInfos cannot be deleted either.",
+    doInstead:
+      "First take it off sale everywhere, which IS automatable: set_app_availability with territories: [] turns all ~175 territories off (Apple requires this even for an app that was never released). Also remove any in-app purchases from sale. Then, in the ASC website: Apps > your app > App Information > Additional Information > Remove App. Needs the Account Holder or Admin role, and it will not appear while the app is in Ready for Review, Waiting for Review, In Review, Metadata Rejected or Rejected. Note the SKU can never be reused in the organisation, and the bundle ID cannot be reused if a build was ever uploaded.",
+  },
+  {
     item: "Create an App Group",
     why: "Portal-only; no API.",
     doInstead: "Apple Developer portal > Identifiers.",
