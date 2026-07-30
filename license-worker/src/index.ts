@@ -663,7 +663,7 @@ function handleTerms(headers: Record<string, string>): Response {
     </ul>
 
     <h2>Free and Pro tiers</h2>
-    <p>Three tools are free with no account needed. Pro tools (customer reviews, sales reports) require a $9/month subscription managed through <a href="https://polar.sh">Polar.sh</a>.</p>
+    <p>Five of the 40 tools are free with no account needed: <code>asc_setup_check</code>, <code>asc_guide</code>, <code>list_apps</code>, <code>app_details</code> and <code>review_status</code>. The other 35, covering customer reviews, sales reports, preflight audits and the full write/control plane (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release), require a $9/month subscription managed through <a href="https://polar.sh">Polar.sh</a>.</p>
 
     <h2>Subscriptions</h2>
     <p>Pro subscriptions are billed monthly through Polar. You can cancel anytime through Polar's subscription management. Polar's terms of service apply to the payment process.</p>

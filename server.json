@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.pofky/asc-mcp",
-  "description": "Full App Store Connect control plane for coding agents: 40 tools covering pre-submission audits, daily briefings, reviews, sales, plus write/control (metadata, screenshots, builds, TestFlight, submit, release). Intelligence layer, not just an API wrapper.",
+  "description": "Drive App Store Connect end to end: metadata, screenshots, builds, TestFlight, submit, release.",
   "repository": {
     "url": "https://github.com/pofky/asc-mcp",
     "source": "github"
   },
-  "version": "1.8.0",
+  "version": "1.8.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@pofky/asc-mcp",
-      "version": "1.8.0",
+      "version": "1.8.1",
       "transport": {
         "type": "stdio"
       },
