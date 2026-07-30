@@ -3,7 +3,7 @@
 Not sent. Send from your mail client, or via `POST /admin/announce` with the ANNOUNCE_TOKEN
 secret (recipient must exist in the licenses table, which he does).
 
-**Subject:** Fixed in v1.8.3, and you found three more places it was wrong
+**Subject:** Fixed in v1.8.5, and you found three more places it was wrong
 
 ---
 
@@ -48,6 +48,21 @@ about what Apple refused, so you can see what landed.
 
 There are 13 unit tests covering the selection, and I verified the write end to end on a real
 app (set a subtitle, read it back, restored it).
+
+Your report also made me stop trusting my own reading of the code, so I ran every tool against
+a real account instead. That turned up a few more things, all fixed in the same 1.8.5 you are
+installing:
+
+- `set_app_availability` was broken in both directions. Creating availability rejected any
+  territory subset (Apple wants a territoryAvailability for all 175 on create), and updating
+  used `/v2/territoryAvailabilities/{id}`, which 404s because those rows are v1 resources.
+- 409 hints assumed a state conflict, so a rejected phone-number format told you to go check
+  your version state. They now name the field Apple pointed at.
+- `create_version` threw Apple's raw 409 instead of distinguishing "that version number was
+  already used" from "a version is still open for editing".
+- `list_builds` said "no builds found" for an app_id that does not exist.
+
+So thank you twice: once for the bug, once for the nudge.
 
 If anything else looks off, please keep sending it my way. Reports at this level of detail are
 genuinely rare.
