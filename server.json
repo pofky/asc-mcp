@@ -6,12 +6,12 @@
     "url": "https://github.com/pofky/asc-mcp",
     "source": "github"
   },
-  "version": "1.8.3",
+  "version": "1.8.4",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@pofky/asc-mcp",
-      "version": "1.8.3",
+      "version": "1.8.4",
       "transport": {
         "type": "stdio"
       },

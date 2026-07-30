@@ -191,6 +191,19 @@ function friendlyHint(status: number, body: string): string {
     case 404:
       return "The resource wasn't found. Double-check the app_id / product_id (use `list_apps`), or the resource may not exist yet for this app.";
     case 409:
+      // Apple overloads 409: STATE_ERROR really is a state conflict, but
+      // ENTITY_ERROR.ATTRIBUTE.* is a rejected field value, and telling someone
+      // to check the version state when Apple rejected their phone format sends
+      // them the wrong way entirely.
+      if (/ENTITY_ERROR\.ATTRIBUTE/.test(body)) {
+        const field = body.match(/"pointer"\s*:\s*"\/data\/attributes\/(\w+)"/)?.[1];
+        return (
+          `Apple rejected the value${field ? ` for ${field}` : ""}, not the request. The detail above says what format it wants; fix that value and retry.`
+        );
+      }
+      if (/ENTITY_ERROR\.RELATIONSHIP|ENTITY_ERROR\.ATTRIBUTE_REQUIRED|required/i.test(body) && !/STATE_ERROR/.test(body)) {
+        return "Something the request needs is missing or points at the wrong resource. The detail above names it.";
+      }
       return "State conflict: the version/product isn't in a state that allows this. For example, you can only edit/submit a version in PREPARE_FOR_SUBMISSION or a rejected state. Check current state with `app_details` or `review_status`.";
     case 429:
       return "Rate limited by Apple. Wait a minute and retry.";

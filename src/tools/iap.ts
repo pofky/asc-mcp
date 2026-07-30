@@ -323,6 +323,16 @@ export async function createIAP(
   const gate = requirePro(tier, "Creating an in-app purchase");
   if (gate) return gate;
 
+  const missing = ["product_id", "display_name", "description", "type"].filter(
+    (k) => !(args as unknown as Record<string, unknown>)[k],
+  );
+  if (missing.length) {
+    return (
+      `Missing required argument(s): ${missing.join(", ")}. ` +
+      `An in-app purchase needs product_id (e.g. com.app.lifetime), display_name, description and type ` +
+      `(NON_CONSUMABLE or CONSUMABLE). See asc_guide topic:iap.`
+    );
+  }
   if (args.display_name.length > NAME_LIMIT) return `display_name too long: ${args.display_name.length}/${NAME_LIMIT}.`;
   if (args.description.length > IAP_DESC_LIMIT) return `description too long: ${args.description.length}/${IAP_DESC_LIMIT}.`;
 
