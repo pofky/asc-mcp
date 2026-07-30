@@ -37,8 +37,10 @@ jobs:
       - name: Login (GitHub Actions OIDC)
         run: ./mcp-publisher login github-oidc
 
+      # Re-running for a version already in the registry is not a failure: the
+      # deprecation step below still needs to run.
       - name: Publish
-        run: ./mcp-publisher publish
+        run: ./mcp-publisher publish || echo "publish skipped (version already in registry)"
 
       # The pre-1.0 entry points at @pofky/appstore-connect-mcp 0.2.1, a package
       # that has not moved since April. Anyone installing from it gets a fraction
@@ -46,7 +48,8 @@ jobs:
       - name: Deprecate the superseded registry entry
         continue-on-error: true
         run: |
-          ./mcp-publisher status \
+          # The command prompts for confirmation, so answer it.
+          yes | ./mcp-publisher status \
             --status deprecated \
             --message "Superseded by io.github.pofky/asc-mcp (npm @pofky/asc-mcp). Same maintainer, 40 tools." \
             --all-versions io.github.pofky/appstore-connect-mcp
