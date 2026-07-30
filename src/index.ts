@@ -43,7 +43,17 @@ import { discoverPrivateKey, runInit } from "./setup.js";
 
 const SERVER_VERSION = "1.8.0";
 
-function getConfig(): ASCConfig {
+const MISSING_CREDS_MESSAGE =
+  "Missing App Store Connect credentials.\n\n" +
+  "Fastest path: run `asc-mcp init` (auto-detects your .p8, prints a paste-ready config).\n\n" +
+  "Or set manually:\n" +
+  "  ASC_KEY_ID       - Your API key ID (auto-detected from a .p8 in ~/.appstoreconnect/private_keys)\n" +
+  "  ASC_ISSUER_ID    - Your team's issuer ID\n" +
+  "  ASC_PRIVATE_KEY_PATH - Path to your .p8 (auto-detected from the standard path)\n\n" +
+  "Create an API key at:\n" +
+  "  https://appstoreconnect.apple.com/access/integrations/api";
+
+function getConfig(): ASCConfig | null {
   // Auto-discover the .p8 in Apple's standard path so a dropped key + Issuer ID
   // is enough - no need to hand-set ASC_KEY_ID / ASC_PRIVATE_KEY_PATH.
   const discovered = discoverPrivateKey();
@@ -51,19 +61,7 @@ function getConfig(): ASCConfig {
   const issuerId = process.env.ASC_ISSUER_ID;
   const privateKeyPath = process.env.ASC_PRIVATE_KEY_PATH || discovered?.path;
 
-  if (!keyId || !issuerId || !privateKeyPath) {
-    console.error(
-      "Missing App Store Connect credentials.\n\n" +
-        "Fastest path: run `asc-mcp init` (auto-detects your .p8, prints a paste-ready config).\n\n" +
-        "Or set manually:\n" +
-        "  ASC_KEY_ID       - Your API key ID (auto-detected from a .p8 in ~/.appstoreconnect/private_keys)\n" +
-        "  ASC_ISSUER_ID    - Your team's issuer ID\n" +
-        "  ASC_PRIVATE_KEY_PATH - Path to your .p8 (auto-detected from the standard path)\n\n" +
-        "Create an API key at:\n" +
-        "  https://appstoreconnect.apple.com/access/integrations/api",
-    );
-    process.exit(1);
-  }
+  if (!keyId || !issuerId || !privateKeyPath) return null;
 
   return {
     keyId,
@@ -73,8 +71,45 @@ function getConfig(): ASCConfig {
   };
 }
 
+/**
+ * Credential-less start: connect anyway with the two free orientation tools so
+ * the client shows a working server that can explain the fix, instead of a
+ * "server disconnected" with the reason buried in a log file.
+ */
+async function runSetupMode() {
+  console.error(`asc-mcp ${SERVER_VERSION}: setup mode. ${MISSING_CREDS_MESSAGE}`);
+
+  const server = new McpServer(
+    { name: "asc-mcp", version: SERVER_VERSION },
+    {
+      capabilities: { tools: {}, prompts: {} },
+      instructions:
+        "App Store Connect MCP, running in SETUP MODE: no credentials found, so only asc_setup_check and asc_guide are available. Call asc_setup_check first and relay the fix it prints, then the user restarts this server to get all 40 tools.",
+    },
+  );
+
+  const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
+
+  server.tool(
+    "asc_setup_check",
+    "Diagnose your setup: checks the .p8 key, Key ID, Issuer ID, a LIVE authenticated connection to App Store Connect, and your license tier. For anything wrong, returns the exact fix. Run this first if something isn't working. Free.",
+    {},
+    async () => text(formatDoctor(await runDoctor())),
+  );
+
+  server.tool(
+    "asc_guide",
+    "START HERE. Returns the exact end-to-end playbook for an App Store task, with every manual ASC-website/Xcode step that no API can do flagged inline. Free.",
+    { topic: z.string().optional().describe("Which playbook. Omit for the overview + topic list.") },
+    async (args: { topic?: string }) => text(await ascGuide(args as any)),
+  );
+
+  await server.connect(new StdioServerTransport());
+}
+
 async function main() {
   const config = getConfig();
+  if (!config) return runSetupMode();
   const client = new ASCClient(config);
   const tier: Tier = await validateLicense(config.licenseKey);
 

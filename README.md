@@ -1,6 +1,6 @@
 # App Store Connect MCP Server
 
-> **Full control of App Store Connect from your coding agent.** 36 tools: read intelligence that thinks, plus write/control that ships your app end to end (edit metadata, upload screenshots, attach builds, TestFlight, submit, release, even build and upload the binary locally). 4 slash-command workflows and a bundled Claude Skill. Not another API wrapper.
+> **Full control of App Store Connect from your coding agent.** 40 tools: read intelligence that thinks, plus write/control that ships your app end to end (edit metadata, upload screenshots, attach builds, TestFlight, submit, release, even build and upload the binary locally). 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper.
 
 Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Different angle, same API surface plus more.
 
@@ -11,7 +11,7 @@ asc-mcp install-skill   # one-line, optional, for auto-routed review questions
 
 ## What Makes This Different
 
-Other ASC MCP servers wrap the API and give you 80 to 293 raw endpoints. This one gives you 36 opinionated tools, 4 slash-command Prompts, and a Claude Skill that all think. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
+Other ASC MCP servers wrap the API and give you 80 to 293 raw endpoints. This one gives you 40 opinionated tools, 6 slash-command Prompts, and a Claude Skill that all think. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
 
 **Why full control is possible without fastlane:** fastlane's `deliver` and `pilot` are just calls to the same App Store Connect REST API this server authenticates against with your `.p8`. So nearly everything you would script with fastlane is a tool here, no Ruby toolchain required. The only step that needs your Mac is building and signing the binary, which `build_and_archive` and `upload_binary` drive via Xcode.
 
