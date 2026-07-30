@@ -1,55 +1,59 @@
-# X thread (v1.2.0)
+# X thread, v1.8.1
 
-Post sequence: 1 tweet every 45 seconds. Do not thread all at once, feels spammy.
+Refreshed 30 July 2026. One tweet every 45 seconds, not all at once.
+Lowercase voice, no emoji, no hype words. Every number here is real.
 
-## Tweet 1 (hook)
+## 1 (hook)
 
-i used to tab-hop to app store connect 20 times a day just to check if my build was still in review.
+last month i shipped an ios app's 1.0 to the app store without opening app store connect.
 
-built an MCP server so my coding agent can just answer it. 11 tools, 3 slash commands, a Claude Skill.
+my coding agent set the metadata, priced 3 iap products across 175 territories, attached the
+build, uploaded screenshots, ran a preflight audit, and submitted. apple approved it.
 
-no other ASC MCP ships prompts or a skill. mine does.
+## 2 (the honest part)
 
-## Tweet 2 (what you can actually say)
+it is not fully automatable, and the interesting output was the list of walls:
 
-slash commands you can type in Claude Desktop:
+- POST /v1/apps is 403 for api keys. you create the app record by hand, always.
+- the privacy nutrition label is not in the public api
+- EU trader status has no api attribute
+- an app's FIRST in-app purchases can only be submitted with the version on the website
 
-/asc-weekly-review -> digest of all apps + low-rating reviews from last 7 days
-/asc-rejection-audit <app_id> -> catches metadata / screenshot issues before Apple does
-/asc-release-go-no-go <app_id> -> ships a GO or NO-GO with reasoning
+## 3 (the failure mode that matters)
 
-## Tweet 3 (skill)
+that last one bites. a naive script submits the version, apple takes it without the
+products, and now your version is in review missing its iaps.
 
-claude skills are the procedural knowledge layer. install ours with one command:
+so my submit tool detects pending first products and aborts instead. the abort is the
+feature.
 
-asc-mcp install-skill
+## 4 (what it does do)
 
-then just ask "any bad reviews lately?" and claude auto-routes to the MCP, calls list_reviews + review_status, and summarizes by theme.
+40 tools, all job-shaped instead of one-per-endpoint:
 
-## Tweet 4 (why now)
+- age rating in one call (fetch, merge the full declaration set, submit, because a partial
+  patch silently drops declarations)
+- subscription in one call: group, localization, availability, price in every territory,
+  free trial
+- preflight that lists every submission blocker with its fix
 
-JoshuaRileyDev's ASC MCP (the community favorite, 316 stars) got archived in Feb 2026. i am shipping the maintained successor with the AI-native layer his repo never got to.
+## 5 (guardrails)
 
-## Tweet 5 (install + pricing)
+submit_for_review, release_version and upload_binary all refuse to run without
+confirm:true. an agent has to be told twice before anything reaches the public.
 
-install:
-npm install -g @pofky/asc-mcp
-asc-mcp install-skill
+the review-reply tool writes a draft and never posts it.
 
-free tier = 3 tools. pro = $9/mo for the other 8 + slash commands + skill.
+## 6 (privacy)
 
-.p8 stays on your machine. Polar handles billing + VAT.
+your .p8 never leaves your machine. jwts are signed locally, calls go straight to
+api.appstoreconnect.apple.com. the only other request checks a license key.
 
-github.com/pofky/asc-mcp
+## 7 (call to action)
 
-## Tweet 6 (what is next)
+npx @pofky/asc-mcp init
 
-week 2: MCP Sampling so the MCP asks your own Claude to cluster reviews + draft localized response replies. zero LLM bill for me, zero price hike for you.
+5 tools free, no account, including asc_guide which prints the playbook for any flow with
+the manual steps flagged. pro is $9/mo for the write and control plane.
 
-week 3: rejection-risk scoring vs the 2026 corpus (guideline 2.3, 4.0, privacy-AI 5.1.2).
-
-## Tweet 7 (reply-bait close)
-
-if you ship iOS apps, what's the one thing you still check the ASC portal for that a coding agent should answer instead?
-
-i will build the top 3 answers.
+https://asc-mcp.pages.dev

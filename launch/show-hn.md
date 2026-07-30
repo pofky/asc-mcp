@@ -1,62 +1,85 @@
-# Show HN drafts for @pofky/asc-mcp v1.2.0
+# Show HN draft, @pofky/asc-mcp v1.8.1
 
-## DECISION REQUIRED BEFORE POSTING
+Refreshed 30 July 2026. Everything below matches what is on npm right now: 40 tools,
+6 prompts, 5 free tools, Pro $9/mo, site at https://asc-mcp.pages.dev.
 
-v1.3.0 shipped Sampling. Option A is the active draft.
+**Title:** `Show HN: I shipped an iOS app to the App Store from my coding agent`
 
-**Title (Option A, honest as of v1.3.0):** `Show HN: An App Store Connect MCP that actually thinks, with Sampling, Prompts, and a Claude Skill, not another API wrapper`
+Alternate, if the first reads as too much of a stunt:
+`Show HN: An App Store Connect MCP server that ships the release, and admits what it cannot do`
 
-Honest title at post time is critical. HN rings nuke accounts. Do not claim a feature that is not merged. v1.3.0 has Prompts + Skill + Sampling live on npm.
-
-Post day: Tuesday 14:00 UTC. First-comment prep below. Mod-rule reminders at the bottom.
-
----
-
-## Body (use with either title)
-
-I have a few iOS apps and kept tab-hopping to App Store Connect to answer the same five questions every day. Review status. New 2-star reviews. What rejected last week. What my daily downloads look like. The portal is fine but Safari is not where I write code.
-
-So I built @pofky/asc-mcp, an MCP server for the App Store Connect API. It is not a raw wrapper. Competing ASC MCPs ship 80 to 293 raw tool endpoints that eat your context budget without helping you. This one ships 11 opinionated tools and three pre-built workflows that actually answer the question you asked.
-
-**What is in v1.2.0:**
-
-- 11 tools: list apps, app details, review status (free), plus list_reviews, sales_report, release_preflight, daily_briefing, release_notes, keyword_insights, competitor_snapshot, metadata_diff (Pro).
-- 3 MCP Prompts (slash commands in Claude Desktop or Claude Code): `/asc-weekly-review`, `/asc-rejection-audit`, `/asc-release-go-no-go`. Each seeds the agent with the exact multi-tool sequence to run. Zero other ASC MCP ships Prompts.
-- 1 Claude Skill, `asc-review-triage`. One-line install via `asc-mcp install-skill`. Claude auto-loads it when you ask about reviews. Zero other ASC MCP ships a Skill.
-
-**Positioning:** maintained successor to JoshuaRileyDev's app-store-connect-mcp-server, which was archived in February 2026. I kept the tool-surface familiar and added the AI-native layer his repo never got to.
-
-**Pricing:** free tier is 3 tools (list apps, app details, review status). Pro is $9/mo for the other 8 plus the Prompts and Skill. Polar is the merchant of record, so VAT and consumer-rights compliance are handled.
-
-**Security:** your `.p8` private key is read locally. JWT tokens generated on your machine. API calls go direct to api.appstoreconnect.apple.com. The license server sees only the license-key string, zero Apple data, zero credentials.
-
-Install:
-
-```
-npm install -g @pofky/asc-mcp
-asc-mcp install-skill
-```
-
-Source: https://github.com/pofky/asc-mcp
-
-Happy to answer questions, especially on the Prompts + Skill design. I want to know if anyone else is shipping MCP Prompts yet. I could not find a single ASC competitor that does.
+Post Tuesday or Wednesday, 14:00 UTC. First comment within five minutes.
 
 ---
 
-## First comment (always reply-first to your own post for signaling)
+## Body
 
-If you are wondering why the Pro tier is $9, it is because there are six free ASC MCP alternatives already. I am not competing on price. I am competing on what the AI actually does with the data. That is why Pro gates the workflows and the Skill, not basic endpoints. If you want just the API wrapper, the free tier covers it.
+Last month I submitted an app's 1.0 to the App Store without opening App Store Connect,
+except for the four things Apple's API genuinely cannot do. The agent set the metadata,
+priced three in-app purchase products across 175 territories with free trials, attached
+the build, uploaded screenshots, set the age rating, ran a preflight audit, and submitted.
+Apple approved it.
 
-Full feature list and why I think MCP Prompts matter: [link to README section].
+The tool is `@pofky/asc-mcp`, an MCP server for the App Store Connect API. 40 tools, and
+the part I care about is the honest boundary. These cannot be automated, and I found each
+one by hitting it live:
+
+- Creating an app record. `POST /v1/apps` is 403 for API keys, full stop.
+- The App Privacy nutrition label. The data usage resource is not in the public API.
+- EU DSA trader status. No attribute exists, and it is a legal declaration anyway.
+- An app's very first in-app purchases. Apple requires them submitted with the version,
+  which only the website can do. My `submit_for_review` detects this and aborts rather
+  than orphaning your version, which is the behaviour I wish I had had the first time.
+- Xcode cloud signing with a least-privilege key. Fails with a permissions error, so the
+  tool creates real distribution profiles and an ExportOptions.plist for manual signing.
+
+Everything else is a tool call: metadata with Apple's character limits validated before
+the write, screenshots per display type, build and upload locally with Xcode's toolchain,
+TestFlight groups and testers, subscriptions with territory pricing and trials, preflight,
+submit, release, phased rollout.
+
+Design decisions that might be interesting:
+
+- `asc_guide(topic)` is free and returns the end-to-end playbook for a flow with every
+  manual interruption flagged inline. An agent that reads it first does not walk into a
+  wall on step 12. The user guide in the repo is generated from that same source, so the
+  docs cannot drift from the tool.
+- Outward-facing calls (`submit_for_review`, `release_version`, `upload_binary`) refuse to
+  run without an explicit `confirm: true`. An agent has to be told twice.
+- Two tools use MCP Sampling, so review triage and reply drafting run on your client's
+  model and cost me nothing. The reply tool returns a draft and never posts it.
+- Job-shaped tools instead of one-to-one endpoint wrappers. Setting an age rating is one
+  call that fetches, merges the full V2 declaration set and submits, because a partial
+  PATCH silently loses declarations.
+
+Your `.p8` stays on your machine. JWTs are signed locally, calls go straight to
+api.appstoreconnect.apple.com. The only other request validates a license key.
+
+Free tier is five tools with no account: setup check, guide, list apps, app details,
+review status. Pro is $9/mo for the other 35, through Polar as merchant of record.
+
+    npx @pofky/asc-mcp init
+
+https://asc-mcp.pages.dev
+https://github.com/pofky/asc-mcp
+
+I would like to hear from anyone who has automated the privacy nutrition label or trader
+status. As far as I can tell it is not possible, and I would be happy to be wrong.
 
 ---
+
+## First comment (post within five minutes)
+
+On why it is not free: there are several free App Store Connect MCP servers that wrap the
+API one to one. I did not want to compete on endpoint count. The paid half is the write
+and control plane, which is the part that took months of live failures to get right, plus
+the preflight audit that catches the rejection before you spend a review cycle on it. Five
+tools stay free so you can check your setup and read the playbook before paying anything.
 
 ## Mod-rule reminders
 
-- No superlatives in the title ("fastest", "best", "first"). Instant downvote signal on HN.
-- No emoji.
-- Title under 80 chars. Both options are within that.
-- Do not DM friends asking for upvotes. HN detects rings and bans permanently.
-- First comment goes in within 5 minutes of posting.
-- Respond to every comment within the first hour.
-- If a mod changes your title, do not re-post.
+- No superlatives in the title. No emoji.
+- Title under 80 characters.
+- Never ask for upvotes anywhere. HN detects rings and bans permanently.
+- Reply to every comment in the first hour.
+- If a mod rewrites the title, leave it.
