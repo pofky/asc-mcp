@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -79,6 +79,25 @@ describe("setup mode (no credentials)", () => {
       // The reason has to reach the user, who only ever sees the client's log.
       expect(err).toContain("setup mode");
       expect(err).toContain("asc-mcp init");
+    },
+    30_000,
+  );
+
+  /**
+   * SERVER_VERSION used to be a hand-maintained literal, so 1.8.6 shipped
+   * announcing itself as 1.8.5 in every handshake and every stderr banner.
+   */
+  it.skipIf(!existsSync(ENTRY))(
+    "announces the published package version",
+    async () => {
+      const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf-8")) as {
+        version: string;
+      };
+      const { err, messages } = await handshake({});
+
+      const init = messages.find((m) => m.id === 1);
+      expect(init?.result?.serverInfo?.version).toBe(pkg.version);
+      expect(err).toContain(`asc-mcp ${pkg.version}`);
     },
     30_000,
   );
