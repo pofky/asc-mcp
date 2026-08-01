@@ -1,6 +1,25 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**Customer #6, and the version-drift bug it found (2026-08-01, v1.8.7).**
+
+Second subscriber of the day: koheimitsui3@gmail.com, D1 row 24, 18:38 UTC. `active=1`,
+`key_emailed=1`, expires 2026-09-01, `/validate` returns Pro. They landed 7 minutes after the
+worker deploy (18:31) and after 1.8.6 was on npm, so they are the first customer to get both the
+fixed licence email with a full config block and an `init` that generates a launchable config.
+Verified their exact key end to end: clean-dir install from npm, stdio handshake, "Pro license
+active", setup check all-OK, `list_apps` returned all 8 apps.
+
+**Found: the server announced the wrong version.** `SERVER_VERSION` was a hand-maintained
+literal, so 1.8.6 introduced itself as 1.8.5 in every client handshake and every stderr banner.
+Any bug report from these two customers would have named a version that does not contain their
+fix. Now read from package.json at startup, with a spawn test asserting the handshake and the
+banner match the package. Shipped as 1.8.7 (npm, tag, site); verified the published build reports
+1.8.7 with customer #6's key.
+
+The id gap in D1 (21 to 24) is not lost customers: the upsert's `ON CONFLICT` still consumes an
+AUTOINCREMENT value on every repeat Polar delivery.
+
 **Customer #5 onboarding check, and the setup bug it found (2026-08-01).**
 
 New Pro subscriber landed 2026-08-01 17:37 UTC (D1 row 21, chamillo007@gmail.com). Provisioning
