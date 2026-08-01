@@ -1,7 +1,6 @@
 # Reply draft: Michael Knuesel, appInfo 409 (reported against v1.8.2, fixed in v1.8.5)
 
-Not sent. Send from your mail client, or via `POST /admin/announce` with the ANNOUNCE_TOKEN
-secret (recipient must exist in the licenses table, which he does).
+Sent by hand on 2026-08-01. Kept for tone reference and for the next customer bug report.
 
 **Subject:** Fixed in v1.8.5, and you found three more places it was wrong
 

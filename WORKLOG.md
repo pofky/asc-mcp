@@ -29,9 +29,12 @@ lookup page sent only the `"ASC_LICENSE_KEY": "..."` line, which assumes a worki
 exists. Someone who buys before installing had no block. Both now carry a complete `mcpServers`
 snippet plus the `npx @pofky/asc-mcp init --write` path.
 
-Pending (production, needs a human): publish 1.8.6 to npm + registry, redeploy the site, deploy
-the licence worker. Customer #5 was emailed the pre-fix wording; a short follow-up with the
-working config is worth sending.
+All shipped and verified live: npm 1.8.6 (re-installed from the registry into a clean dir, the
+generated block is the npx form), MCP registry workflow green on tag v1.8.6, site on Pages
+master showing v1.8.6, licence worker deployed (`/key` now returns the full block). Customer #5
+had been emailed the pre-fix wording, so they got a follow-up with the working config via
+`/admin/announce`. ANNOUNCE_TOKEN was rotated to send it, since worker secrets cannot be read
+back.
 
 **v1.8.4, live sweep of every write path (2026-07-30).** Ran all 40 tools against the real
 account: confirm guardrails, free-tier gating, instruction-only tools, reads on both a live and
@@ -86,7 +89,7 @@ patch is now a note on the result rather than an exception that discards the ver
 fields that already landed. 13 unit tests; live end-to-end subtitle write verified by reading
 it back and restoring it. Published 1.8.3 to npm, registry, and the site.
 
-Open: reply to Michael (draft ready, needs a human to send; /admin/announce can deliver it).
+Reply to Michael sent by hand (confirmed 2026-08-01). Draft kept in launch/ for tone reference.
 
 **Distribution + revenue-path session (2026-07-30). Shipped v1.8.1 and v1.8.2.**
 
