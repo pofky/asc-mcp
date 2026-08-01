@@ -40,8 +40,22 @@ import { setupAppStoreSigning } from "./tools/signing.js";
 import { ascGuide } from "./tools/guide.js";
 import { runDoctor, formatDoctor } from "./doctor.js";
 import { discoverPrivateKey, runInit } from "./setup.js";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const SERVER_VERSION = "1.8.5";
+/**
+ * Read from package.json rather than a literal. A hand-maintained constant
+ * drifts: 1.8.6 shipped announcing itself as 1.8.5 to every client handshake,
+ * so bug reports carried the wrong version.
+ */
+export const SERVER_VERSION: string = (() => {
+  try {
+    const pkg = readFileSync(join(__dirname, "..", "package.json"), "utf-8");
+    return (JSON.parse(pkg) as { version?: string }).version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+})();
 
 const MISSING_CREDS_MESSAGE =
   "Missing App Store Connect credentials.\n\n" +
