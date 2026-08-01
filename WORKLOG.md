@@ -20,6 +20,13 @@ banner match the package. Shipped as 1.8.7 (npm, tag, site); verified the publis
 The id gap in D1 (21 to 24) is not lost customers: the upsert's `ON CONFLICT` still consumes an
 AUTOINCREMENT value on every repeat Polar delivery.
 
+Full licence audit, all 7 keys checked live against `/validate`: 3 paying customers active
+(knuesel.michael, chamillo007, koheimitsui3), 2 lapsed real customers correctly inactive
+(stevias.geneugten.5j, ameen), and 2 owner-owned rows, the `owner-selftest` key and
+`geowrecked@gmail.com` (an owner test purchase in June, `key_emailed=0` from the Brevo outage, so
+not a customer with an undelivered key). Not yet reconciled against Polar itself: if Polar still
+bills a row we have inactive, that is billing without access. Needs a Polar API token.
+
 **Customer #5 onboarding check, and the setup bug it found (2026-08-01).**
 
 New Pro subscriber landed 2026-08-01 17:37 UTC (D1 row 21, chamillo007@gmail.com). Provisioning
