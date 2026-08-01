@@ -8,7 +8,7 @@ Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://gi
 
 ```bash
 npm install -g @pofky/asc-mcp
-asc-mcp install-skill   # one-line, optional, for auto-routed review questions
+npx @pofky/asc-mcp install-skill   # one-line, optional, for auto-routed review questions
 ```
 
 ## What Makes This Different
@@ -48,13 +48,13 @@ No global install needed if you prefer `npx` (see the manual config below).
 **Fastest setup (recommended).** Drop your `.p8` into Apple's standard path `~/.appstoreconnect/private_keys/` (the file is named `AuthKey_XXXXXXXXXX.p8`, and the Key ID is in the filename). Then run:
 
 ```bash
-asc-mcp init --write     # auto-detects the key, asks for your Issuer ID, and writes the config for you
-# or: asc-mcp init       # same, but prints the block to paste yourself
+npx @pofky/asc-mcp init --write     # auto-detects the key, asks for your Issuer ID, and writes the config for you
+# or: npx @pofky/asc-mcp init       # same, but prints the block to paste yourself
 ```
 
 `init --write` finds your Claude Desktop / Claude Code config, backs it up, and merges in the server block, so there's no JSON editing. The server also auto-discovers the `.p8` path at runtime, so you only ever need `ASC_ISSUER_ID` (and `ASC_LICENSE_KEY` for Pro).
 
-**Stuck?** Run `asc-mcp doctor` (or ask your agent to call `asc_setup_check`). It checks your key, Issuer ID, a live connection to App Store Connect, and your license, and prints the exact fix for anything wrong. In your agent, the `/asc-start` command walks a first-time user through all of this.
+**Stuck?** Run `npx @pofky/asc-mcp doctor` (or ask your agent to call `asc_setup_check`). It checks your key, Issuer ID, a live connection to App Store Connect, and your license, and prints the exact fix for anything wrong. In your agent, the `/asc-start` command walks a first-time user through all of this.
 
 **Manual setup.** Add to your agent's MCP config (Claude Desktop config, or `~/.claude.json` for Claude Code). Use `npx` for zero-install, or `asc-mcp` if you installed globally:
 
@@ -182,12 +182,12 @@ These are MCP Prompts per the [spec](https://modelcontextprotocol.io/docs/concep
 After installing the MCP, run:
 
 ```bash
-asc-mcp install-skill
+npx @pofky/asc-mcp install-skill
 ```
 
 This copies a small `asc-review-triage` Skill to `~/.claude/skills/` so Claude automatically picks up review-related questions ("any bad reviews lately?", "what do my users say?", "ratings this week?") and calls the right ASC tools without you having to explain the workflow each time.
 
-Works on macOS, Linux, and Windows. To remove: `asc-mcp uninstall-skill`.
+Works on macOS, Linux, and Windows. To remove: `npx @pofky/asc-mcp uninstall-skill`.
 
 ## Real Output Examples
 

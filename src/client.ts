@@ -185,7 +185,7 @@ export class ASCAPIError extends Error {
 function friendlyHint(status: number, body: string): string {
   switch (status) {
     case 401:
-      return "Authentication failed. Your Issuer ID, Key ID, or .p8 likely don't match. Re-check the Issuer ID (UUID on the Integrations page) and that the .p8 matches the Key ID. Run `asc-mcp doctor` to pinpoint it.";
+      return "Authentication failed. Your Issuer ID, Key ID, or .p8 likely don't match. Re-check the Issuer ID (UUID on the Integrations page) and that the .p8 matches the Key ID. Run `npx @pofky/asc-mcp doctor` to pinpoint it.";
     case 403:
       return "Your API key authenticated but lacks permission for this action. Its role is probably too low (needs App Manager or higher), or this specific capability (e.g. cloud signing, creating an app record) is not available to API keys at all. See `asc_guide topic:limitations`.";
     case 404:

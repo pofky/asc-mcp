@@ -1,6 +1,38 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**Customer #5 onboarding check, and the setup bug it found (2026-08-01).**
+
+New Pro subscriber landed 2026-08-01 17:37 UTC (D1 row 21, chamillo007@gmail.com). Provisioning
+is clean end to end: `active=1`, `key_emailed=1`, `expires_at` 2026-09-01, and `/validate`
+returns `{"valid":true,"tier":"pro"}` live. Worker `/health`, `/key`, `/privacy`, `/terms`, the
+landing page, llms.txt, sitemap and the Polar checkout all 200. All four worker secrets present.
+
+Ran the customer's own path: installed `@pofky/asc-mcp@1.8.5` fresh from npm into a clean dir and
+drove it over stdio. Free tier: 40 tools, 6 prompts, `asc_setup_check` all-OK with a Free-tier
+warn. With a Pro key: "Pro license active", setup check all-OK, `asc_guide` correct.
+
+**Found: `asc-mcp init` generated a config that cannot start.** It wrote
+`"command": "asc-mcp"`, a bare binary that only exists after `npm i -g`. The site's primary CTA
+and README both tell people to run `npx @pofky/asc-mcp init`, which never puts that binary on
+PATH, so a customer following the documented path got a config whose server fails to launch.
+My own machine has a stale global install, which is why every previous check passed. Fixed in
+v1.8.6: one exported `SERVER_LAUNCH` (`npx -y @pofky/asc-mcp`) used by both the printed block and
+`--write`, matching the README. Every other `asc-mcp <cmd>` instruction in the guide, doctor,
+client errors, README and CONTROL_PLANE now says `npx @pofky/asc-mcp <cmd>` too; the CLI's own
+`--help` still uses the short form, which is correct once you are running the binary.
+4 regression tests on the generated block (npx form, merge preserves other servers, `.bak`
+backup, unparseable config left untouched). 112 tests pass.
+
+**Also: the licence email had nothing to paste into.** Both the Brevo email and the `/key`
+lookup page sent only the `"ASC_LICENSE_KEY": "..."` line, which assumes a working config already
+exists. Someone who buys before installing had no block. Both now carry a complete `mcpServers`
+snippet plus the `npx @pofky/asc-mcp init --write` path.
+
+Pending (production, needs a human): publish 1.8.6 to npm + registry, redeploy the site, deploy
+the licence worker. Customer #5 was emailed the pre-fix wording; a short follow-up with the
+working config is worth sending.
+
 **v1.8.4, live sweep of every write path (2026-07-30).** Ran all 40 tools against the real
 account: confirm guardrails, free-tier gating, instruction-only tools, reads on both a live and
 a draft app, reversible writes (read back and restored), and wrong-input paths. 5 of 25 checks

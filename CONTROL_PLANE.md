@@ -7,7 +7,7 @@ fastlane's `deliver`/`pilot` are just [spaceship](https://github.com/fastlane/fa
 
 ## Setup flow (shipped)
 - `.p8` auto-discovery from Apple's standard path `~/.appstoreconnect/private_keys/AuthKey_XXXXXXXXXX.p8`. Key ID is parsed from the filename. Drop the key, give the Issuer ID, done.
-- `asc-mcp init` wizard: detects the key, prompts for Issuer ID plus optional license, prints a paste-ready MCP config. Writes nothing destructive.
+- `npx @pofky/asc-mcp init` wizard: detects the key, prompts for Issuer ID plus optional license, prints a paste-ready MCP config. Writes nothing destructive.
 - `getConfig()` falls back to discovery when env vars are unset.
 
 ## Tool surface
