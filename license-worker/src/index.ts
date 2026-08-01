@@ -438,6 +438,25 @@ async function handleAdminAnnounce(
  * Returns true on success. No-ops (returns false) if BREVO_API_KEY is unset,
  * so the worker is safe to deploy before email is configured.
  */
+/**
+ * A complete, paste-ready server block. Sending only the `ASC_LICENSE_KEY` line
+ * assumed the customer already had a working config; someone who buys before
+ * installing had nothing to paste it into. `npx` (not a bare `asc-mcp`) so it
+ * launches without a global install.
+ */
+const CONFIG_SNIPPET = (key: string) => `{
+  "mcpServers": {
+    "appstore-connect": {
+      "command": "npx",
+      "args": ["-y", "@pofky/asc-mcp"],
+      "env": {
+        "ASC_ISSUER_ID": "YOUR_ISSUER_ID",
+        "ASC_LICENSE_KEY": "${key}"
+      }
+    }
+  }
+}`;
+
 async function sendLicenseEmail(
   env: Env,
   email: string,
@@ -455,7 +474,8 @@ async function sendLicenseEmail(
       <p>Thanks for subscribing. Here is your license key:</p>
       <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
       <p>Add it to your MCP server config alongside your App Store Connect credentials:</p>
-      <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">"ASC_LICENSE_KEY": "${safeKey}"</pre>
+      <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">${CONFIG_SNIPPET(safeKey)}</pre>
+      <p>Not set up yet? Drop your <code>.p8</code> into <code>~/.appstoreconnect/private_keys/</code> and run <code>npx @pofky/asc-mcp init --write</code>; it asks for your Issuer ID and this key, then writes the config for you.</p>
       <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.), then ask it to "list my App Store Connect apps" to confirm Pro is active.</p>
       <p style="color:#666;font-size:14px">You can also retrieve this key any time at <a href="https://asc-mcp-license.remewdy.workers.dev/key">the license page</a>. Keep it private; it unlocks Pro tools on your machine.</p>
       <p style="color:#666;font-size:14px">Questions or trouble? Just reply to this email.</p>
@@ -647,7 +667,8 @@ async function handleKeyLookup(
       ${escapeHtml(row.key)}
     </div>
     <p>Add this to your MCP server configuration:</p>
-    <pre style="background:#1a1a2e;padding:15px;border-radius:8px;overflow-x:auto">"ASC_LICENSE_KEY": "${escapeHtml(row.key)}"</pre>
+    <pre style="background:#1a1a2e;padding:15px;border-radius:8px;overflow-x:auto">${CONFIG_SNIPPET(escapeHtml(row.key))}</pre>
+    <p>Not set up yet? Drop your <code>.p8</code> into <code>~/.appstoreconnect/private_keys/</code> and run <code>npx @pofky/asc-mcp init --write</code>, which asks for your Issuer ID and this key and writes the config for you.</p>
     <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.) so it reloads with the key. Then ask it to "list my App Store Connect apps" to confirm Pro is active.</p>
     <p style="color:#888;font-size:14px">Keep this key private. It unlocks Pro tools on your machine.</p>
   `, headers);

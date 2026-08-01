@@ -30,6 +30,17 @@ export function discoverPrivateKey(dir = STANDARD_KEY_DIR): DiscoveredKey | null
   return { path: join(dir, match), keyId };
 }
 
+/**
+ * How the client should launch the server. The documented install path is
+ * `npx @pofky/asc-mcp init`, which never puts an `asc-mcp` binary on PATH, so a
+ * config saying `"command": "asc-mcp"` fails to start for everyone who did not
+ * also `npm i -g`. npx works in both cases and matches the README.
+ */
+export const SERVER_LAUNCH = {
+  command: "npx",
+  args: ["-y", "@pofky/asc-mcp"],
+} as const;
+
 /** Known client MCP config files, in the order we offer them. */
 function clientConfigCandidates(): { label: string; path: string }[] {
   const home = homedir();
@@ -48,7 +59,7 @@ function clientConfigCandidates(): { label: string; path: string }[] {
  * clobbering other servers. Backs up the original to <path>.bak first. Returns a
  * status line for the user.
  */
-function writeServerBlock(path: string, env: Record<string, string>): string {
+export function writeServerBlock(path: string, env: Record<string, string>): string {
   let existing: Record<string, unknown> = {};
   if (existsSync(path)) {
     try {
@@ -59,7 +70,7 @@ function writeServerBlock(path: string, env: Record<string, string>): string {
     copyFileSync(path, `${path}.bak`);
   }
   const servers = (existing.mcpServers as Record<string, unknown>) ?? {};
-  servers["appstore-connect"] = { command: "asc-mcp", env };
+  servers["appstore-connect"] = { ...SERVER_LAUNCH, env };
   existing.mcpServers = servers;
   writeFileSync(path, JSON.stringify(existing, null, 2) + "\n");
   return existsSync(`${path}.bak`)
@@ -126,7 +137,7 @@ export async function runInit(write = false): Promise<number> {
   const config = {
     mcpServers: {
       "appstore-connect": {
-        command: "asc-mcp",
+        ...SERVER_LAUNCH,
         env,
       },
     },
@@ -167,9 +178,9 @@ export async function runInit(write = false): Promise<number> {
       (wrote
         ? "  1. Restart your MCP client.\n"
         : "  1. Paste the block above, then restart your MCP client.\n") +
-      "  2. Ask your agent to run `asc_setup_check` (or `asc-mcp doctor`) to confirm everything is wired.\n" +
+      "  2. Ask your agent to run `asc_setup_check` (or `npx @pofky/asc-mcp doctor`) to confirm everything is wired.\n" +
       "  3. Then `list_apps`, and `asc_guide` (topic:overview) for the map of every flow.\n" +
-      "  4. Optional: `asc-mcp install-skill` adds the bundled review-triage Claude Skill.\n",
+      "  4. Optional: `npx @pofky/asc-mcp install-skill` adds the bundled review-triage Claude Skill.\n",
   );
   return 0;
 }

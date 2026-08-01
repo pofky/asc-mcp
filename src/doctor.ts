@@ -2,7 +2,7 @@
  * Self-diagnosis for setup. The #1 newbie failure mode is "it doesn't work" with
  * no idea why: missing .p8, wrong Issuer ID, a key without the right role, or an
  * unset license. `runDoctor` checks each link in the chain and, for every
- * failure, prints the exact next step. Powers both `asc-mcp doctor` (CLI, runs
+ * failure, prints the exact next step. Powers both `npx @pofky/asc-mcp doctor` (CLI, runs
  * before the server is even configured) and the free `asc_setup_check` MCP tool.
  */
 
@@ -88,7 +88,7 @@ export async function runDoctor(): Promise<DoctorReport> {
       name: "Issuer ID",
       status: "fail",
       detail: "ASC_ISSUER_ID is unset.",
-      fix: `Copy the Issuer ID (a UUID at the top of ${INTEGRATIONS_URL}) and set ASC_ISSUER_ID. Run \`asc-mcp init\` to generate the config.`,
+      fix: `Copy the Issuer ID (a UUID at the top of ${INTEGRATIONS_URL}) and set ASC_ISSUER_ID. Run \`npx @pofky/asc-mcp init\` to generate the config.`,
     });
   } else {
     checks.push({ name: "Issuer ID", status: "ok", detail: issuerId });

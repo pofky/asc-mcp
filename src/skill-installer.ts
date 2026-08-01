@@ -78,7 +78,7 @@ export function installSkill(): number {
     console.log("Claude will auto-load the skill and call the right tools.");
     console.log("");
     console.log("If Claude does not pick it up, restart the client once.");
-    console.log("To remove: asc-mcp uninstall-skill");
+    console.log("To remove: npx @pofky/asc-mcp uninstall-skill");
     return 0;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

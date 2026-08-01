@@ -45,7 +45,7 @@ const SERVER_VERSION = "1.8.5";
 
 const MISSING_CREDS_MESSAGE =
   "Missing App Store Connect credentials.\n\n" +
-  "Fastest path: run `asc-mcp init` (auto-detects your .p8, prints a paste-ready config).\n\n" +
+  "Fastest path: run `npx @pofky/asc-mcp init` (auto-detects your .p8, prints a paste-ready config).\n\n" +
   "Or set manually:\n" +
   "  ASC_KEY_ID       - Your API key ID (auto-detected from a .p8 in ~/.appstoreconnect/private_keys)\n" +
   "  ASC_ISSUER_ID    - Your team's issuer ID\n" +
