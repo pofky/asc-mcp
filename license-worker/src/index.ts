@@ -31,6 +31,9 @@ interface Env {
   // by design: DELETE IT once a verification run is finished, so a sandbox
   // signature can never mint a real licence.
   POLAR_WEBHOOK_SECRET_SANDBOX?: string;
+  // Extra asc-mcp product ids beyond the two built in, comma-separated. Used to
+  // admit the sandbox mirror product during a verification run.
+  POLAR_EXTRA_PRODUCT_IDS?: string;
   // Optional: Brevo transactional email. If BREVO_API_KEY is unset, the worker
   // simply skips emailing the key (self-service /key still works).
   BREVO_API_KEY?: string;
@@ -216,8 +219,16 @@ const IMMEDIATE_REVOKE_EVENTS = new Set(["subscription.revoked"]);
 // active-type event fired. Anything else (active, trialing, past_due,
 // incomplete, or absent) is treated as active so a paying customer is
 // never left without a key.
+//
+// `canceled` is deliberately NOT here. Polar sets it the moment a customer
+// turns off renewal, while `current_period_end` is still in the future and they
+// are still entitled. It arrives on a `subscription.updated`, so listing it as
+// dead demoted a paying customer the instant they cancelled, taking away time
+// they had already paid for. The CANCEL_EVENTS path was fixed for this in
+// v1.8.2; this is the same bug through the other door, and a sandbox
+// cancellation reproduced it against the live worker. `revoked` is what ends
+// access, and expires_at ends it naturally otherwise.
 const DEAD_STATUSES = new Set([
-  "canceled",
   "revoked",
   "incomplete_expired",
   "unpaid",
@@ -226,12 +237,35 @@ const DEAD_STATUSES = new Set([
 /**
  * Decide whether a subscription should be active given the status on an
  * active-type Polar event. Exported for regression tests: this is the exact
- * logic that twice left paying customers at active=0. Anything that is not a
- * known-dead status (including an absent status, "active", "trialing",
- * "past_due", "incomplete") activates the license.
+ * logic that three times now left paying customers at active=0. Anything that
+ * is not a known-dead status (including an absent status, "active",
+ * "trialing", "past_due", "incomplete", "canceled") activates the license.
  */
 export function computeActiveFlag(status?: string): 0 | 1 {
   return status && DEAD_STATUSES.has(status) ? 0 : 1;
+}
+
+/**
+ * The activation decision actually written to the row: the status verdict, and
+ * additionally never active once the paid period is over.
+ *
+ * Two orderings make the status alone insufficient. Polar's own cancellation
+ * emits `canceled` and `revoked` back to back, and any late or retried
+ * `subscription.updated` carrying the still-live status would otherwise
+ * resurrect a licence that `revoked` had just switched off. And a `cycled` or
+ * `updated` replayed long after a subscription lapsed would reactivate it.
+ * A period end in the past means no entitlement, whatever the status says.
+ */
+export function shouldBeActive(
+  status: string | undefined,
+  currentPeriodEnd: string | null | undefined,
+  now: Date,
+): 0 | 1 {
+  if (!computeActiveFlag(status)) return 0;
+  if (!currentPeriodEnd) return 1;
+  const end = new Date(currentPeriodEnd);
+  if (Number.isNaN(end.getTime())) return 1;
+  return end > now ? 1 : 0;
 }
 
 export function classifyPolarEvent(
@@ -256,6 +290,59 @@ export function webhookSecrets(env: {
     env.POLAR_WEBHOOK_SECRET,
     env.POLAR_WEBHOOK_SECRET_SANDBOX,
   ].filter((s): s is string => typeof s === "string" && s.length > 0);
+}
+
+/**
+ * Every asc-mcp Pro product, across organizations.
+ *
+ * Polar delivers each event to EVERY webhook endpoint registered in the
+ * organization, so an endpoint in a shared org receives the other products'
+ * sales too. That has already caused a real incident on this account: one
+ * project's test purchase fanned out and minted three stray licences plus
+ * welcome emails in a sibling project. The old org sold asc-mcp alongside other
+ * products, so without this guard someone else's subscription would mint an
+ * asc-mcp Pro key and email it to them.
+ */
+const OWN_PRODUCT_IDS = new Set([
+  // Original product, in the shared organization c16ec812.
+  "7cf11984-03f1-4251-b765-4c0abb3ab99f",
+  // Dedicated asc-mcp organization 3bef20c6, where new signups go.
+  "7cd3dd0b-7ee2-43db-a920-f7d4371f9d9a",
+]);
+
+/**
+ * Polar has emitted the product id under several shapes over time, and a guard
+ * that reads only one of them silently falls through to "provision it" — which
+ * is exactly how the stray-licence incident happened.
+ */
+export function resolveProductId(data: Record<string, unknown>): string | null {
+  const direct = data.product_id ?? data.productId;
+  if (typeof direct === "string" && direct) return direct;
+  const nested = (data.product as { id?: unknown } | undefined)?.id;
+  return typeof nested === "string" && nested ? nested : null;
+}
+
+/**
+ * Whether this event is for one of our products. An event with NO product id is
+ * ours by default: dropping those would break the legacy payload shape that the
+ * existing subscriptions still arrive in, and a false negative here costs a
+ * paying customer their key.
+ */
+export function isOwnProduct(
+  data: Record<string, unknown>,
+  extraIds: string[] = [],
+): boolean {
+  const id = resolveProductId(data);
+  if (!id) return true;
+  return OWN_PRODUCT_IDS.has(id) || extraIds.includes(id);
+}
+
+/** Sandbox or future product ids, comma-separated. Empty in a normal prod run. */
+function extraProductIds(env: Env): string[] {
+  return (env.POLAR_EXTRA_PRODUCT_IDS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 async function handlePolarWebhook(
@@ -286,6 +373,11 @@ async function handlePolarWebhook(
 
   console.log("polar webhook", event.type, "status:", event.data?.status);
 
+  if (!isOwnProduct(event.data as unknown as Record<string, unknown>, extraProductIds(env))) {
+    console.log("ignoring event for another product in this organization");
+    return json({ ok: true, note: "not an asc-mcp product" }, headers);
+  }
+
   if (ACTIVE_EVENTS.has(event.type)) {
     const sub = event.data;
     const email = sub.customer?.email || "";
@@ -294,7 +386,7 @@ async function handlePolarWebhook(
     // required status to be exactly "active"/"trialing", which left real
     // paying customers at active=0 (e.g. status "incomplete" while payment
     // settled), silently suppressing the license email too.
-    const active = computeActiveFlag(sub.status);
+    const active = shouldBeActive(sub.status, expiresAt, new Date());
     const licenseKey = generateLicenseKey();
 
     await env.DB.prepare(
