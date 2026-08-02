@@ -22,6 +22,10 @@ const CHECKOUT_URL =
 interface Env {
   DB: D1Database;
   POLAR_WEBHOOK_SECRET: string;
+  // Second Polar organization's webhook signing secret. Set during the move to
+  // a dedicated org, when the old org still delivers renewals and
+  // cancellations for the grandfathered subscriptions. Unset otherwise.
+  POLAR_WEBHOOK_SECRET_2?: string;
   // Optional: Brevo transactional email. If BREVO_API_KEY is unset, the worker
   // simply skips emailing the key (self-service /key still works).
   BREVO_API_KEY?: string;
@@ -225,6 +229,19 @@ export function classifyPolarEvent(
   return "ignore";
 }
 
+/**
+ * Every webhook signing secret this worker will accept, newest first. Exported
+ * for tests.
+ */
+export function webhookSecrets(env: {
+  POLAR_WEBHOOK_SECRET?: string;
+  POLAR_WEBHOOK_SECRET_2?: string;
+}): string[] {
+  return [env.POLAR_WEBHOOK_SECRET_2, env.POLAR_WEBHOOK_SECRET].filter(
+    (s): s is string => typeof s === "string" && s.length > 0,
+  );
+}
+
 async function handlePolarWebhook(
   request: Request,
   env: Env,
@@ -235,7 +252,7 @@ async function handlePolarWebhook(
   const verified = await verifyPolarSignature(
     request.headers,
     rawBody,
-    env.POLAR_WEBHOOK_SECRET,
+    webhookSecrets(env),
   );
   if (!verified) {
     return json({ error: "Invalid signature" }, headers, 401);
@@ -525,12 +542,12 @@ async function sendLicenseEmail(
 async function verifyPolarSignature(
   reqHeaders: Headers,
   rawBody: string,
-  secret: string,
+  secrets: string[],
 ): Promise<boolean> {
   const id = reqHeaders.get("webhook-id");
   const timestamp = reqHeaders.get("webhook-timestamp");
   const sigHeader = reqHeaders.get("webhook-signature");
-  if (!id || !timestamp || !sigHeader || !secret) return false;
+  if (!id || !timestamp || !sigHeader || !secrets.length) return false;
 
   // Replay protection: reject timestamps more than 5 minutes from now.
   const ts = Number(timestamp);
@@ -538,29 +555,37 @@ async function verifyPolarSignature(
   const skew = Math.abs(Math.floor(Date.now() / 1000) - ts);
   if (skew > 300) return false;
 
-  // Polar's validateEvent base64-encodes the secret string then hands it to the
-  // Standard Webhooks lib, which base64-decodes it back -- so the HMAC key is
-  // simply the raw UTF-8 bytes of the full secret (e.g. "polar_whs_...").
-  const secretBytes = new TextEncoder().encode(secret);
-  const key = await crypto.subtle.importKey(
-    "raw",
-    secretBytes,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sigBuf = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(`${id}.${timestamp}.${rawBody}`),
-  );
-  const expected = bytesToBase64(new Uint8Array(sigBuf));
+  const signed = new TextEncoder().encode(`${id}.${timestamp}.${rawBody}`);
 
-  // Header may carry multiple space-delimited signatures (key rotation).
-  return sigHeader.split(" ").some((part) => {
-    const [version, sig] = part.split(",");
-    return version === "v1" && sig != null && timingSafeEqual(sig, expected);
-  });
+  // Each Polar organization signs with its own secret, and during the move to a
+  // dedicated org both deliver at once: the old org still sends renewals and
+  // cancellations for the grandfathered subscriptions while the new one sends
+  // new signups. Accept a signature from any configured secret.
+  for (const secret of secrets) {
+    if (!secret) continue;
+
+    // Polar's validateEvent base64-encodes the secret string then hands it to
+    // the Standard Webhooks lib, which base64-decodes it back -- so the HMAC key
+    // is simply the raw UTF-8 bytes of the full secret (e.g. "polar_whs_...").
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const sigBuf = await crypto.subtle.sign("HMAC", key, signed);
+    const expected = bytesToBase64(new Uint8Array(sigBuf));
+
+    // Header may carry multiple space-delimited signatures (key rotation).
+    const match = sigHeader.split(" ").some((part) => {
+      const [version, sig] = part.split(",");
+      return version === "v1" && sig != null && timingSafeEqual(sig, expected);
+    });
+    if (match) return true;
+  }
+
+  return false;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
