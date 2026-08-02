@@ -8,7 +8,7 @@
 - Install: `npx @pofky/asc-mcp init` prints a paste-ready MCP config block. `init --write` merges it into your client config directly.
 - Tool count: 40 tools and 6 prompts. 5 tools are free, 35 require Pro.
 - Free tools: `asc_setup_check`, `asc_guide`, `list_apps`, `app_details`, `review_status`. No account or signup required.
-- Pricing: Pro is $9 per month, billed through Polar, cancel any time. Purchase: https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu
+- Pricing: Pro is $9 per month, billed through Polar, cancel any time. Purchase: https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj
 - License key recovery: https://asc-mcp-license.remewdy.workers.dev/key
 - Architecture: the App Store Connect `.p8` private key stays on the user's machine. JWTs are signed locally. API calls go directly from the user's computer to api.appstoreconnect.apple.com with no proxy. The only other outbound call validates the license key.
 - Safety: `submit_for_review`, `release_version` and `upload_binary` refuse to run without an explicit `confirm: true`. `draft_review_response` writes a reply and never posts it.

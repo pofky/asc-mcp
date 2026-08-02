@@ -1,7 +1,7 @@
 import type { Tier } from "./types.js";
 
 export const UPGRADE_URL =
-  "https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu";
+  "https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj";
 
 /**
  * Returns an upgrade message string when the tier is not Pro, otherwise null.

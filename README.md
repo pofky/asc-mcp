@@ -140,7 +140,7 @@ The whole flow chains: `setup_app_store_signing` to `build_and_archive` to `uplo
 
 `release_preflight` is the single source of truth for "is this submittable": it checks every API-addressable field and ends with a tailored "Manual steps to finish" list for the few things Apple only allows in the website (first-IAP bundling, App Privacy nutrition labels, EU trader status).
 
-[Get Pro](https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu) | [Retrieve your license key](https://asc-mcp-license.remewdy.workers.dev/key)
+[Get Pro](https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj) | [Retrieve your license key](https://asc-mcp-license.remewdy.workers.dev/key)
 
 ## What stays manual (and why)
 

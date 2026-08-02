@@ -5,6 +5,7 @@ import {
   isLicenseUsable,
   GRACE_DAYS,
   webhookSecrets,
+  verifyPolarSignature,
 } from "../license-worker/src/index.js";
 
 // Regression coverage for the bug that twice left paying customers at
@@ -45,6 +46,17 @@ describe("classifyPolarEvent", () => {
     expect(classifyPolarEvent("subscription.created")).toBe("activate");
     expect(classifyPolarEvent("subscription.active")).toBe("activate");
     expect(classifyPolarEvent("subscription.updated")).toBe("activate");
+  });
+
+  /**
+   * A renewal is what keeps a paying customer's expires_at moving forward.
+   * Missing the event Polar actually sends for it demotes them to free once the
+   * grace window closes, so every "period continues" event must activate.
+   */
+  it("treats a renewal or a resumed subscription as activation", () => {
+    expect(classifyPolarEvent("subscription.cycled")).toBe("activate");
+    expect(classifyPolarEvent("subscription.uncanceled")).toBe("activate");
+    expect(classifyPolarEvent("subscription.resumed")).toBe("activate");
   });
 
   it("treats canceled/revoked as cancellation events", () => {
@@ -122,5 +134,82 @@ describe("webhookSecrets", () => {
   it("drops empty values so an unset secret never verifies", () => {
     expect(webhookSecrets({ POLAR_WEBHOOK_SECRET: "", POLAR_WEBHOOK_SECRET_2: "" })).toEqual([]);
     expect(webhookSecrets({})).toEqual([]);
+  });
+});
+
+/**
+ * The signature check is the single point where a paying customer either gets a
+ * licence key or silently gets nothing, and it has already broken once over the
+ * exact byte derivation of the HMAC key. A dashboard secret is `polar_whs_...`
+ * and keys off the raw UTF-8 of the whole string; an API-minted one is
+ * `whsec_<base64>` and keys off the decoded remainder. Both must verify.
+ */
+describe("verifyPolarSignature", () => {
+  const ID = "msg_test";
+  const BODY = JSON.stringify({ type: "subscription.created", data: { id: "sub_1" } });
+
+  async function sign(keyBytes: Uint8Array, timestamp: string): Promise<string> {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      keyBytes as unknown as ArrayBufferView,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const buf = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      new TextEncoder().encode(`${ID}.${timestamp}.${BODY}`),
+    );
+    return Buffer.from(new Uint8Array(buf)).toString("base64");
+  }
+
+  function headers(timestamp: string, sig: string): Headers {
+    return new Headers({
+      "webhook-id": ID,
+      "webhook-timestamp": timestamp,
+      "webhook-signature": `v1,${sig}`,
+    });
+  }
+
+  const now = () => String(Math.floor(Date.now() / 1000));
+
+  it("accepts a dashboard secret signed over its raw UTF-8 bytes", async () => {
+    const secret = "polar_whs_dashboardsecret";
+    const ts = now();
+    const sig = await sign(new TextEncoder().encode(secret), ts);
+    expect(await verifyPolarSignature(headers(ts, sig), BODY, [secret])).toBe(true);
+  });
+
+  it("accepts an API-minted whsec_ secret signed over its decoded bytes", async () => {
+    const raw = Buffer.from("an-api-minted-signing-key");
+    const secret = `whsec_${raw.toString("base64")}`;
+    const ts = now();
+    const sig = await sign(new Uint8Array(raw), ts);
+    expect(await verifyPolarSignature(headers(ts, sig), BODY, [secret])).toBe(true);
+  });
+
+  it("accepts a delivery from the second organization", async () => {
+    const secret = "polar_whs_neworg";
+    const ts = now();
+    const sig = await sign(new TextEncoder().encode(secret), ts);
+    const accepted = await verifyPolarSignature(headers(ts, sig), BODY, [
+      secret,
+      "polar_whs_oldorg",
+    ]);
+    expect(accepted).toBe(true);
+  });
+
+  it("rejects a wrong secret, a tampered body and a stale timestamp", async () => {
+    const secret = "polar_whs_real";
+    const ts = now();
+    const sig = await sign(new TextEncoder().encode(secret), ts);
+
+    expect(await verifyPolarSignature(headers(ts, sig), BODY, ["polar_whs_other"])).toBe(false);
+    expect(await verifyPolarSignature(headers(ts, sig), BODY + " ", [secret])).toBe(false);
+
+    const stale = String(Math.floor(Date.now() / 1000) - 3600);
+    const staleSig = await sign(new TextEncoder().encode(secret), stale);
+    expect(await verifyPolarSignature(headers(stale, staleSig), BODY, [secret])).toBe(false);
   });
 });
