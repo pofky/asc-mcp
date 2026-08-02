@@ -26,6 +26,11 @@ interface Env {
   // a dedicated org, when the old org still delivers renewals and
   // cancellations for the grandfathered subscriptions. Unset otherwise.
   POLAR_WEBHOOK_SECRET_2?: string;
+  // Polar's sandbox instance, for verifying the checkout -> webhook -> email ->
+  // validate chain with a test card against this exact deployed code. Temporary
+  // by design: DELETE IT once a verification run is finished, so a sandbox
+  // signature can never mint a real licence.
+  POLAR_WEBHOOK_SECRET_SANDBOX?: string;
   // Optional: Brevo transactional email. If BREVO_API_KEY is unset, the worker
   // simply skips emailing the key (self-service /key still works).
   BREVO_API_KEY?: string;
@@ -244,10 +249,13 @@ export function classifyPolarEvent(
 export function webhookSecrets(env: {
   POLAR_WEBHOOK_SECRET?: string;
   POLAR_WEBHOOK_SECRET_2?: string;
+  POLAR_WEBHOOK_SECRET_SANDBOX?: string;
 }): string[] {
-  return [env.POLAR_WEBHOOK_SECRET_2, env.POLAR_WEBHOOK_SECRET].filter(
-    (s): s is string => typeof s === "string" && s.length > 0,
-  );
+  return [
+    env.POLAR_WEBHOOK_SECRET_2,
+    env.POLAR_WEBHOOK_SECRET,
+    env.POLAR_WEBHOOK_SECRET_SANDBOX,
+  ].filter((s): s is string => typeof s === "string" && s.length > 0);
 }
 
 async function handlePolarWebhook(
