@@ -17,7 +17,7 @@
  * value as `UPGRADE_URL` in `src/gate.ts`; both must change together.
  */
 const CHECKOUT_URL =
-  "https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu";
+  "https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj";
 
 interface Env {
   DB: D1Database;
@@ -189,6 +189,14 @@ const ACTIVE_EVENTS = new Set([
   "subscription.created",
   "subscription.updated",
   "subscription.active",
+  // A renewal starts a new billing period. Polar sends `cycled` for it, and
+  // historically `updated` too; handling only `updated` would leave a renewed
+  // customer on last period's `expires_at` if that ever stops being sent, and
+  // they would fall to the free tier once the grace window closed.
+  "subscription.cycled",
+  // Both mean access resumes with a fresh period end.
+  "subscription.uncanceled",
+  "subscription.resumed",
 ]);
 // In Polar, `subscription.canceled` means "will not renew": the customer keeps
 // access until the period they already paid for ends. Only `revoked` means
@@ -539,7 +547,7 @@ async function sendLicenseEmail(
  * with HMAC-SHA256 using the base64 secret (whsec_ prefix), and sends the
  * result base64-encoded as space-delimited `v1,<sig>` entries.
  */
-async function verifyPolarSignature(
+export async function verifyPolarSignature(
   reqHeaders: Headers,
   rawBody: string,
   secrets: string[],
@@ -562,30 +570,61 @@ async function verifyPolarSignature(
   // cancellations for the grandfathered subscriptions while the new one sends
   // new signups. Accept a signature from any configured secret.
   for (const secret of secrets) {
-    if (!secret) continue;
+    for (const keyBytes of candidateKeys(secret)) {
+      const key = await crypto.subtle.importKey(
+        "raw",
+        keyBytes,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+      );
+      const sigBuf = await crypto.subtle.sign("HMAC", key, signed);
+      const expected = bytesToBase64(new Uint8Array(sigBuf));
 
-    // Polar's validateEvent base64-encodes the secret string then hands it to
-    // the Standard Webhooks lib, which base64-decodes it back -- so the HMAC key
-    // is simply the raw UTF-8 bytes of the full secret (e.g. "polar_whs_...").
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    );
-    const sigBuf = await crypto.subtle.sign("HMAC", key, signed);
-    const expected = bytesToBase64(new Uint8Array(sigBuf));
-
-    // Header may carry multiple space-delimited signatures (key rotation).
-    const match = sigHeader.split(" ").some((part) => {
-      const [version, sig] = part.split(",");
-      return version === "v1" && sig != null && timingSafeEqual(sig, expected);
-    });
-    if (match) return true;
+      // Header may carry multiple space-delimited signatures (key rotation).
+      const match = sigHeader.split(" ").some((part) => {
+        const [version, sig] = part.split(",");
+        return version === "v1" && sig != null && timingSafeEqual(sig, expected);
+      });
+      if (match) return true;
+    }
   }
 
   return false;
+}
+
+/**
+ * The HMAC key bytes to try for one secret.
+ *
+ * A secret copied from the Polar dashboard looks like `polar_whs_...`, and the
+ * key is the raw UTF-8 of the whole string: Polar's `validateEvent`
+ * base64-encodes the secret before handing it to the Standard Webhooks library,
+ * which base64-decodes it straight back. Getting this wrong meant zero licence
+ * rows were ever created and the first paying customer got no key.
+ *
+ * A secret minted through `POST /v1/webhooks/endpoints` comes back as
+ * `whsec_<base64>`, the canonical Standard Webhooks shape, where the key is the
+ * base64-decoded remainder. Rather than bet a customer's first purchase on
+ * which convention applies, try both. Two extra HMACs on a rejected request.
+ */
+export function candidateKeys(secret: string): Uint8Array[] {
+  if (!secret) return [];
+  const keys = [new TextEncoder().encode(secret)];
+
+  const marker = secret.indexOf("_");
+  if (marker > 0) {
+    const body = secret.slice(marker + 1);
+    try {
+      const bin = atob(body);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      if (bytes.length) keys.push(bytes);
+    } catch {
+      // Not base64: the raw-UTF-8 candidate is the only one.
+    }
+  }
+
+  return keys;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {

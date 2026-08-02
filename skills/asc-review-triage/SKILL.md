@@ -45,7 +45,7 @@ Produce a concise summary with:
 - Do not invent reviews. Quote only what `list_reviews` returned.
 - Do not post a reply. This skill reads only. Drafting or posting responses is a separate Pro feature not in this skill.
 - If `list_reviews` returns nothing, say so plainly.
-- If the user does not have a Pro license (free tier), `list_reviews` will error. Explain the free-tier limit and link to https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu.
+- If the user does not have a Pro license (free tier), `list_reviews` will error. Explain the free-tier limit and link to https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj.
 
 ## Example usage
 
