@@ -1,11 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
   computeActiveFlag,
+  shouldBeActive,
   classifyPolarEvent,
   isLicenseUsable,
   GRACE_DAYS,
   webhookSecrets,
   verifyPolarSignature,
+  isOwnProduct,
+  resolveProductId,
 } from "../license-worker/src/index.js";
 
 // Regression coverage for the bug that twice left paying customers at
@@ -33,8 +36,18 @@ describe("computeActiveFlag", () => {
     expect(computeActiveFlag("")).toBe(1);
   });
 
+  /**
+   * Polar sets status "canceled" the moment renewal is turned off, while the
+   * paid period is still running, and delivers it on a subscription.updated.
+   * Treating it as dead demoted a customer the instant they cancelled, taking
+   * away time they had paid for. Reproduced against the live worker with a
+   * sandbox cancellation on 2026-08-02. `expires_at` ends access instead.
+   */
+  it("keeps a cancelled-but-still-paid subscription active", () => {
+    expect(computeActiveFlag("canceled")).toBe(1);
+  });
+
   it("does NOT activate genuinely dead statuses", () => {
-    expect(computeActiveFlag("canceled")).toBe(0);
     expect(computeActiveFlag("revoked")).toBe(0);
     expect(computeActiveFlag("incomplete_expired")).toBe(0);
     expect(computeActiveFlag("unpaid")).toBe(0);
@@ -222,5 +235,85 @@ describe("verifyPolarSignature", () => {
     const stale = String(Math.floor(Date.now() / 1000) - 3600);
     const staleSig = await sign(new TextEncoder().encode(secret), stale);
     expect(await verifyPolarSignature(headers(stale, staleSig), BODY, [secret])).toBe(false);
+  });
+});
+
+/**
+ * Polar fans every event out to EVERY webhook endpoint in the organization, so
+ * an endpoint in a shared org sees the other products' sales. That has already
+ * minted stray licences plus welcome emails in a sibling project on this
+ * account, so a subscription for someone else's product must never provision
+ * asc-mcp Pro.
+ */
+describe("isOwnProduct", () => {
+  const OLD = "7cf11984-03f1-4251-b765-4c0abb3ab99f";
+  const NEW = "7cd3dd0b-7ee2-43db-a920-f7d4371f9d9a";
+
+  it("claims both asc-mcp products, in either organization", () => {
+    expect(isOwnProduct({ product_id: OLD })).toBe(true);
+    expect(isOwnProduct({ product_id: NEW })).toBe(true);
+  });
+
+  it("reads the product id in every shape Polar has emitted", () => {
+    expect(resolveProductId({ product_id: NEW })).toBe(NEW);
+    expect(resolveProductId({ productId: NEW })).toBe(NEW);
+    expect(resolveProductId({ product: { id: NEW } })).toBe(NEW);
+    expect(resolveProductId({})).toBeNull();
+  });
+
+  it("disowns another project's product in the same organization", () => {
+    expect(isOwnProduct({ product_id: "00000000-0000-0000-0000-000000000000" })).toBe(false);
+    expect(isOwnProduct({ product: { id: "11111111-1111-1111-1111-111111111111" } })).toBe(false);
+  });
+
+  it("admits an extra id, for the sandbox mirror during a verification run", () => {
+    const sandbox = "22222222-2222-2222-2222-222222222222";
+    expect(isOwnProduct({ product_id: sandbox })).toBe(false);
+    expect(isOwnProduct({ product_id: sandbox }, [sandbox])).toBe(true);
+  });
+
+  /**
+   * A false negative costs a paying customer their key, so an event carrying no
+   * product id keeps the legacy behaviour rather than being dropped.
+   */
+  it("treats an event with no product id as ours", () => {
+    expect(isOwnProduct({ id: "sub_1", status: "active" })).toBe(true);
+  });
+});
+
+/**
+ * Polar's own cancellation emits `subscription.canceled` and
+ * `subscription.revoked` back to back (observed in the sandbox, 2026-08-02), and
+ * activation events are retried. So the status alone cannot decide the flag: a
+ * late `updated` would resurrect a licence that `revoked` had just switched off.
+ */
+describe("shouldBeActive", () => {
+  const now = new Date("2026-08-02T12:00:00Z");
+  const future = "2026-09-02T00:00:00Z";
+  const past = "2026-07-02T00:00:00Z";
+
+  it("activates a live subscription with a future period end", () => {
+    expect(shouldBeActive("active", future, now)).toBe(1);
+    expect(shouldBeActive(undefined, future, now)).toBe(1);
+  });
+
+  it("keeps a cancelled subscription active until the paid period ends", () => {
+    expect(shouldBeActive("canceled", future, now)).toBe(1);
+  });
+
+  it("never resurrects a licence once the paid period is over", () => {
+    expect(shouldBeActive("active", past, now)).toBe(0);
+    expect(shouldBeActive("canceled", past, now)).toBe(0);
+  });
+
+  it("stays off for a genuinely dead status even inside the period", () => {
+    expect(shouldBeActive("revoked", future, now)).toBe(0);
+    expect(shouldBeActive("unpaid", future, now)).toBe(0);
+  });
+
+  it("falls back to the status when Polar sends no usable period end", () => {
+    expect(shouldBeActive("active", null, now)).toBe(1);
+    expect(shouldBeActive("active", "not-a-date", now)).toBe(1);
+    expect(shouldBeActive("revoked", null, now)).toBe(0);
   });
 });
