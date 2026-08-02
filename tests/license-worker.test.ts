@@ -4,6 +4,7 @@ import {
   classifyPolarEvent,
   isLicenseUsable,
   GRACE_DAYS,
+  webhookSecrets,
 } from "../license-worker/src/index.js";
 
 // Regression coverage for the bug that twice left paying customers at
@@ -98,5 +99,28 @@ describe("isLicenseUsable", () => {
 
   it("ignores an unparseable expiry rather than locking a customer out", () => {
     expect(isLicenseUsable({ expires_at: "not-a-date", active: 1 }, now)).toEqual({ usable: true });
+  });
+});
+
+/**
+ * Grandfathering the pre-move subscribers means two Polar organizations deliver
+ * to the same endpoint at once: the old org sends renewals and cancellations
+ * for the existing subscriptions, the new org sends new signups. Each signs
+ * with its own secret, so a single-secret check would 401 one of them.
+ */
+describe("webhookSecrets", () => {
+  it("accepts both organizations while the move is in flight", () => {
+    expect(
+      webhookSecrets({ POLAR_WEBHOOK_SECRET: "old", POLAR_WEBHOOK_SECRET_2: "new" }),
+    ).toEqual(["new", "old"]);
+  });
+
+  it("is a plain single-secret setup when the second is unset", () => {
+    expect(webhookSecrets({ POLAR_WEBHOOK_SECRET: "old" })).toEqual(["old"]);
+  });
+
+  it("drops empty values so an unset secret never verifies", () => {
+    expect(webhookSecrets({ POLAR_WEBHOOK_SECRET: "", POLAR_WEBHOOK_SECRET_2: "" })).toEqual([]);
+    expect(webhookSecrets({})).toEqual([]);
   });
 });
