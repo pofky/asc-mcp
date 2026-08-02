@@ -13,6 +13,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { sample, MODEL_HINTS } from "../sampling.js";
+import { UPGRADE_URL } from "../gate.js";
 
 interface ReviewAttributes {
   rating: number;
@@ -71,7 +72,7 @@ export async function triageReviews(
       reviews_analyzed: 0,
       themes: [],
       degraded: true,
-      note: "Review triage requires a Pro license ($9/mo). Get your license at https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu",
+      note: "Review triage requires a Pro license ($9/mo). Get your license at " + UPGRADE_URL,
     };
   }
 

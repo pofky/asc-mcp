@@ -16,6 +16,7 @@ import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { sample, MODEL_HINTS } from "../sampling.js";
 import { elicit, clientSupportsElicitation } from "../elicitation.js";
+import { UPGRADE_URL } from "../gate.js";
 
 interface ReviewAttributes {
   rating: number;
@@ -66,7 +67,7 @@ export async function draftReviewResponse(
 ): Promise<DraftResult> {
   if (tier !== "pro") {
     return emptyResult(args, "default_factual", {
-      note: "draft_review_response requires a Pro license ($9/mo). Get your license at https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu",
+      note: "draft_review_response requires a Pro license ($9/mo). Get your license at " + UPGRADE_URL,
     });
   }
 

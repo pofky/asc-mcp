@@ -12,6 +12,7 @@ import { homedir } from "node:os";
 import { getToken, clearTokenCache } from "./auth.js";
 import { validateLicense } from "./license.js";
 import { discoverPrivateKey } from "./setup.js";
+import { UPGRADE_URL } from "./gate.js";
 
 export type CheckStatus = "ok" | "warn" | "fail";
 
@@ -155,7 +156,7 @@ export async function runDoctor(): Promise<DoctorReport> {
       name: "License",
       status: "warn",
       detail: "Free tier: read + intelligence tools only.",
-      fix: "To unlock write/control tools (edit metadata, screenshots, builds, submit, IAP/subs), set ASC_LICENSE_KEY. Get one at https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu",
+      fix: "To unlock write/control tools (edit metadata, screenshots, builds, submit, IAP/subs), set ASC_LICENSE_KEY. Get one at " + UPGRADE_URL,
     });
   } else {
     const tier = await validateLicense(licenseKey);
