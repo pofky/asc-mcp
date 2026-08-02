@@ -131,6 +131,17 @@ describe("webhookSecrets", () => {
     expect(webhookSecrets({ POLAR_WEBHOOK_SECRET: "old" })).toEqual(["old"]);
   });
 
+  /**
+   * The sandbox secret is tried last and only while a verification run is in
+   * flight. It must never be the reason an unsigned request passes.
+   */
+  it("adds the sandbox secret last, and is absent once it is removed", () => {
+    expect(
+      webhookSecrets({ POLAR_WEBHOOK_SECRET: "old", POLAR_WEBHOOK_SECRET_SANDBOX: "sbx" }),
+    ).toEqual(["old", "sbx"]);
+    expect(webhookSecrets({ POLAR_WEBHOOK_SECRET: "old" })).not.toContain("sbx");
+  });
+
   it("drops empty values so an unset secret never verifies", () => {
     expect(webhookSecrets({ POLAR_WEBHOOK_SECRET: "", POLAR_WEBHOOK_SECRET_2: "" })).toEqual([]);
     expect(webhookSecrets({})).toEqual([]);
