@@ -10,6 +10,15 @@
  *   POST /key            - key lookup by email (rate-limited)
  */
 
+/**
+ * The Polar checkout link. Lives in one place because moving the product to a
+ * different Polar organization changes it, and the old link keeps working, so a
+ * missed copy silently sells into the wrong org. The npm package has the same
+ * value as `UPGRADE_URL` in `src/gate.ts`; both must change together.
+ */
+const CHECKOUT_URL =
+  "https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu";
+
 interface Env {
   DB: D1Database;
   POLAR_WEBHOOK_SECRET: string;
@@ -657,7 +666,7 @@ async function handleKeyLookup(
       <p>No active Pro license found for <strong>${escapeHtml(email)}</strong>.</p>
       <p>If you just purchased, it may take a minute for the webhook to process. <a href="/key">Try again</a>.</p>
       <p>Still nothing after a few minutes? Email <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a> with the email you checked out with and we will sort it out quickly.</p>
-      <p>Need to subscribe? <a href="https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu">Get Pro</a></p>
+      <p>Need to subscribe? <a href="${CHECKOUT_URL}">Get Pro</a></p>
     `, headers);
   }
 

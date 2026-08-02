@@ -42,6 +42,7 @@ import { runDoctor, formatDoctor } from "./doctor.js";
 import { discoverPrivateKey, runInit } from "./setup.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { UPGRADE_URL } from "./gate.js";
 
 /**
  * Read from package.json rather than a literal. A hand-maintained constant
@@ -131,7 +132,7 @@ async function main() {
     console.error(`asc-mcp ${SERVER_VERSION}: Pro license active. All tools available.`);
   } else {
     console.error(
-      `asc-mcp ${SERVER_VERSION}: Free tier. Read/intelligence tools active; write/control tools require Pro. Upgrade at https://buy.polar.sh/polar_cl_Ta3OxEA1EbRyYNPFtSsRXgYWBCCtjwMxlbAeW35RLuu`,
+      `asc-mcp ${SERVER_VERSION}: Free tier. Read/intelligence tools active; write/control tools require Pro. Upgrade at ${UPGRADE_URL}`,
     );
   }
 
