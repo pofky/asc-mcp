@@ -28,12 +28,36 @@ changes, so nothing in D1 needs touching and no customer has to do anything.
   the three existing subscriptions, the new one sends new signups. With only one secret set the
   behaviour is exactly as before, so this is inert until the second secret exists.
 
-## Blocked on you
+## Done, 2026-08-02 (v1.8.8)
 
-1. Create the organization in the Polar dashboard and pass KYC. I cannot do this.
-2. Give me an API token scoped to the new org.
+Org `asc-mcp` (`3bef20c6-dc3d-40aa-836f-5f04b51703f0`), individual entity, presentment currency
+USD to match the $9 priced on every public surface.
 
-## Cutover, once the org exists
+- Product "App Store Connect MCP Pro" `7cd3dd0b-7ee2-43db-a920-f7d4371f9d9a`, $9/mo recurring.
+- Checkout link `5bc67e31-4521-46da-983d-8abcd00e40ed`,
+  `https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj`, success URL
+  points at the worker's `/success` page so buyers land on the key-retrieval form.
+- Webhook endpoint `5d7b2b54-a9eb-408d-9e06-632e37353c19` on 8 subscription events; its secret
+  is in `POLAR_WEBHOOK_SECRET_2`.
+- All 7 link sites, npm 1.8.8, the MCP registry, the site and the worker are on the new link.
+
+Two things the move surfaced, both fixed:
+
+- **An API-minted webhook secret is `whsec_<base64>`, not the dashboard's `polar_whs_...`.** The
+  two conventions key the HMAC off different bytes. Verification now tries both
+  (`candidateKeys`), because this is the exact check that once meant a paying customer got no
+  key at all.
+- **A renewal can arrive as `subscription.cycled`**, which was classified as "ignore". A renewed
+  customer would have kept last period's expiry and dropped to free once grace ran out. Cycled,
+  uncanceled and resumed now activate.
+
+Verified against the deployed worker with a signed self-test delivery: 200 under both key
+derivations, 401 on a bad signature, row written to D1 and then deleted.
+
+**Still open: nobody has paid through the new link yet.** Only a real purchase proves the whole
+path, per the lesson in the provisioning memory. Payouts also wait on KYC.
+
+## Cutover steps, for reference (already executed)
 
 1. In the new org: create the "App Store Connect MCP Pro" product at $9/mo, a checkout link, and
    a webhook endpoint pointing at `https://asc-mcp-license.remewdy.workers.dev/webhook/polar`.

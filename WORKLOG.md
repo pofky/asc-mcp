@@ -1,6 +1,26 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**asc-mcp sells through its own Polar organization (2026-08-02, v1.8.8).**
+
+New signups now go to org `asc-mcp` (`3bef20c6`), product "App Store Connect MCP Pro" at $9/mo USD,
+checkout `polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj`. Polar cannot move active
+subscriptions between orgs, so the three existing subscribers stay with the old org until they
+churn; all three still validate as Pro, unchanged. Both orgs deliver to the same webhook
+endpoint and the worker holds both signing secrets. Details and the reason the old org must stay
+enabled: `launch/polar-org-migration.md`.
+
+Two bugs the move surfaced, both fixed and deployed. An API-minted webhook secret is
+`whsec_<base64>`, not the dashboard `polar_whs_...`, and the two key the HMAC off different
+bytes; verification now tries both, which matters because this check is where a paying customer
+silently gets no key. And a renewal can arrive as `subscription.cycled`, which was classified
+"ignore", so a renewed customer would have kept last period expiry and dropped to free once
+grace ran out. Verified on the deployed worker with a signed self-test delivery (200 both ways,
+401 on a bad signature, row written then deleted). 121 tests.
+
+Open: nobody has bought through the new link yet, and only a real payment proves that path.
+Payouts from the new org also wait on KYC.
+
 **Customer #6, and the version-drift bug it found (2026-08-01, v1.8.7).**
 
 Second subscriber of the day: koheimitsui3@gmail.com, D1 row 24, 18:38 UTC. `active=1`,
