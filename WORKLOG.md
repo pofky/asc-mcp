@@ -1,7 +1,7 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
-**In-agent 7-day trial, buy-intent attribution, and a security pass (2026-08-06, v1.9.0, NOT YET DEPLOYED).**
+**In-agent 7-day trial, buy-intent attribution, and a security pass (2026-08-06, v1.9.0, SHIPPED).**
 
 Built because the funnel said the product converts and nobody sees it. 9 Polar checkouts in 4 days,
 1 paid, and not one of the 8 abandoned sessions typed an email address: people leave on sight,
@@ -48,7 +48,19 @@ trial key that broke on day 8 (the paid branch now matches the trial on the fing
 
 180 unit tests, 39 HTTP checks against a D1 migrated from the live table shape, 21 checks driving
 the built server over stdio, 16 lifecycle checks driving real signed webhooks through a local
-worker. Green. Independent verification of the lifecycle fixes in progress.
+worker. Green. An independent tester then ran 55 adversarial cases against the three lifecycle claims and
+found no defect.
+
+**Shipped 2026-08-06.** Order: snapshot the 8 live licence rows, apply the D1 migration, re-validate
+the 5 active keys against the old worker (all pro), set `DELETE_SECRET`, deploy, re-validate again
+(all pro, no interruption at any point). `POLAR_WEBHOOK_SECRET_SANDBOX` confirmed absent before the
+deploy. Production smoke: a real trial minted, validated as a pro trial, repeated idempotently, and
+the row deleted afterwards so it does not pollute the funnel numbers; paying customers refused a
+trial without leaking their key; `/go` redirects with utm attribution; `/admin/stats` 401s unguarded.
+npm 1.9.0 published, MCP registry published (the tag had to be recreated because server.json was
+still on 1.8.8), site deployed by hand because the Pages git integration has not fired since
+2 August. Final check ran the published package from npm in a throwaway HOME: 41 tools, the trial
+offered free, a locked tool refusing with the trial before the price and the buy link attributed.
 
 Open: nothing is deployed. `docs/deploy-prd-0001.md` is the runbook; the gate is re-validating all
 three paying keys immediately after the worker deploy. Needs `DELETE_SECRET` set, and
