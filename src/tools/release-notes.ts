@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
 import type { Tier } from "../types.js";
-import { UPGRADE_URL } from "../gate.js";
+import { requirePro } from "../gate.js";
 
 const WHATS_NEW_MAX = 4000;
 
@@ -35,13 +35,8 @@ export async function releaseNotes(args: {
   since_tag?: string;
   max_commits?: number;
 }, tier: Tier): Promise<string> {
-  if (tier !== "pro") {
-    return (
-      "Release notes generation requires a Pro license ($9/mo).\n" +
-      "Get your license at: " + UPGRADE_URL + "\n\n" +
-      "Set ASC_LICENSE_KEY in your MCP server config to unlock."
-    );
-  }
+  const gate = requirePro(tier, "Release notes generation", "release_notes");
+  if (gate) return gate;
   const cwd = args.project_path || process.cwd();
   const maxCommits = args.max_commits || 50;
 

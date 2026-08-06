@@ -78,6 +78,62 @@ export function writeServerBlock(path: string, env: Record<string, string>): str
     : `Created ${path}. Restart the client.`;
 }
 
+/**
+ * Add ASC_LICENSE_KEY to an already-configured asc-mcp server block, in every
+ * client config that has one.
+ *
+ * Deliberately narrower than `writeServerBlock`, which replaces the whole block:
+ * this runs unattended from inside a tool call, so it must not be able to drop
+ * an env var someone set by hand. It only ever adds one key, only to a block
+ * that already launches this package, and only after taking a .bak. A config it
+ * cannot parse, or that has no asc-mcp block, is left alone and reported.
+ */
+export function injectLicenseKey(
+  key: string,
+  candidates = clientConfigCandidates(),
+): { updated: string[]; skipped: string[] } {
+  const updated: string[] = [];
+  const skipped: string[] = [];
+
+  for (const { path } of candidates) {
+    if (!existsSync(path)) continue;
+
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+    } catch {
+      skipped.push(`${path} (not valid JSON)`);
+      continue;
+    }
+
+    const servers = parsed.mcpServers as Record<string, any> | undefined;
+    if (!servers || typeof servers !== "object") continue;
+
+    let touched = false;
+    for (const block of Object.values(servers)) {
+      if (!block || typeof block !== "object") continue;
+      const launches =
+        JSON.stringify(block.args ?? "").includes("@pofky/asc-mcp") ||
+        String(block.command ?? "").includes("asc-mcp");
+      if (!launches) continue;
+      block.env = { ...(block.env ?? {}), ASC_LICENSE_KEY: key };
+      touched = true;
+    }
+
+    if (!touched) continue;
+
+    try {
+      copyFileSync(path, `${path}.bak`);
+      writeFileSync(path, JSON.stringify(parsed, null, 2) + "\n");
+      updated.push(path);
+    } catch {
+      skipped.push(`${path} (not writable)`);
+    }
+  }
+
+  return { updated, skipped };
+}
+
 function prompt(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {

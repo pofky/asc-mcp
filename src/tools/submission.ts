@@ -43,7 +43,7 @@ export async function setAppMetadata(
   args: AppMetadataArgs,
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Setting app submission metadata");
+  const gate = requirePro(tier, "Setting app submission metadata", "set_app_metadata");
   if (gate) return gate;
   const changes: string[] = [];
 
@@ -124,7 +124,7 @@ export async function setAppPrice(
   args: AppPriceArgs,
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Setting the app price");
+  const gate = requirePro(tier, "Setting the app price", "set_app_price");
   if (gate) return gate;
 
   // Find the matching USA app price point.
@@ -195,7 +195,7 @@ export async function setReviewContact(
   args: ReviewContactArgs,
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Setting the App Review contact");
+  const gate = requirePro(tier, "Setting the App Review contact", "set_review_contact");
   if (gate) return gate;
 
   const v = await editableVersionId(client, args.app_id);

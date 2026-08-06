@@ -156,7 +156,10 @@ export async function runDoctor(): Promise<DoctorReport> {
       name: "License",
       status: "warn",
       detail: "Free tier: read + intelligence tools only.",
-      fix: "To unlock write/control tools (edit metadata, screenshots, builds, submit, IAP/subs), set ASC_LICENSE_KEY. Get one at " + UPGRADE_URL,
+      fix:
+        "Run `asc_start_trial` for 7 days of everything, no card. " +
+        "It unlocks write/control (metadata, screenshots, builds, submit, IAP/subs) in this session, no restart. " +
+        "Or subscribe at " + UPGRADE_URL + " and set ASC_LICENSE_KEY.",
     });
   } else {
     const tier = await validateLicense(licenseKey);

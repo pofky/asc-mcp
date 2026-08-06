@@ -20,7 +20,7 @@ export async function listBuilds(
   args: { app_id: string; limit?: number },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Listing builds");
+  const gate = requirePro(tier, "Listing builds", "list_builds");
   if (gate) return gate;
 
   const res = await client.get<BuildAttrs>("/v1/builds", {
@@ -60,7 +60,7 @@ export async function waitForBuild(
   args: { app_id: string; max_wait_seconds?: number; poll_seconds?: number },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Waiting for a build");
+  const gate = requirePro(tier, "Waiting for a build", "wait_for_build");
   if (gate) return gate;
 
   const maxWait = Math.min(args.max_wait_seconds ?? 1800, 3600) * 1000;
@@ -102,7 +102,7 @@ export async function attachBuild(
   args: { app_id: string; build_id?: string },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Attaching a build");
+  const gate = requirePro(tier, "Attaching a build", "attach_build");
   if (gate) return gate;
 
   // Find the editable version.

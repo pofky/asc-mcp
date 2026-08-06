@@ -30,7 +30,7 @@ export async function setAppAvailability(
   args: AppAvailabilityArgs,
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Setting app availability");
+  const gate = requirePro(tier, "Setting app availability", "set_app_availability");
   if (gate) return gate;
 
   const newTerr = args.available_in_new_territories ?? true;

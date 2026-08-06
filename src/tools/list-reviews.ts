@@ -1,6 +1,6 @@
 import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
-import { UPGRADE_URL } from "../gate.js";
+import { requirePro } from "../gate.js";
 
 interface ReviewAttributes {
   rating: number;
@@ -45,13 +45,8 @@ export async function listReviews(
   args: { app_id: string; rating?: number; limit?: number; sort?: string },
   tier: Tier,
 ): Promise<string> {
-  if (tier !== "pro") {
-    return (
-      "Customer reviews require a Pro license ($9/mo).\n" +
-      "Get your license at: " + UPGRADE_URL + "\n\n" +
-      "Set ASC_LICENSE_KEY in your MCP server config to unlock."
-    );
-  }
+  const gate = requirePro(tier, "Customer reviews", "list_reviews");
+  if (gate) return gate;
 
   const limit = Math.min(args.limit ?? 20, 100);
   const params: Record<string, string> = {

@@ -26,7 +26,7 @@ const stubClient = {} as never;
 describe("requirePro gate", () => {
   it("blocks free tier with an upgrade message", () => {
     const msg = requirePro("free", "Editing metadata");
-    expect(msg).toContain("Pro license");
+    expect(msg).toContain("requires Pro");
     expect(msg).toContain("Editing metadata");
   });
   it("lets pro through (null)", () => {
@@ -37,42 +37,42 @@ describe("requirePro gate", () => {
 describe("control tools refuse on free tier before any API call", () => {
   it("update_version_metadata", async () => {
     const r = await updateVersionMetadata(stubClient, { app_id: "1", description: "x" }, "free");
-    expect(r).toContain("Pro license");
+    expect(r).toContain("requires Pro");
   });
   it("create_version", async () => {
     const r = await createVersion(stubClient, { app_id: "1", version_string: "2.0" }, "free");
-    expect(r).toContain("Pro license");
+    expect(r).toContain("requires Pro");
   });
   it("submit_for_review", async () => {
     const r = await submitForReview(stubClient, { app_id: "1", confirm: true }, "free");
-    expect(r).toContain("Pro license");
+    expect(r).toContain("requires Pro");
   });
 });
 
 describe("every control tool refuses on free tier before any API call", () => {
   const f = "free" as const;
-  it("list_builds", async () => expect(await listBuilds(stubClient, { app_id: "1" }, f)).toContain("Pro license"));
-  it("attach_build", async () => expect(await attachBuild(stubClient, { app_id: "1" }, f)).toContain("Pro license"));
+  it("list_builds", async () => expect(await listBuilds(stubClient, { app_id: "1" }, f)).toContain("requires Pro"));
+  it("attach_build", async () => expect(await attachBuild(stubClient, { app_id: "1" }, f)).toContain("requires Pro"));
   it("upload_screenshots", async () =>
-    expect(await uploadScreenshots(stubClient, { app_id: "1", display_type: "APP_IPHONE_67", files: ["/x.png"] }, f)).toContain("Pro license"));
-  it("release_version", async () => expect(await releaseVersion(stubClient, { app_id: "1", confirm: true }, f)).toContain("Pro license"));
+    expect(await uploadScreenshots(stubClient, { app_id: "1", display_type: "APP_IPHONE_67", files: ["/x.png"] }, f)).toContain("requires Pro"));
+  it("release_version", async () => expect(await releaseVersion(stubClient, { app_id: "1", confirm: true }, f)).toContain("requires Pro"));
   it("manage_phased_release", async () =>
-    expect(await managePhasedRelease(stubClient, { app_id: "1", action: "start" }, f)).toContain("Pro license"));
-  it("list_beta_groups", async () => expect(await listBetaGroups(stubClient, { app_id: "1" }, f)).toContain("Pro license"));
+    expect(await managePhasedRelease(stubClient, { app_id: "1", action: "start" }, f)).toContain("requires Pro"));
+  it("list_beta_groups", async () => expect(await listBetaGroups(stubClient, { app_id: "1" }, f)).toContain("requires Pro"));
   it("assign_build_to_group", async () =>
-    expect(await assignBuildToGroup(stubClient, { app_id: "1", group_id: "g" }, f)).toContain("Pro license"));
+    expect(await assignBuildToGroup(stubClient, { app_id: "1", group_id: "g" }, f)).toContain("requires Pro"));
   it("invite_beta_tester", async () =>
-    expect(await inviteBetaTester(stubClient, { group_id: "g", email: "a@b.com" }, f)).toContain("Pro license"));
+    expect(await inviteBetaTester(stubClient, { group_id: "g", email: "a@b.com" }, f)).toContain("requires Pro"));
   it("build_and_archive", async () =>
-    expect(await buildAndArchive({ project_path: "/x", scheme: "S", export_options_plist: "/p" }, f)).toContain("Pro license"));
+    expect(await buildAndArchive({ project_path: "/x", scheme: "S", export_options_plist: "/p" }, f)).toContain("requires Pro"));
   it("upload_binary", async () =>
-    expect(await uploadBinary({ keyId: "k", issuerId: "i" }, { ipa_path: "/x.ipa", confirm: true }, f)).toContain("Pro license"));
+    expect(await uploadBinary({ keyId: "k", issuerId: "i" }, { ipa_path: "/x.ipa", confirm: true }, f)).toContain("requires Pro"));
   it("set_age_rating", async () =>
-    expect(await setAgeRating(stubClient, { app_id: "1", declarations: { gambling: false } }, f)).toContain("Pro license"));
+    expect(await setAgeRating(stubClient, { app_id: "1", declarations: { gambling: false } }, f)).toContain("requires Pro"));
   it("set_privacy_nutrition", async () =>
-    expect(await setPrivacyNutrition({ app_id: "1", data_not_collected: true }, f)).toContain("Pro license"));
+    expect(await setPrivacyNutrition({ app_id: "1", data_not_collected: true }, f)).toContain("requires Pro"));
   it("set_eu_trader_status", async () =>
-    expect(await setEUTraderStatus({ app_id: "1" }, f)).toContain("Pro license"));
+    expect(await setEUTraderStatus({ app_id: "1" }, f)).toContain("requires Pro"));
   it("create_subscription", async () =>
     expect(
       await createSubscription(
@@ -80,7 +80,7 @@ describe("every control tool refuses on free tier before any API call", () => {
         { app_id: "1", group_reference_name: "G", group_display_name: "G", product_id: "p", reference_name: "r", display_name: "d", description: "x", period: "ONE_MONTH", price_usd: 4.99 },
         f,
       ),
-    ).toContain("Pro license"));
+    ).toContain("requires Pro"));
   it("create_iap", async () =>
     expect(
       await createIAP(
@@ -88,9 +88,9 @@ describe("every control tool refuses on free tier before any API call", () => {
         { app_id: "1", product_id: "p", reference_name: "r", display_name: "d", description: "x", type: "NON_CONSUMABLE", price_usd: 59.99 },
         f,
       ),
-    ).toContain("Pro license"));
+    ).toContain("requires Pro"));
   it("set_iap_review_screenshot", async () =>
-    expect(await setIapReviewScreenshot(stubClient, { app_id: "1", product_id: "p", file: "/x.png" }, f)).toContain("Pro license"));
+    expect(await setIapReviewScreenshot(stubClient, { app_id: "1", product_id: "p", file: "/x.png" }, f)).toContain("requires Pro"));
 });
 
 describe("new tools validate before any API call (pro tier)", () => {

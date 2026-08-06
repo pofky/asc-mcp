@@ -4,7 +4,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { ASCClient } from "./client.js";
-import { validateLicense } from "./license.js";
+import { validateLicense, clearLicenseCache, lastLicenseStatus } from "./license.js";
+import { requestTrial } from "./trial.js";
 import { registerPrompts } from "./prompts.js";
 import { installSkill, uninstallSkill } from "./skill-installer.js";
 import type { ASCConfig, Tier } from "./types.js";
@@ -39,7 +40,7 @@ import { setAppAvailability } from "./tools/availability.js";
 import { setupAppStoreSigning } from "./tools/signing.js";
 import { ascGuide } from "./tools/guide.js";
 import { runDoctor, formatDoctor } from "./doctor.js";
-import { discoverPrivateKey, runInit } from "./setup.js";
+import { discoverPrivateKey, runInit, injectLicenseKey } from "./setup.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { UPGRADE_URL } from "./gate.js";
@@ -99,7 +100,7 @@ async function runSetupMode() {
     {
       capabilities: { tools: {}, prompts: {} },
       instructions:
-        "App Store Connect MCP, running in SETUP MODE: no credentials found, so only asc_setup_check and asc_guide are available. Call asc_setup_check first and relay the fix it prints, then the user restarts this server to get all 40 tools.",
+        "App Store Connect MCP, running in SETUP MODE: no credentials found, so only asc_setup_check and asc_guide are available. Call asc_setup_check first and relay the fix it prints, then the user restarts this server to get all 41 tools.",
     },
   );
 
@@ -126,13 +127,18 @@ async function main() {
   const config = getConfig();
   if (!config) return runSetupMode();
   const client = new ASCClient(config);
-  const tier: Tier = await validateLicense(config.licenseKey);
+  // Mutable on purpose. `asc_start_trial` reassigns it, and every tool closure
+  // below reads it at call time, so a trial started mid-conversation unlocks the
+  // running session with no config reload and no client restart. Sending someone
+  // away to restart their agent at the exact moment they agreed to try the thing
+  // is how you lose them.
+  let tier: Tier = await validateLicense(config.licenseKey);
 
   if (tier === "pro") {
     console.error(`asc-mcp ${SERVER_VERSION}: Pro license active. All tools available.`);
   } else {
     console.error(
-      `asc-mcp ${SERVER_VERSION}: Free tier. Read/intelligence tools active; write/control tools require Pro. Upgrade at ${UPGRADE_URL}`,
+      `asc-mcp ${SERVER_VERSION}: Free tier. Call asc_start_trial for 7 days of Pro, no card. Or subscribe at ${UPGRADE_URL}`,
     );
   }
 
@@ -194,6 +200,81 @@ async function main() {
     "Diagnose your setup: checks the .p8 key, Key ID, Issuer ID, a LIVE authenticated connection to App Store Connect, and your license tier. For anything wrong, returns the exact fix. Run this first if something isn't working. Free.",
     {},
     safe(async () => formatDoctor(await runDoctor())),
+  );
+
+  server.registerTool(
+    "asc_start_trial",
+    {
+      title: "Start a free 7-day Pro trial",
+      description:
+        "Start a FREE 7-day trial of Pro, with no credit card, unlocking all 41 tools including the full write/control plane. Call this whenever a Pro tool is refused and the user wants to proceed: ask them for an email address first, then call this. The trial activates in THIS session immediately, so you can retry the tool that was blocked without any restart. Free.",
+      inputSchema: {
+        email: z
+          .string()
+          .describe(
+            "The user's email address. Required: the trial key is sent there so they still have it later. Ask the user for it; never invent one.",
+          ),
+        tool: z
+          .string()
+          .optional()
+          .describe("The tool whose gate prompted this, e.g. submit_for_review."),
+      },
+    },
+    async (args: { email: string; tool?: string }) => {
+      const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
+
+      // Gate on *why* the tier is pro, not on the tier. A live trial also reads
+      // as pro, and refusing on that would leave a trial user with no way to ask
+      // how long they have left. Only a real subscription short-circuits.
+      const status = lastLicenseStatus();
+      if (tier === "pro" && status?.valid && !status.trial) {
+        return text(
+          "A paid Pro subscription is already active on this server. There is nothing to trial; every tool is unlocked.",
+        );
+      }
+
+      const result = await requestTrial({
+        issuerId: config.issuerId,
+        email: args.email,
+        tool: args.tool,
+      });
+
+      if (!result.ok) {
+        return text(
+          `Could not start a trial: ${result.message}` +
+            (result.checkout_url ? `\n\nSubscribe: ${result.checkout_url}` : ""),
+        );
+      }
+
+      // Unlock the running session. The closures above read `tier` at call time,
+      // so the tool that was just refused works on the very next call.
+      tier = "pro";
+      process.env.ASC_LICENSE_KEY = result.key;
+      clearLicenseCache();
+
+      const { updated, skipped } = injectLicenseKey(result.key);
+      const persistence = updated.length
+        ? `Saved to ${updated.join(", ")} (backup alongside), so it survives a restart.`
+        : "Could not find an asc-mcp block in a known client config, so add ASC_LICENSE_KEY yourself to keep it after a restart:\n" +
+          `  "ASC_LICENSE_KEY": "${result.key}"`;
+
+      return text(
+        [
+          result.already_started
+            ? `Trial already running: ${result.days_remaining} day(s) left.`
+            : `Pro trial started. ${result.days_remaining} day(s), no card, nothing to cancel.`,
+          "",
+          `License key: ${result.key}`,
+          persistence,
+          skipped.length ? `Left untouched: ${skipped.join(", ")}` : "",
+          "",
+          "All 41 tools are unlocked in this session right now. Retry what you were doing.",
+          result.checkout_url ? `When the trial ends, Pro is $9/month: ${result.checkout_url}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
+    },
   );
 
   server.tool(

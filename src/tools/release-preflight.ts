@@ -1,7 +1,7 @@
 import type { ASCClient } from "../client.js";
 import { fetchAppInfos, pickAuditAppInfo } from "../app-info.js";
 import type { Tier } from "../types.js";
-import { UPGRADE_URL } from "../gate.js";
+import { requirePro } from "../gate.js";
 
 interface VersionAttributes {
   versionString: string;
@@ -73,13 +73,8 @@ export async function releasePreflight(
   args: { app_id: string },
   tier: Tier,
 ): Promise<string> {
-  if (tier !== "pro") {
-    return (
-      "Release preflight audit requires a Pro license ($9/mo).\n" +
-      "Get your license at: " + UPGRADE_URL + "\n\n" +
-      "Set ASC_LICENSE_KEY in your MCP server config to unlock."
-    );
-  }
+  const gate = requirePro(tier, "Release preflight audit", "release_preflight");
+  if (gate) return gate;
   const checks: CheckResult[] = [];
 
   // 1. Get latest version

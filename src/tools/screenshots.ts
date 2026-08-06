@@ -47,7 +47,7 @@ export async function uploadScreenshots(
   },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Uploading screenshots");
+  const gate = requirePro(tier, "Uploading screenshots", "upload_screenshots");
   if (gate) return gate;
 
   if (!args.files?.length) return "No files provided.";

@@ -1,6 +1,6 @@
 import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
-import { UPGRADE_URL } from "../gate.js";
+import { requirePro } from "../gate.js";
 
 export const salesReportDefinition = {
   name: "sales_report",
@@ -34,13 +34,8 @@ export async function salesReport(
   args: { vendor_number?: string; frequency?: string; report_date?: string },
   tier: Tier,
 ): Promise<string> {
-  if (tier !== "pro") {
-    return (
-      "Sales reports require a Pro license ($9/mo).\n" +
-      "Get your license at: " + UPGRADE_URL + "\n\n" +
-      "Set ASC_LICENSE_KEY in your MCP server config to unlock."
-    );
-  }
+  const gate = requirePro(tier, "Sales reports", "sales_report");
+  if (gate) return gate;
 
   // An agent cannot discover the vendor number: it is only shown in the ASC
   // website. Say where it is instead of failing schema validation, which used to

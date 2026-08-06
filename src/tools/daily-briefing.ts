@@ -1,6 +1,6 @@
 import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
-import { UPGRADE_URL } from "../gate.js";
+import { requirePro } from "../gate.js";
 
 interface AppAttributes {
   name: string;
@@ -45,13 +45,8 @@ export async function dailyBriefing(
   args: { days?: number },
   tier: Tier,
 ): Promise<string> {
-  if (tier !== "pro") {
-    return (
-      "Daily briefing requires a Pro license ($9/mo).\n" +
-      "Get your license at: " + UPGRADE_URL + "\n\n" +
-      "Set ASC_LICENSE_KEY in your MCP server config to unlock."
-    );
-  }
+  const gate = requirePro(tier, "Daily briefing", "daily_briefing");
+  if (gate) return gate;
 
   const lookbackDays = args.days || 3;
   const now = new Date();

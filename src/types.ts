@@ -13,6 +13,11 @@ export interface LicenseStatus {
   valid: boolean;
   tier: Tier;
   expires?: string;
+  /** True when this key is a 7-day in-agent trial rather than a subscription. */
+  trial?: boolean;
+  /** True when a paid key is past expiry but inside the renewal grace window. */
+  grace?: boolean;
+  reason?: string;
 }
 
 export interface ASCApp {

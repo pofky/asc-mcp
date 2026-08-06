@@ -17,7 +17,7 @@ export async function listBetaGroups(
   args: { app_id: string },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Listing beta groups");
+  const gate = requirePro(tier, "Listing beta groups", "list_beta_groups");
   if (gate) return gate;
 
   const res = await client.get<GroupAttrs>("/v1/betaGroups", {
@@ -41,7 +41,7 @@ export async function assignBuildToGroup(
   args: { app_id: string; group_id: string; build_id?: string },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Assigning a build to TestFlight");
+  const gate = requirePro(tier, "Assigning a build to TestFlight", "assign_build_to_group");
   if (gate) return gate;
 
   let buildId = args.build_id;
@@ -73,7 +73,7 @@ export async function inviteBetaTester(
   args: { group_id: string; email: string; first_name?: string; last_name?: string },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Inviting a beta tester");
+  const gate = requirePro(tier, "Inviting a beta tester", "invite_beta_tester");
   if (gate) return gate;
 
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(args.email)) {

@@ -18,7 +18,7 @@ export async function setPrivacyNutrition(
   args: PrivacyArgs,
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Configuring the privacy nutrition label");
+  const gate = requirePro(tier, "Configuring the privacy nutrition label", "set_privacy_nutrition");
   if (gate) return gate;
 
   const url = `https://appstoreconnect.apple.com/apps/${args.app_id}/distribution/privacy`;

@@ -91,7 +91,7 @@ export async function updateVersionMetadata(
   args: UpdateMetadataArgs,
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Editing version metadata");
+  const gate = requirePro(tier, "Editing version metadata", "update_version_metadata");
   if (gate) return gate;
 
   // Validate character limits before any write.

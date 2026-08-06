@@ -9,7 +9,7 @@ import {
   verifyPolarSignature,
   isOwnProduct,
   resolveProductId,
-} from "../license-worker/src/index.js";
+} from "../license-worker/src/logic.js";
 
 // Regression coverage for the bug that twice left paying customers at
 // active=0 (and therefore never emailed a key): activation must succeed for

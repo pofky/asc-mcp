@@ -1,5 +1,5 @@
 import type { Tier } from "../types.js";
-import { UPGRADE_URL } from "../gate.js";
+import { requirePro } from "../gate.js";
 
 interface ITunesApp {
   trackName: string;
@@ -106,13 +106,8 @@ export async function competitorSnapshot(
   args: { query: string; country?: string },
   tier: Tier,
 ): Promise<string> {
-  if (tier !== "pro") {
-    return (
-      "Competitor snapshot requires a Pro license ($9/mo).\n" +
-      "Get your license at: " + UPGRADE_URL + "\n\n" +
-      "Set ASC_LICENSE_KEY in your MCP server config to unlock."
-    );
-  }
+  const gate = requirePro(tier, "Competitor snapshot", "competitor_snapshot");
+  if (gate) return gate;
 
   const country = args.country || "us";
   const query = args.query.trim();
