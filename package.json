@@ -22,7 +22,8 @@
     "test": "vitest run",
     "docs": "tsc && node scripts/gen-docs.mjs",
     "lint": "tsc --noEmit",
-    "mcpb": "npm run build && node scripts/build-mcpb.mjs"
+    "mcpb": "npm run build && node scripts/build-mcpb.mjs",
+    "release": "node scripts/release.mjs"
   },
   "keywords": [
     "mcp",

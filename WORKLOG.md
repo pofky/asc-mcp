@@ -1,6 +1,42 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**v1.9.1 shipped: one-click install, and releases no longer depend on GitHub Actions (2026-08-06).**
+
+Verified live on all three surfaces: npm 1.9.1, the GitHub release with the `.mcpb` attached (the
+downloaded asset's sha256 matches the local build byte for byte), and the MCP registry at 1.9.1
+carrying the new description. `npx -y @pofky/asc-mcp@1.9.1` from a clean directory hands back 41
+tools, 6 prompts and a handshake reporting 1.9.1.
+
+**The release half-landed on the first attempt, which is the lesson.** npm published fine, then the
+tag-triggered registry workflow failed with "Failed to resolve action download info, Service
+Unavailable" before it reached any of our code, leaving npm at 1.9.1 and the registry at 1.9.0. A
+re-run fixed it, but the shape of the failure is the problem: the registry publish existed only as
+a GitHub Actions workflow, and this account has no paid plan, so that is a dependency we do not
+control on the one step that feeds every downstream directory.
+
+`npm run release -- <version>` now does the whole thing from this machine: version bump in both
+files, lint, tests, docs regen, bundle build, a handshake assertion that the server announces the
+version it was built as (the 1.8.6 drift bug), then tag, push, npm publish, GitHub release with the
+bundle, and `mcp-publisher publish` locally rather than via the workflow. It finishes by reading
+npm, the release assets and the registry back and failing loudly if any one of them is not on the
+new version. The workflow stays as a backstop; publishing twice is harmless because the registry
+rejects a version it already has. `--dry` runs every gate and publishes nothing.
+
+**The `.mcpb` bundle is the real feature.** Claude for macOS and Windows installs it in one click and
+collects config natively: a file picker for the `.p8`, one text field for the Issuer ID. Building it
+exposed two bugs that only appear on that path, both found by extracting the bundle and running the
+server the way the client would rather than by reading the manifest spec. The Key ID was only ever
+derived from keys sitting in `~/.appstoreconnect/private_keys`, so a file picker (which almost never
+returns a path there) would have failed every install with "missing credentials" while holding a
+file whose name contains the missing value. And an optional config field left blank arrives as the
+literal `${user_config.asc_license_key}`, which was being posted to the licence server on every
+start. Both fixed, both tested, 186 tests.
+
+Smithery, which prompted all of this, turned out to be the wrong question: it no longer lists a local
+server from a repo plus a yaml, only a hosted HTTPS server (impossible when the `.p8` must not leave
+the machine) or a prebuilt `.mcpb`. The yaml written that morning was deleted.
+
 **Glama analytics, the traffic we never knew we had (2026-08-06, measured).**
 
 Claiming the Glama listing unlocked an analytics tab, and it says the distribution model in this
