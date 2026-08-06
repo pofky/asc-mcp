@@ -1,0 +1,157 @@
+#!/usr/bin/env node
+/**
+ * Cut a release end to end, from this machine, verifying every surface after it
+ * is written.
+ *
+ * Deliberately does NOT depend on GitHub Actions. The registry publish used to
+ * run only from a tag-triggered workflow, and on 6 August 2026 that workflow
+ * failed before reaching our code ("Failed to resolve action download info,
+ * Service Unavailable"), leaving npm at 1.9.1 and the registry at 1.9.0. A
+ * release that can half-land is a release that will half-land. The workflow
+ * still exists as a backstop, and publishing twice is harmless because the
+ * registry rejects a version it already has.
+ *
+ * Usage: npm run release -- 1.9.2
+ *        npm run release -- 1.9.2 --dry
+ *
+ * Prerequisites, both one-time:
+ *   brew install mcp-publisher && mcp-publisher login github
+ *   npm login && gh auth login
+ */
+import { execFileSync, execSync } from "node:child_process";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const args = process.argv.slice(2);
+const dry = args.includes("--dry");
+const version = args.find((a) => /^\d+\.\d+\.\d+$/.test(a));
+
+if (!version) {
+  console.error("Usage: npm run release -- <version> [--dry]\nExample: npm run release -- 1.9.2");
+  process.exit(1);
+}
+
+const run = (cmd, cmdArgs, opts = {}) => {
+  console.log(`\n> ${cmd} ${cmdArgs.join(" ")}`);
+  if (dry && opts.mutating) {
+    console.log("  (dry run, skipped)");
+    return "";
+  }
+  return execFileSync(cmd, cmdArgs, { cwd: root, stdio: opts.capture ? "pipe" : "inherit", encoding: "utf8" });
+};
+
+const fail = (msg) => {
+  console.error(`\nRELEASE ABORTED: ${msg}`);
+  process.exit(1);
+};
+
+// --- preflight, before anything is written anywhere -------------------------
+
+if (execSync("git status --porcelain", { cwd: root, encoding: "utf8" }).trim() && !dry) {
+  fail("working tree is dirty. Commit or stash first, so the tag points at what was tested.");
+}
+const branch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: root, encoding: "utf8" }).trim();
+if (branch !== "master") fail(`on branch ${branch}, expected master.`);
+
+for (const [tool, probe] of [
+  ["npm", ["whoami"]],
+  ["gh", ["auth", "status"]],
+  ["mcp-publisher", ["--version"]],
+]) {
+  try {
+    execFileSync(tool, probe, { stdio: "ignore" });
+  } catch {
+    fail(`${tool} is not available or not authenticated. See the prerequisites in scripts/release.mjs.`);
+  }
+}
+
+// --- version, in both files that carry it -----------------------------------
+
+for (const file of ["package.json", "server.json"]) {
+  const path = join(root, file);
+  const json = JSON.parse(readFileSync(path, "utf8"));
+  json.version = version;
+  if (json.packages) json.packages[0].version = version;
+  if (!dry) writeFileSync(path, JSON.stringify(json, null, 2) + "\n");
+}
+console.log(`\nVersion set to ${version} in package.json and server.json`);
+
+// --- gates ------------------------------------------------------------------
+
+run("npm", ["run", "lint"]);
+run("npm", ["test"]);
+run("npm", ["run", "docs"]);
+run("npm", ["run", "mcpb"]);
+
+const bundle = join(root, "build", `asc-mcp-${version}.mcpb`);
+if (!dry && !existsSync(bundle)) fail(`bundle was not produced at ${bundle}`);
+
+// The version-drift bug of 1.8.6 shipped a server that announced the previous
+// version to every client handshake, so the handshake is checked, not assumed.
+if (!dry) {
+  const handshake = execSync(
+    `printf '%s\\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"c","version":"1"}}}' | ASC_KEY_ID=x ASC_ISSUER_ID=x ASC_PRIVATE_KEY_PATH=/dev/null node dist/index.js 2>/dev/null | head -1`,
+    { cwd: root, encoding: "utf8", shell: "/bin/bash" },
+  );
+  const reported = JSON.parse(handshake).result.serverInfo.version;
+  if (reported !== version) fail(`server handshake reports ${reported}, expected ${version}`);
+  console.log(`\nHandshake reports ${reported}`);
+}
+
+// --- publish ----------------------------------------------------------------
+
+run("git", ["add", "-A"], { mutating: true });
+run("git", ["commit", "-m", `release: v${version}`], { mutating: true });
+run("git", ["tag", "-a", `v${version}`, "-m", `v${version}`], { mutating: true });
+run("git", ["push", "origin", "master"], { mutating: true });
+run("git", ["push", "origin", `v${version}`], { mutating: true });
+
+run("npm", ["publish", "--access", "public"], { mutating: true });
+run("gh", ["release", "create", `v${version}`, bundle, "--title", `v${version}`, "--generate-notes"], {
+  mutating: true,
+});
+// Local publish, not the workflow. See the header.
+run("mcp-publisher", ["publish"], { mutating: true });
+
+// --- verify every surface ---------------------------------------------------
+
+if (dry) {
+  console.log("\nDry run complete. Nothing was published.");
+  process.exit(0);
+}
+
+const checks = [];
+const npmVersion = execFileSync("npm", ["view", "@pofky/asc-mcp", "version"], { encoding: "utf8" }).trim();
+checks.push(["npm", npmVersion === version, npmVersion]);
+
+const assets = JSON.parse(
+  execFileSync("gh", ["release", "view", `v${version}`, "--json", "assets"], { encoding: "utf8" }),
+).assets;
+checks.push(["release asset", assets.some((a) => a.name.endsWith(".mcpb")), assets.map((a) => a.name).join(",")]);
+
+const registry = JSON.parse(
+  execSync(
+    `curl -s "https://registry.modelcontextprotocol.io/v0/servers?search=io.github.pofky/asc-mcp"`,
+    { encoding: "utf8" },
+  ),
+);
+const latest = registry.servers
+  .filter((s) => s.server.name.includes("pofky"))
+  .find((s) => s._meta["io.modelcontextprotocol.registry/official"].isLatest);
+checks.push(["registry", latest?.server.version === version, latest?.server.version ?? "none"]);
+
+console.log("\n--- release verification ---");
+let ok = true;
+for (const [name, pass, actual] of checks) {
+  console.log(`${pass ? "OK  " : "FAIL"} ${name}: ${actual}`);
+  if (!pass) ok = false;
+}
+if (!ok) {
+  console.error(
+    "\nOne or more surfaces did not update. This is the half-landed release the script exists to catch: fix the failing one before announcing.",
+  );
+  process.exit(1);
+}
+console.log(`\nv${version} is live on npm, the GitHub release and the MCP registry.`);
