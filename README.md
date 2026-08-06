@@ -7,9 +7,10 @@
 Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Different angle, same API surface plus more.
 
 ```bash
-npm install -g @pofky/asc-mcp
-npx @pofky/asc-mcp install-skill   # one-line, optional, for auto-routed review questions
+npx @pofky/asc-mcp init --write   # finds your .p8, asks for your Issuer ID, writes your MCP config
 ```
+
+Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. That unlocks all 41 tools for 7 days with no card and nothing to cancel, and it activates in the session you are already in, so the tool that was just refused works on the next call. Six tools work without any license at all.
 
 ## What Makes This Different
 
