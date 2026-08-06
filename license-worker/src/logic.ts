@@ -84,7 +84,12 @@ export function buildCheckoutUrl(tool?: string, email?: string): string {
 export const GRACE_DAYS = 4;
 
 export function isLicenseUsable(
-  row: { expires_at: string | null; active: number; source?: string | null },
+  row: {
+    expires_at: string | null;
+    active: number;
+    source?: string | null;
+    canceled_at?: string | null;
+  },
   now: Date,
 ): { usable: boolean; reason?: string; grace?: boolean } {
   if (!row.active) return { usable: false, reason: "inactive" };
@@ -100,6 +105,12 @@ export function isLicenseUsable(
   // 7-day trial into an 11-day one. Anything that is not explicitly a trial
   // keeps the paid behaviour, including the rows that predate this column.
   if (row.source === "trial") return { usable: false, reason: "trial_expired" };
+
+  // Nor does a subscription the customer has already cancelled. Grace covers a
+  // renewal webhook that is late; when renewal is switched off there is no
+  // webhook coming, and the customer keeps exactly the time they paid for.
+  // Applied to every cancellation it was quietly giving away four extra days.
+  if (row.canceled_at) return { usable: false, reason: "canceled" };
 
   const graceEnds = new Date(expiry.getTime() + GRACE_DAYS * 24 * 60 * 60 * 1000);
   if (now <= graceEnds) return { usable: true, grace: true };
