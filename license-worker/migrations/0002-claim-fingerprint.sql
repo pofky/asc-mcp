@@ -1,0 +1,17 @@
+-- Which machine has claimed a paid licence through /trial.
+--
+-- /trial takes an unauthenticated email address and, since v1.9.3, hands back
+-- the subscription key for that address. That fixed a real bug (every paying
+-- customer without a trial row was being refused) but it also means anyone who
+-- knows a customer's email can read their key out of a JSON API.
+--
+-- This column closes it without putting a wall in front of the customer: the
+-- first machine to claim a subscription is remembered, and a later claim from a
+-- different machine gets the key emailed to the address on file instead of
+-- returned in the response. The customer always gets their key; a stranger who
+-- guessed the email gets nothing they can use.
+--
+-- Deliberately NOT unique, and separate from trial_fingerprint, which carries a
+-- partial unique index enforcing one trial per Apple account. A person may hold
+-- both a trial and a subscription from the same machine.
+ALTER TABLE licenses ADD COLUMN claim_fingerprint TEXT;

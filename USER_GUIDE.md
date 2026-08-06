@@ -30,7 +30,7 @@ Steps:
 1. Create an API key: App Store Connect > Users and Access > Integrations > App Store Connect API > generate a key with the App Manager role. Download the .p8 (one time only).
 2. Drop the .p8 into ~/.appstoreconnect/private_keys/ (Apple's standard path). The 10-char Key ID is read from the filename, so that one file is enough.
 3. Run `npx @pofky/asc-mcp init` in a terminal. It auto-detects the key, asks for your Issuer ID (the UUID at the top of the Integrations page) and an optional Pro license key, and prints a paste-ready MCP config block.
-4. Paste the block into your client config (~/.claude/settings.json, Claude Desktop config, Cursor, etc.) and restart the client.
+4. Paste the block into your client config and restart the client. Claude Code global: ~/.claude.json. Claude Desktop: Library/Application Support/Claude/claude_desktop_config.json. Per project: .mcp.json in the project root. Or re-run `init --write` and let it write whichever you pick.
 5. Verify with `list_apps`. If it returns your apps, you are connected.
 
 Manual interruptions you must do yourself:

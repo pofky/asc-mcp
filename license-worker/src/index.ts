@@ -576,13 +576,26 @@ async function handleTrial(
   // in their config, and the day the trial expires a paying subscriber loses
   // access with a message telling them to buy the thing they already bought.
   //
-  // The key itself is not returned: this endpoint takes an unauthenticated
-  // email, so it must never become a way to read someone else's licence.
-  const paid = await env.DB.prepare(
-    "SELECT key, expires_at FROM licenses WHERE email = ? AND source = 'polar' AND active = 1",
+  // Every candidate row, newest first, and the pick made by the same helper
+  // /key uses.
+  //
+  // `.first()` on an unordered query used to decide this. A customer who
+  // cancelled and later resubscribed holds two rows, both with active = 1
+  // (cancellation sets canceled_at and leaves active alone on purpose, so the
+  // period they paid for is not cut short), and the unordered read handed back
+  // whichever SQLite surfaced first, normally the oldest. That is the dead one:
+  // it validates as `canceled` and the person who has just paid again is told
+  // their key is not valid.
+  const paidRows = await env.DB.prepare(
+    "SELECT key, tier, active, expires_at, source, claim_fingerprint FROM licenses " +
+      "WHERE email = ? AND source = 'polar' AND active = 1 ORDER BY created_at DESC, id DESC",
   )
     .bind(email)
-    .first<{ key: string; expires_at: string | null }>();
+    .all<LookupRow & { claim_fingerprint: string | null }>();
+
+  const paid = pickLookupRow(paidRows.results ?? [], now) as
+    | (LookupRow & { claim_fingerprint: string | null })
+    | null;
 
   if (paid) {
     // They subscribed, so hand back the subscription key. Two different people
@@ -606,20 +619,49 @@ async function handleTrial(
     // them, and it was found by a paying customer (me) running the documented
     // flow on a new install.
     //
-    // Dropping the fingerprint check discloses nothing that was not already
-    // public: /key renders the key on screen for an email address alone, with no
-    // second factor at all. The fingerprint was a strictly higher bar than the
-    // front door, guarding a side door. The real fix for both is to mail the key
-    // rather than display it, which is tracked separately; blocking paying
-    // customers in the meantime buys no security.
+    // Requiring a *trial* fingerprint was the wrong check. Requiring none at
+    // all made this a JSON API that reads out a paying customer's key to anyone
+    // who knows their email address, which is worse than it sounds: /key is at
+    // least a browser form, this is one curl.
+    //
+    // So the first machine to claim a subscription is remembered, and that
+    // machine keeps getting the key inline forever. A claim from any other
+    // machine does not get refused, because refusing is how the original bug
+    // hurt people; it gets the key emailed to the address already on the
+    // subscription. The customer always ends up with their key. Someone who
+    // guessed the email gets a response with no key in it, and the real owner
+    // gets an email telling them it happened.
+    const firstClaim = !paid.claim_fingerprint;
+    if (firstClaim) {
+      await env.DB.prepare("UPDATE licenses SET claim_fingerprint = ? WHERE key = ?")
+        .bind(fingerprint, paid.key)
+        .run();
+    }
+
+    if (firstClaim || paid.claim_fingerprint === fingerprint) {
+      return json(
+        {
+          ok: true,
+          key: paid.key,
+          expires: paid.expires_at,
+          days_remaining: daysRemaining(paid.expires_at, now),
+          already_started: true,
+          subscription: true,
+        },
+        headers,
+      );
+    }
+
+    const mailed = await sendLicenseEmail(env, email, paid.key);
     return json(
       {
-        ok: true,
-        key: paid.key,
-        expires: paid.expires_at,
-        days_remaining: daysRemaining(paid.expires_at, now),
-        already_started: true,
+        ok: false,
         subscription: true,
+        message: mailed
+          ? `This subscription is already set up on another machine, so the key was not returned here. ` +
+            `It has been emailed to ${email}. Paste it in as ASC_LICENSE_KEY, or into the extension's License key field.`
+          : `This subscription is already set up on another machine, so the key was not returned here, ` +
+            "and the email could not be sent just now. Retrieve it at https://asc-mcp-license.remewdy.workers.dev/key .",
       },
       headers,
     );
@@ -680,10 +722,10 @@ async function handleTrial(
     .run();
 
   const minted = await env.DB.prepare(
-    "SELECT key, expires_at FROM licenses WHERE trial_fingerprint = ?",
+    "SELECT key, expires_at, key_emailed FROM licenses WHERE trial_fingerprint = ?",
   )
     .bind(fingerprint)
-    .first<{ key: string; expires_at: string | null }>();
+    .first<{ key: string; expires_at: string | null; key_emailed: number }>();
 
   if (!minted) {
     // Uniqueness is on the fingerprint, which we already checked, so reaching
@@ -702,7 +744,13 @@ async function handleTrial(
 
   await recordIntent(env, "trial_started", tool || "direct");
 
-  const sent = await sendTrialEmail(env, email, minted.key, minted.expires_at);
+  // Guarded on key_emailed, like the paid path. Two agents calling
+  // asc_start_trial at once both won the read after INSERT OR IGNORE and both
+  // mailed the same key, which reads as a duplicate-send bug to the recipient
+  // and burns two sends out of a capped daily quota.
+  const sent = minted.key_emailed
+    ? false
+    : await sendTrialEmail(env, email, minted.key, minted.expires_at);
   if (sent) {
     await env.DB.prepare(
       "UPDATE licenses SET key_emailed = 1 WHERE trial_fingerprint = ?",
@@ -1093,7 +1141,11 @@ async function handleKeyLookup(
   }
 
   const formData = await request.formData();
-  const email = formData.get("email") as string;
+  // Normalised the same way /trial and the webhook path store it. SQLite
+  // compares TEXT case-sensitively, so "Alice@Example.com" typed into this form
+  // found nothing for a row Polar had stored as "alice@example.com", and the
+  // page told a paying customer they had no licence.
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
 
   if (!email) {
     return html("<h1>Email required</h1><p><a href='/key'>Try again</a></p>", headers, 400);

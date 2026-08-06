@@ -308,7 +308,7 @@ async function main() {
 
   server.tool(
     "list_apps",
-    "List all apps in your App Store Connect account with name, bundle ID, and platform.",
+    "List all apps in your App Store Connect account with name, bundle ID, SKU and App ID.",
     { limit: z.number().optional().describe("Max apps to return (default 50, max 200)") },
     safe((args) => listApps(client, args)),
   );

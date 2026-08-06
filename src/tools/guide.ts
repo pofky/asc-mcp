@@ -46,7 +46,7 @@ const FLOWS: Record<Exclude<GuideTopic, "overview" | "limitations">, Flow> = {
       "Create an API key: App Store Connect > Users and Access > Integrations > App Store Connect API > generate a key with the App Manager role. Download the .p8 (one time only).",
       "Drop the .p8 into ~/.appstoreconnect/private_keys/ (Apple's standard path). The 10-char Key ID is read from the filename, so that one file is enough.",
       "Run `npx @pofky/asc-mcp init` in a terminal. It auto-detects the key, asks for your Issuer ID (the UUID at the top of the Integrations page) and an optional Pro license key, and prints a paste-ready MCP config block.",
-      "Paste the block into your client config (~/.claude/settings.json, Claude Desktop config, Cursor, etc.) and restart the client.",
+      "Paste the block into your client config and restart the client. Claude Code global: ~/.claude.json. Claude Desktop: Library/Application Support/Claude/claude_desktop_config.json. Per project: .mcp.json in the project root. Or re-run `init --write` and let it write whichever you pick.",
       "Verify with `list_apps`. If it returns your apps, you are connected.",
     ],
     manual: [
