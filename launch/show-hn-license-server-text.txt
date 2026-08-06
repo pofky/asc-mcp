@@ -1,0 +1,11 @@
+I sell a $9/month MCP server. The licensing is a Cloudflare Worker and a D1 table with about eight rows in it, which is as small as a billing integration gets, and it has still found seven distinct ways to revoke access from people who were paying.
+
+The one that cost the most: in Polar, subscription.canceled means "will not renew", not "revoke now". The customer has paid through the end of the period and is entitled to every day of it. The naive handler deactivates on both canceled and revoked, because both read as bad news, so someone who cancels on day 3 of a 30-day period loses the software on day 3 and gets told to subscribe.
+
+I fixed that, and then reintroduced it a week later through the status field on subscription.updated, for the same customers with the same symptom, because I had only fixed one of the two code paths that write that column.
+
+The others are in the post: two webhook secret encodings from the same vendor that hash differently (a dashboard secret and an API-minted secret), org-wide event fan-out that emailed working license keys to strangers who bought a different product, a renewal grace window that silently turned every 7-day trial into an 11-day one, an ordinary webhook retry that resurrected a revoked license, and a converted customer being handed their own dead trial key on day 8.
+
+None of these are hard problems and every one is a two-line fix. What makes them expensive is that they all fail silently in the direction of the customer, and none of them show up in a test you would think to write, because the triggering input is a webhook from a vendor behaving exactly as documented.
+
+The decision logic is one file, MIT licensed, and every branch carries a comment naming the incident that put it there: https://github.com/pofky/asc-mcp/blob/master/license-worker/src/logic.ts

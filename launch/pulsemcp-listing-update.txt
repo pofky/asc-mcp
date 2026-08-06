@@ -1,0 +1,15 @@
+Hello,
+
+The listing at pulsemcp.com/servers/pofky-app-store-connect is showing a description from April 2026 that describes a read-only version of the server. It now reads "Check app review status, read customer reviews, and download sales reports from App Store Connect", which covers about three of its forty-one tools.
+
+The server is at v1.9.0 and is published on the official MCP registry as io.github.pofky/asc-mcp, with an updated description. I understand PulseMCP pipes server.json straight from the registry, so this may just be a sync that has not run for this entry yet. If it needs a manual nudge, the current description is:
+
+41 tools to ship an App Store release: metadata, screenshots, builds, TestFlight, IAP, submit.
+
+Repository: https://github.com/pofky/asc-mcp
+Package: @pofky/asc-mcp on npm, current version 1.9.0
+Registry: io.github.pofky/asc-mcp
+Website: https://asc-mcp.pages.dev
+
+Thanks,
+Povilas

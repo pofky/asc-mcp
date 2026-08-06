@@ -7,7 +7,7 @@
 - Package: `@pofky/asc-mcp` on npm. Current version 1.9.0 (published 6 August 2026).
 - Install: `npx @pofky/asc-mcp init` prints a paste-ready MCP config block. `init --write` merges it into your client config directly.
 - Tool count: 41 tools and 6 prompts. 6 tools are free, 35 require Pro or a running trial.
-- Free tools: `asc_start_trial`, `asc_setup_check`, `asc_guide`, `list_apps`, `app_details`, `review_status`. No account or signup required.
+- Free tools: `asc_start_trial`, `asc_setup_check`, `asc_guide`, `list_apps`, `app_details`, `review_status`. No asc-mcp account or signup is required for any of them. The first three need nothing at all; the other three read from App Store Connect, so they need your own Apple API key like every other tool here.
 - Free trial: all 41 tools for 7 days, no credit card and nothing to cancel. Started in-agent by calling the `asc_start_trial` tool with an email address, not on a website. It activates in the running session, so a tool that was just refused works on the next call with no restart. One trial per Apple developer account, identified by a one-way hash of the Issuer ID computed on the user's machine.
 - Pricing: free for the first 7 days via `asc_start_trial`, then Pro is $9 per month, billed through Polar, cancel any time. Purchase: https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj
 - License key recovery: https://asc-mcp-license.remewdy.workers.dev/key
@@ -33,6 +33,7 @@
 - Q&A (cost, credential safety, accidental submissions, proof it has shipped a real app): https://asc-mcp.pages.dev/#different
 - User guide (generated from the in-tool playbook): https://github.com/pofky/asc-mcp/blob/master/USER_GUIDE.md
 - Limitations: https://github.com/pofky/asc-mcp/blob/master/LIMITATIONS.md
+- Field notes, seven ways a license server cuts off paying customers (Polar webhooks, cancel versus revoke, webhook signature encoding, org-wide event fan-out, renewal grace, trial and paid key collision): https://asc-mcp.pages.dev/writing/license-server/
 - Terms: https://asc-mcp-license.remewdy.workers.dev/terms
 - Privacy: https://asc-mcp-license.remewdy.workers.dev/privacy
 

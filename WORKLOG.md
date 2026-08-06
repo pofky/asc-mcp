@@ -1,6 +1,53 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**Distribution pass and the first field-notes page (2026-08-06).**
+
+The funnel is not the problem. 1 paid out of 28 unique visitors in 14 days is a working funnel with
+almost nothing in it, so this session went at the numerator. Glama alone indexes twenty App Store
+Connect MCP servers, which reframes "0 stars against competitors at 46, 24 and 11": the gap is
+presence on the surfaces that rank, not social proof.
+
+The three awesome-lists turned out to be three unrelated mechanisms, only one of which is a pull
+request. `punkpeye` PR [#11198](https://github.com/punkpeye/awesome-mcp-servers/pull/11198) is open
+and its entry was corrected twice today, first from the v1.8-era "40 job-shaped tools" to 41, then
+for two overclaims an independent check caught. `wong2` states in its README that it does not accept
+PRs at all and generates the list from mcpservers.org submissions. `appcypher` is archived, so it can
+never be changed by anyone, and it is now recorded as a dead end rather than a to-do.
+
+Two overclaims were shipping in that entry and would have shipped in three more places.
+"Territory pricing" implies per-region prices we do not set: `create_subscription` takes a USA price
+and lets Apple equalize across ~175 territories, which is territory *availability*. And "six tools
+are free with no account" is only true of three, since `list_apps`, `app_details` and `review_status`
+read from Apple and need the user's own API key. Corrected in the PR, the wong2 branch, the
+mcpservers.org submission text, and `site/llms.txt`, which had carried the loose version since launch.
+
+**What actually moved.** `glama.json` claims the Glama listing, which was sitting there unclaimed and
+therefore, by Glama's own notice, with limited discoverability. `smithery.yaml` makes a Smithery
+listing possible. The registry description was rewritten from "Drive App Store Connect end to end" to
+"41 tools to ship an App Store release" (94 chars, limit 100), because that string is what PulseMCP
+and Glama mirror verbatim and the nearest registry competitor advertises "982 tools from Apple's
+OpenAPI spec". PulseMCP turned out to need no submission at all: it pipes `server.json` from the
+official registry, so its April 2026 read-only description fixes itself at the next release publish.
+
+**`site/writing/license-server/`, the incident catalogue as a public page.** Seven failures from the
+licence worker, written up from the comments already in `logic.ts`. It exists for two reasons: it is a
+credibility asset for a paid dev tool, and it is a zero-build demand test for the idea that the
+non-App-Store half of the worker should be a package for other MCP sellers. The CTA asks anyone who
+wants that to open an issue, which is cheaper than building it and guessing.
+
+Three independent agents audited it before anything was pushed. The fact-check confirmed all seven
+incidents against source, and caught that "428 lines of comments wrapped around about 150 lines of
+code" was wrong in both halves (it is 224 code, 164 comment). The SEO/AEO audit found five blockers:
+title one character over, meta description 239 against a 160 limit, all four FAQ JSON-LD answers
+paraphrasing rather than matching the visible copy, no `<main>` landmark, and `--dim` at 4.26:1
+failing WCAG AA. All fixed, and the contrast one is inherited from the homepage palette, so the
+homepage has the same defect on its footer and eyebrow text and now needs the same change.
+
+Still on the operator, browser only, about five minutes total: claim the Glama listing, resubmit to
+mcpservers.org (we are there under `pofky/appstore-connect-mcp`, a slug from the retired package
+name), check mcp.so, create a Smithery account. Paste-ready text for each is in `launch/`.
+
 **In-agent 7-day trial, buy-intent attribution, and a security pass (2026-08-06, v1.9.0, SHIPPED).**
 
 Built because the funnel said the product converts and nobody sees it. 9 Polar checkouts in 4 days,

@@ -1,0 +1,34 @@
+# Smithery listing config. The server is stdio and runs on the user's own machine:
+# the .p8 private key never leaves it, so there is no hosted variant of this server.
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required:
+      - ASC_KEY_ID
+      - ASC_ISSUER_ID
+      - ASC_PRIVATE_KEY_PATH
+    properties:
+      ASC_KEY_ID:
+        type: string
+        description: App Store Connect API Key ID, the 10-character alphanumeric value from the ASC portal.
+      ASC_ISSUER_ID:
+        type: string
+        description: App Store Connect Issuer ID, a UUID from the ASC portal.
+      ASC_PRIVATE_KEY_PATH:
+        type: string
+        description: Path to the .p8 private key you downloaded from App Store Connect. Read locally, never transmitted.
+      ASC_LICENSE_KEY:
+        type: string
+        description: Optional Pro license key. Six tools work without it. Start a free 7-day trial from inside your agent with the asc_start_trial tool.
+  commandFunction: |-
+    (config) => ({
+      command: 'npx',
+      args: ['-y', '@pofky/asc-mcp'],
+      env: {
+        ASC_KEY_ID: config.ASC_KEY_ID,
+        ASC_ISSUER_ID: config.ASC_ISSUER_ID,
+        ASC_PRIVATE_KEY_PATH: config.ASC_PRIVATE_KEY_PATH,
+        ...(config.ASC_LICENSE_KEY ? { ASC_LICENSE_KEY: config.ASC_LICENSE_KEY } : {})
+      }
+    })
