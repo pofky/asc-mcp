@@ -35,7 +35,18 @@ few hundred impressions a month, for minutes of work.
 
 ---
 
-## 2. Resubmit to mcpservers.org (3 minutes)
+## 2. Resubmit to mcpservers.org, DONE 6 August
+
+Submitted through the browser. Fields sent: Server Name "App Store Connect", Short Description
+"41 tools to ship an App Store release from your agent: metadata, screenshots, builds, TestFlight,
+in-app purchases, submit and release.", Link `https://github.com/pofky/asc-mcp`, Category
+Development, Contact povkonop@gmail.com. Premium Submit ($39) deliberately left unchecked, since
+listings are free and only the review is expedited. Confirmation says reviewed within 12 hours with
+an email on approval. Watch for that email; if it does not arrive by 8 August, resubmit.
+
+Original instructions kept below in case a resubmission is needed.
+
+### If you need to do it again
 
 This one form feeds two surfaces: mcpservers.org itself, and `wong2/awesome-mcp-servers` on GitHub
 (4.2k stars), which is generated from it and explicitly refuses pull requests.
@@ -52,15 +63,26 @@ fix is to submit again.
 
 ---
 
-## 3. Check and submit mcp.so (3 minutes)
+## 3. mcp.so, BLOCKED on a $39 decision
 
-Presence could not be confirmed from the terminal because the site returns 403 to everything that
-is not a real browser.
+Checked in the browser on 6 August. We are **not listed**, and searching "App Store Connect" there
+returns only 4 results, so the category is unusually thin: MCPXcode, a mirror repo,
+`zelentsov-dev` (advertising "208 tools across 25 workers"), and `alperduzgun`. A curated 41-tool
+server would stand out rather than be buried.
 
-1. Open <https://mcp.so> and search "App Store Connect"
-2. If `pofky/asc-mcp` is absent, go to <https://mcp.so/submit?type=server>
-3. Fields it asks for: name, one-sentence description, tool count (41), transport (stdio), repo URL,
-   homepage URL, optional icon. Reuse the text from **`launch/mcpservers-org-submit.txt`**.
+The problem is that **mcp.so no longer has a free submission route.** The submit page now offers one
+path, "Paid submission $39, one-time publishing fee", covering publish without review, featured
+placement, a verified badge and a dofollow link. The "submit a ticket" link next to it is support,
+not a free listing. Nothing was submitted, because spending money is your call.
+
+**Recommendation: pay it.** Glama, the only directory we can now measure, produced 845 profile views
+in 30 days. If mcp.so is within an order of magnitude of that, $39 once against $9/month
+subscriptions pays back on the first or second customer, and the dofollow link has SEO value on its
+own. The counter-argument is that we have zero evidence about mcp.so's actual traffic, unlike Glama.
+If you want that evidence first, wait for the 13 August Glama re-read and decide then.
+
+To do it: <https://mcp.so/submit?type=server>, Repository URL `https://github.com/pofky/asc-mcp`,
+Name `App Store Connect`, then pay.
 
 ---
 
