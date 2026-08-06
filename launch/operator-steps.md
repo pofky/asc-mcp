@@ -23,6 +23,18 @@ Nothing to paste. It should recognise `glama.json` on the repo.
 
 ---
 
+### Result of step 1, measured 6 August
+
+Claiming unlocked analytics. Last 30 days: 1,377 search impressions, 0 search clicks, 845 profile
+views. That is an order of magnitude more traffic than GitHub, and it was invisible until the claim.
+The 0.0% CTR was against the April "13 curated tools" snippet, now replaced. Baseline recorded;
+re-read the Analytics tab on 13 August and 6 September.
+
+This is why the remaining steps matter more than they looked. Each directory is plausibly another
+few hundred impressions a month, for minutes of work.
+
+---
+
 ## 2. Resubmit to mcpservers.org (3 minutes)
 
 This one form feeds two surfaces: mcpservers.org itself, and `wong2/awesome-mcp-servers` on GitHub

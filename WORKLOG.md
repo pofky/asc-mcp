@@ -1,6 +1,39 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**Glama analytics, the traffic we never knew we had (2026-08-06, measured).**
+
+Claiming the Glama listing unlocked an analytics tab, and it says the distribution model in this
+worklog has been wrong. Last 30 days on that one directory: **1,377 search impressions, 0 search
+clicks (0.0% CTR), 845 profile views, 0 tool calls.** Compare 28 unique GitHub visitors in 14 days,
+which is the number every prior decision was based on.
+
+Three things follow.
+
+**Glama is the largest known traffic source, by an order of magnitude.** 845 profile views a month
+means the README, which is what renders on that profile, is the highest-traffic sales page the
+project has. Higher than the landing site as far as anyone can prove. Until today it said
+`$9/monthnth` in the header link and the Pro heading.
+
+**0 clicks on 1,377 impressions is not bad luck, it is the snippet.** Glama search was showing an
+April-era description, "An opinionated MCP server for App Store Connect that provides 13 curated
+tools", for a server that has had 41 since v1.9.0. Replaced today with a 383-character version
+(the field caps at 400, undocumented). This gives a clean before/after: the baseline is 0.0% CTR on
+the old text. **Re-read this tab on 13 August and 6 September.** If CTR is still 0 with an accurate
+snippet, the problem is ranking or category placement, not copy, and that is a different fix.
+
+**0 tool calls is not a signal.** That counts Glama's in-browser runner, which cannot execute a
+stdio server that reads a local `.p8`. It will always be 0 and should never be optimised for.
+
+The listing was also 17 commits stale, last synced from `d9b23c2` on 5 August, so it was serving a
+pre-v1.9.0 build with 40 tools and no trial. Synced manually; it auto-syncs daily from here.
+
+**What this changes.** Directory presence was ranked as a slow SEO play. It is in fact the only
+measured demand in the project, and the surfaces are cheap. Steps 2 to 4 in
+`launch/operator-steps.md` (mcpservers.org, mcp.so, Smithery) went from speculative to the highest
+expected-value work available, since each is plausibly another few hundred impressions a month and
+each takes minutes. Do them before writing anything else.
+
 **Distribution pass and the first field-notes page (2026-08-06).**
 
 The funnel is not the problem. 1 paid out of 28 unique visitors in 14 days is a working funnel with
