@@ -1,10 +1,22 @@
 # Operator steps, 6 August 2026
 
-Everything that could be done from a terminal is done and deployed. What is left needs a browser
-login, which the automation cannot do. Total time is about fifteen minutes, and step 1 is worth
-more than the rest combined.
+Everything machine-checkable is done, deployed and verified. What is left is four things that need
+a human: one install test, one inbox check, one dated measurement, and one optional post.
 
-Do them in this order. Each one names the file to paste from.
+## What is actually left, in order
+
+1. **Install the `.mcpb` in Claude Desktop once** (5 min). Download it from
+   <https://github.com/pofky/asc-mcp/releases/latest> and open it. Confirm the Issuer ID prompt and
+   the `.p8` file picker read clearly to a human. This is now the front door for every Claude Desktop
+   user, and it is the one thing no automated check can judge.
+2. **Watch for the mcpservers.org approval email** (within 12 hours of 6 August). If both submissions
+   were approved, ask them to remove the one named "App Store Connect" and keep `asc-mcp`.
+3. **13 August: re-read the Glama Analytics tab.** The baseline is 1,377 impressions, 0 clicks,
+   0.0% CTR against the old snippet. If CTR is still zero with an accurate snippet, the problem is
+   ranking, not copy, and that is a different fix.
+4. **Optional: post the field notes to Hacker News.** Section 5 below has the three files.
+
+Everything under that is the record of what was done and why.
 
 ---
 
@@ -168,18 +180,8 @@ thread produces no such request, that is the answer, and it cost a day rather th
 
 ---
 
-## Pending decision: cut v1.9.1 to ship the bundle
+## Done 6 August: v1.9.1 shipped
 
-The `.mcpb` is built and verified locally, but it is not distributable until it is attached to a
-GitHub release. That means a version bump, an npm publish and a registry publish, all of which touch
-a package with paying customers, so it is not something to do without asking.
-
-What would go into 1.9.1:
-
-- Key ID derived from the `.p8` filename for keys outside the standard directory (fixes every MCPB
-  install, and also helps anyone who keeps their key somewhere else today).
-- Unsubstituted config placeholders no longer sent to the license server.
-- `.mcpb` bundle attached as a release asset, plus a one-click install line in the README.
-- The registry description finally goes out, which is what fixes the stale PulseMCP listing.
-
-186 tests pass. The npm-lag lesson applies: publish in the same session as the version bump.
+Released and verified on npm, the GitHub release (bundle attached, downloaded hash matches the local
+build) and the MCP registry. `npm run release -- <version>` now does the whole thing from your
+machine and verifies every surface afterwards, so no release step depends on GitHub Actions.
