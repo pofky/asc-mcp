@@ -81,30 +81,37 @@ const manifest = {
       },
     },
   },
+  // Claude Desktop renders `description` twice: as help text above the field AND
+  // as the input's placeholder. A sentence written only as help reads as a
+  // truncated instruction inside the box, and says the same thing twice on
+  // screen. So each one below has to work in both roles, which means short, and
+  // shaped like an example rather than a paragraph. Verified against the real
+  // Configure dialog, not against the spec.
   user_config: {
     asc_issuer_id: {
       type: "string",
       title: "Issuer ID",
-      description:
-        "The UUID at the top of App Store Connect > Integrations > App Store Connect API. It has a copy button next to it.",
+      description: "The UUID from App Store Connect > Integrations > Keys",
       required: true,
     },
     asc_private_key: {
       type: "file",
       title: "API private key (.p8)",
+      // File fields get a native "File path" placeholder and a Browse button, so
+      // this string is help text only and can afford the reassurance.
+      //
       // No Key ID field on purpose: Apple names the download
       // AuthKey_XXXXXXXXXX.p8, so the server derives the Key ID from the
       // filename. Asking for it would mean retyping something the user just
       // pointed at with a file picker.
       description:
-        "The AuthKey_XXXXXXXXXX.p8 you downloaded from Apple. It is read on your machine and never transmitted anywhere.",
+        "Your AuthKey_XXXXXXXXXX.p8 from Apple. Read on this machine only, never transmitted.",
       required: true,
     },
     asc_license_key: {
       type: "string",
       title: "License key (optional)",
-      description:
-        "Leave empty to start. Six tools work without one, and you can start a free 7-day trial of all 41 from inside your agent by asking it to run asc_start_trial.",
+      description: "Leave empty, then ask your agent for a free 7-day trial",
       sensitive: true,
       required: false,
     },
