@@ -234,9 +234,10 @@ async function handleValidate(
     expires_at: string | null;
     active: number;
     source: string | null;
+    canceled_at: string | null;
   };
 
-  // `source` is a post-launch column. If this build ever reaches production
+  // `source` and `canceled_at` are post-launch columns. If this build ever reaches production
   // ahead of the migration, selecting it throws "no such column", the outer
   // handler turns that into a 500, and the client treats a 500 as "not valid"
   // and drops to the free tier. That is every paying customer silently losing
@@ -245,7 +246,7 @@ async function handleValidate(
   let row: ValidateRow | null;
   try {
     row = await env.DB.prepare(
-      "SELECT tier, expires_at, active, source FROM licenses WHERE key = ?",
+      "SELECT tier, expires_at, active, source, canceled_at FROM licenses WHERE key = ?",
     )
       .bind(body.key)
       .first<ValidateRow>();
@@ -255,8 +256,8 @@ async function handleValidate(
       "SELECT tier, expires_at, active FROM licenses WHERE key = ?",
     )
       .bind(body.key)
-      .first<Omit<ValidateRow, "source">>();
-    row = legacy ? { ...legacy, source: null } : null;
+      .first<Omit<ValidateRow, "source" | "canceled_at">>();
+    row = legacy ? { ...legacy, source: null, canceled_at: null } : null;
   }
 
   if (!row) {
@@ -338,15 +339,31 @@ async function handlePolarWebhook(
     const active = shouldBeActive(sub.status, expiresAt, new Date());
     const licenseKey = generateLicenseKey();
 
+    // An explicit reinstatement clears the "renewal is off" mark; nothing else
+    // does, so a stray `updated` cannot quietly restore the grace window on a
+    // subscription the customer has already cancelled.
+    const reinstates =
+      event.type === "subscription.uncanceled" || event.type === "subscription.resumed";
+
+    // `WHERE revoked_at IS NULL` is the whole P0 fix. Polar retries deliveries
+    // and does not guarantee ordering, so a `subscription.updated` carrying the
+    // pre-cancellation status ("active", period end in the future) could arrive
+    // after `subscription.revoked` and overwrite active=0 back to 1: someone
+    // whose access had been revoked got a working key again. Revocation is
+    // recorded on the row and is terminal for that subscription id. A customer
+    // who genuinely comes back gets a new Polar subscription, so a new row and a
+    // new key; reviving a revoked id is a support action, not an automatic one.
     await env.DB.prepare(
       `INSERT INTO licenses (key, tier, email, polar_subscription_id, expires_at, active, created_at)
        VALUES (?, 'pro', ?, ?, ?, ?, datetime('now'))
        ON CONFLICT(polar_subscription_id) DO UPDATE SET
          email = excluded.email,
          expires_at = excluded.expires_at,
-         active = excluded.active`,
+         active = excluded.active,
+         canceled_at = CASE WHEN ? = 1 THEN NULL ELSE canceled_at END
+       WHERE revoked_at IS NULL`,
     )
-      .bind(licenseKey, email, sub.id, expiresAt, active)
+      .bind(licenseKey, email, sub.id, expiresAt, active, reinstates ? 1 : 0)
       .run();
 
     // Email the key once, the first time the row is active. The key_emailed
@@ -376,8 +393,13 @@ async function handlePolarWebhook(
 
   if (CANCEL_EVENTS.has(event.type)) {
     if (IMMEDIATE_REVOKE_EVENTS.has(event.type)) {
+      // Stamp the revocation as well as switching the row off. The timestamp is
+      // what makes it stick against a later replay of an active-type event.
       await env.DB.prepare(
-        "UPDATE licenses SET active = 0 WHERE polar_subscription_id = ?",
+        `UPDATE licenses
+            SET active = 0,
+                revoked_at = COALESCE(revoked_at, datetime('now'))
+          WHERE polar_subscription_id = ?`,
       )
         .bind(event.data.id)
         .run();
@@ -387,14 +409,20 @@ async function handlePolarWebhook(
     // Scheduled cancellation: leave the licence usable and let the paid period
     // run out. Refresh the expiry if Polar sent one, so it ends exactly when
     // the customer's paid time does.
+    //
+    // canceled_at is also stamped, which switches off the late-renewal grace
+    // window for this row (see isLicenseUsable). Grace exists for a renewal
+    // webhook that is late; once renewal is off there is no renewal coming, and
+    // handing every cancelling customer four extra free days was pure leakage.
     const endsAt = event.data.current_period_end || null;
-    if (endsAt) {
-      await env.DB.prepare(
-        "UPDATE licenses SET expires_at = ? WHERE polar_subscription_id = ?",
-      )
-        .bind(endsAt, event.data.id)
-        .run();
-    }
+    await env.DB.prepare(
+      `UPDATE licenses
+          SET canceled_at = COALESCE(canceled_at, datetime('now')),
+              expires_at = COALESCE(?, expires_at)
+        WHERE polar_subscription_id = ?`,
+    )
+      .bind(endsAt, event.data.id)
+      .run();
 
     return json({ ok: true, note: "cancellation scheduled, access kept until period end" }, headers);
   }
@@ -459,7 +487,8 @@ function trialRefused(email: string) {
     error: "trial_unavailable",
     message:
       `No new trial is available for ${email}. If you already have Pro, get your key at ` +
-      "https://asc-mcp-license.remewdy.workers.dev/key . If your trial has ended, Pro is $9/month.",
+      "https://asc-mcp-license.remewdy.workers.dev/key , using the address you checked out with " +
+      "if that is a different one. If your trial has ended, Pro is $9/month.",
     checkout_url: buildCheckoutUrl("trial_unavailable", email),
   };
 }
@@ -567,10 +596,16 @@ async function handleTrial(
     // The bar to get a key here is possession of the Apple developer account
     // AND the email, which is strictly higher than the /key page has always
     // asked (an email address alone), so this discloses nothing new.
+    //
+    // Matched on the fingerprint alone, deliberately. Requiring the trial row to
+    // carry the same address stranded anyone who trialled with a personal
+    // address and then checked out with a work one: their config kept the trial
+    // key and broke on day 8. The fingerprint is a 64-hex digest of an Issuer ID
+    // nobody else holds, so it is the strong half of the pair either way.
     const ownTrial = await env.DB.prepare(
-      "SELECT id FROM licenses WHERE trial_fingerprint = ? AND email = ?",
+      "SELECT id FROM licenses WHERE trial_fingerprint = ?",
     )
-      .bind(fingerprint, email)
+      .bind(fingerprint)
       .first<{ id: number }>();
 
     if (ownTrial) {

@@ -218,3 +218,45 @@ sends operator-supplied HTML to customers.
 4. Documentation regenerated and consistent across README, USER_GUIDE, LIMITATIONS, `asc_guide`,
    site, privacy and terms.
 5. Independent testers report pass, with the evidence in their own words, not the implementer's.
+
+## Amendment 2, after the lifecycle and billing audit
+
+A fifth independent audit ran the subscription lifecycle rather than the trial
+path, and found one issue serious enough to hold the release for.
+
+**A revoked licence could be brought back to life (P0).** `subscription.revoked`
+set `active=0`, but nothing on the row recorded that it had happened. Polar
+retries deliveries and does not guarantee ordering, so a `subscription.updated`
+carrying the pre-cancellation state, which is a normal retry rather than an
+attack, arrived afterwards and the upsert wrote `active=1` straight back.
+Reproduced against a local worker: revoke, replay, and `/validate` answered
+`valid:true` again. `revoked_at` is now stamped on the row and the upsert
+carries `WHERE revoked_at IS NULL`, which makes revocation terminal for that
+subscription id. A customer who genuinely returns gets a new Polar subscription,
+so a new row and a new key; reviving a revoked id is a support action.
+
+**Every cancellation was given four extra free days (P1).** The grace window
+exists for one thing: a renewal webhook that is late must not demote someone who
+has paid. A cancelled subscription has no renewal coming, so grace was pure
+leakage. `canceled_at` is now stamped by `subscription.canceled`, cleared by
+`subscription.uncanceled` and `subscription.resumed`, and suppresses grace. The
+paid period itself is untouched: a customer who cancels keeps every day they
+bought.
+
+**Converting under a second email stranded the customer (P1).** Someone who
+trialled with a personal address and checked out with a work one was refused,
+and their config kept the trial key until it broke on day 8. The paid-customer
+branch now matches the trial on the fingerprint alone. That is not a weakening:
+the fingerprint is a 64-hex digest of an Issuer ID nobody else holds, and it was
+always the strong half of the pair. The refusal message also now says to try the
+address you checked out with.
+
+**The migration documents its own non-idempotency (P2).** `ALTER TABLE ADD
+COLUMN` fails on a re-run, so the file and the runbook both carry the
+`pragma_table_info` check that answers whether it has been applied.
+
+Verified: 180 unit tests, 39 HTTP integration checks, 21 stdio end-to-end
+checks, and 16 new lifecycle checks that drive real signed webhooks through a
+local worker (revoke then replay, cancel then expire, uncancel then late
+renewal, ordinary renewal, cross-email conversion, and a stranger's attempt to
+pull a paid key with a fabricated fingerprint). All green.

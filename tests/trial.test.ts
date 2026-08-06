@@ -112,6 +112,30 @@ describe("renewal grace applies to subscriptions, never to trials", () => {
       isLicenseUsable({ expires_at: "2026-08-10T00:00:00.000Z", active: 1, source: "trial" }, twoDaysLater).usable,
     ).toBe(true);
   });
+
+  it("gives no grace to a subscription the customer already cancelled", () => {
+    const v = isLicenseUsable(
+      { expires_at: expired, active: 1, source: "polar", canceled_at: "2026-07-20T00:00:00.000Z" },
+      twoDaysLater,
+    );
+    expect(v.usable).toBe(false);
+    expect(v.reason).toBe("canceled");
+    expect(v.grace).toBeUndefined();
+  });
+
+  it("still honours the paid period of a cancelled subscription", () => {
+    expect(
+      isLicenseUsable(
+        {
+          expires_at: "2026-08-10T00:00:00.000Z",
+          active: 1,
+          source: "polar",
+          canceled_at: "2026-07-20T00:00:00.000Z",
+        },
+        twoDaysLater,
+      ).usable,
+    ).toBe(true);
+  });
 });
 
 describe("checkout URL construction", () => {

@@ -16,7 +16,11 @@ CREATE TABLE IF NOT EXISTS licenses (
   -- machine. NULL on paid rows. Anchors one-trial-per-Apple-account.
   trial_fingerprint TEXT,
   -- Which locked tool's gate produced this trial, when known.
-  trigger_tool TEXT
+  trigger_tool TEXT,
+  -- Set by subscription.revoked. Terminal: no later event reactivates the row.
+  revoked_at TEXT,
+  -- Set when the customer turns off renewal. Suppresses the grace window.
+  canceled_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_licenses_key ON licenses(key);

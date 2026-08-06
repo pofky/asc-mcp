@@ -35,8 +35,23 @@ npx wrangler d1 execute asc-mcp-licenses --remote \
 
 Check: every existing row comes back `source='polar'`, `trial_fingerprint=null`,
 and the row count matches `/tmp/licences-before.json`. The migration is additive
-(three columns with defaults, one partial unique index, one plain index, one new table) and drops
+(five columns with defaults, one partial unique index, one plain index, one new table) and drops
 nothing, so there is no data-loss path, but confirm rather than assume.
+
+`ALTER TABLE ADD COLUMN` is not idempotent in SQLite, so a re-run fails on
+"duplicate column name". If you need to know whether it has already been
+applied, ask the table rather than guessing:
+
+```bash
+npx wrangler d1 execute asc-mcp-licenses --remote \
+  --command="SELECT name FROM pragma_table_info('licenses') WHERE name IN ('source','revoked_at','canceled_at')"
+```
+
+Zero rows means not applied. Three rows means applied in full.
+
+Existing rows land on `revoked_at=null` and `canceled_at=null`, which is the
+pre-change behaviour exactly: nobody is revoked, and everybody keeps the
+late-renewal grace window until they cancel.
 
 ## 2. Worker
 
