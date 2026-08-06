@@ -167,7 +167,7 @@ export function webhookSecrets(env: {
 
 /**
  * Polar has emitted the product id under several shapes over time, and a guard
- * that reads only one of them silently falls through to "provision it" — which
+ * that reads only one of them silently falls through to "provision it", which
  * is exactly how the stray-licence incident happened.
  */
 export function resolveProductId(data: Record<string, unknown>): string | null {
