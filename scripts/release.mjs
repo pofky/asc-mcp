@@ -132,24 +132,32 @@ if (!dry) {
 // Last honest moment to check. Everything below this line is irreversible, and
 // the registry publish is at the end of it, so a token that is about to expire
 // gets refreshed here rather than discovered three commands too late.
+/**
+ * Which route will publish to the registry.
+ *
+ * Never launch `mcp-publisher login` from here. It blocks on a device-code
+ * approval in a browser, and run non-interactively that wait never ends: the
+ * release hangs holding a dirty tree with the version already bumped, which is
+ * exactly what happened cutting 1.9.3 the first time.
+ *
+ * A stale token is not a reason to abandon the release, because the tag also
+ * triggers a workflow that publishes via OIDC and needs no local token. So the
+ * local token is used when it is healthy, and the workflow is waited on and
+ * verified when it is not. Either way the registry is checked at the end, so a
+ * half-landed release still fails loudly.
+ */
+const registryRoute = dry
+  ? "dry"
+  : registryTokenSecondsLeft() >= 120
+    ? "local"
+    : "workflow";
 if (!dry) {
-  const left = registryTokenSecondsLeft();
-  if (left < 120) {
-    // Fail, do not launch the login here.
-    //
-    // The first version of this ran `mcp-publisher login github` inline, which
-    // blocks on a device-code approval in a browser. Run from an agent or any
-    // non-interactive shell that never comes, and the release hangs forever
-    // holding a dirty tree with the version already bumped. A release script
-    // must never wait on a human it cannot reach; it stops and says what to do.
-    fail(
-      `registry token has ${left}s left, which will not survive the publish sequence.\n\n` +
-        "  Run this, approve it in the browser, then re-run the release:\n" +
-        "    mcp-publisher login github\n\n" +
-        "Nothing has been published. The token lasts about five minutes, so start the release right after.",
-    );
-  }
-  console.log(`\nRegistry token good for ${left}s. Publishing.`);
+  console.log(
+    registryRoute === "local"
+      ? `\nRegistry: publishing locally, token good for ${registryTokenSecondsLeft()}s.`
+      : "\nRegistry: local token is stale, so the tag-triggered workflow will publish it." +
+        "\nFor a faster, more reliable release next time: mcp-publisher login github, then release within five minutes.",
+  );
 }
 
 run("git", ["add", "-A"], { mutating: true });
@@ -183,8 +191,42 @@ const body = notes.split("\n").slice(1).join("\n").trim();
 run("gh", ["release", "create", `v${version}`, bundle, "--title", title, "--notes", body], {
   mutating: true,
 });
-// Local publish, not the workflow. See the header.
-run("mcp-publisher", ["publish"], { mutating: true });
+if (registryRoute === "local") {
+  run("mcp-publisher", ["publish"], { mutating: true });
+} else if (!dry) {
+  // The tag push above already started the workflow. Wait for it, and re-run it
+  // once if it fails, because it has failed twice today on GitHub's own
+  // "Failed to resolve action download info, Service Unavailable" before
+  // reaching any of our code. That is worth one retry, not a lost release.
+  console.log("\nWaiting for the tag-triggered registry workflow...");
+  const runId = () =>
+    execSync(
+      `gh run list --workflow=publish-mcp-registry.yml --limit 1 --json databaseId --jq '.[0].databaseId'`,
+      { cwd: root, encoding: "utf8" },
+    ).trim();
+  const waitFor = (id) => {
+    for (let i = 0; i < 60; i++) {
+      const st = execSync(`gh run view ${id} --json status,conclusion --jq '.status+" "+(.conclusion//"")'`, {
+        cwd: root,
+        encoding: "utf8",
+      }).trim();
+      if (st.startsWith("completed")) return st;
+      execSync("sleep 10");
+    }
+    return "timeout";
+  };
+  execSync("sleep 15");
+  const id = runId();
+  let verdict = waitFor(id);
+  console.log(`  workflow ${id}: ${verdict}`);
+  if (!verdict.includes("success")) {
+    console.log("  retrying once");
+    execSync(`gh run rerun ${id}`, { cwd: root, stdio: "inherit" });
+    execSync("sleep 15");
+    verdict = waitFor(id);
+    console.log(`  workflow ${id}: ${verdict}`);
+  }
+}
 
 // --- verify every surface ---------------------------------------------------
 
