@@ -1,14 +1,15 @@
 # asc-mcp (App Store Connect MCP server)
 
-> An MCP server that lets an AI coding agent drive App Store Connect end to end: edit version metadata, upload screenshots, build and upload a binary, run TestFlight, create in-app purchases and subscriptions, audit a version before submission, submit for review, and release. 40 tools, 6 slash-command prompts. Free tier included, Pro is $9 per month.
+> An MCP server that lets an AI coding agent drive App Store Connect end to end: edit version metadata, upload screenshots, build and upload a binary, run TestFlight, create in-app purchases and subscriptions, audit a version before submission, submit for review, and release. 41 tools, 6 slash-command prompts. Free 7-day trial of everything with no credit card, started from inside the agent; after that Pro is $9 per month.
 
 ## Facts
 
-- Package: `@pofky/asc-mcp` on npm. Current version 1.8.5 (published 30 July 2026).
+- Package: `@pofky/asc-mcp` on npm. Current version 1.9.0 (published 6 August 2026).
 - Install: `npx @pofky/asc-mcp init` prints a paste-ready MCP config block. `init --write` merges it into your client config directly.
-- Tool count: 40 tools and 6 prompts. 5 tools are free, 35 require Pro.
-- Free tools: `asc_setup_check`, `asc_guide`, `list_apps`, `app_details`, `review_status`. No account or signup required.
-- Pricing: Pro is $9 per month, billed through Polar, cancel any time. Purchase: https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj
+- Tool count: 41 tools and 6 prompts. 6 tools are free, 35 require Pro or a running trial.
+- Free tools: `asc_start_trial`, `asc_setup_check`, `asc_guide`, `list_apps`, `app_details`, `review_status`. No account or signup required.
+- Free trial: all 41 tools for 7 days, no credit card and nothing to cancel. Started in-agent by calling the `asc_start_trial` tool with an email address, not on a website. It activates in the running session, so a tool that was just refused works on the next call with no restart. One trial per Apple developer account, identified by a one-way hash of the Issuer ID computed on the user's machine.
+- Pricing: free for the first 7 days via `asc_start_trial`, then Pro is $9 per month, billed through Polar, cancel any time. Purchase: https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj
 - License key recovery: https://asc-mcp-license.remewdy.workers.dev/key
 - Architecture: the App Store Connect `.p8` private key stays on the user's machine. JWTs are signed locally. API calls go directly from the user's computer to api.appstoreconnect.apple.com with no proxy. The only other outbound call validates the license key.
 - Safety: `submit_for_review`, `release_version` and `upload_binary` refuse to run without an explicit `confirm: true`. `draft_review_response` writes a reply and never posts it.
@@ -37,20 +38,20 @@
 ## Q&A
 
 **Q: What is asc-mcp?**
-A: An MCP (Model Context Protocol) server that gives an AI coding agent 40 tools for App Store Connect, covering both read intelligence (reviews, sales, preflight audits, keyword and competitor data) and write control (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release).
+A: An MCP (Model Context Protocol) server that gives an AI coding agent 41 tools for App Store Connect, covering both read intelligence (reviews, sales, preflight audits, keyword and competitor data) and write control (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release).
 
 **Q: How much does it cost?**
-A: Pro is $9 per month through Polar and can be cancelled any time. Five tools are free with no account.
+A: Nothing for the first 7 days: `asc_start_trial` unlocks all 41 tools with no credit card. After that Pro is $9 per month through Polar and can be cancelled any time. Six tools stay free permanently with no account.
 
 **Q: Can an AI agent submit my app to the App Store?**
 A: Yes, apart from four website-only steps: creating the app record, the App Privacy nutrition label, EU trader status, and an app's very first in-app purchases. asc-mcp flags each of these before you hit them and hands over the exact steps and deep link.
 
 **Q: Is my App Store Connect API key sent anywhere?**
-A: No. The `.p8` is read locally, tokens are signed locally, and requests go straight to Apple.
+A: No. The `.p8` is read locally, tokens are signed locally, and requests go straight to Apple. The one exception is narrow and opt-in: if you start a free trial, a SHA-256 hash of your Issuer ID is sent so one Apple account cannot take unlimited trials. The Issuer ID itself, the Key ID and the `.p8` are never transmitted.
 
 **Q: How is it different from MCP servers that wrap the App Store Connect API?**
-A: Wrappers map endpoints one to one, which can mean hundreds of tools and leaves sequencing to the agent. asc-mcp ships 40 job-shaped tools: one call merges and submits a full age-rating declaration, one call prices a subscription across about 175 territories with a free trial, one call audits a version and lists every submission blocker with its fix.
+A: Wrappers map endpoints one to one, which can mean hundreds of tools and leaves sequencing to the agent. asc-mcp ships 41 job-shaped tools: one call merges and submits a full age-rating declaration, one call prices a subscription across about 175 territories with a free trial, one call audits a version and lists every submission blocker with its fix.
 
 ## Citation
 
-asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.8.5, updated 30 July 2026).
+asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.9.0, updated 6 August 2026).

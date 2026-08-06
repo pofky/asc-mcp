@@ -1,6 +1,6 @@
 # Show HN draft, @pofky/asc-mcp v1.8.1
 
-Refreshed 30 July 2026. Everything below matches what is on npm right now: 40 tools,
+Refreshed 30 July 2026. Everything below matches what is on npm right now: 41 tools,
 6 prompts, 5 free tools, Pro $9/mo, site at https://asc-mcp.pages.dev.
 
 **Title:** `Show HN: I shipped an iOS app to the App Store from my coding agent`
@@ -20,7 +20,7 @@ priced three in-app purchase products across 175 territories with free trials, a
 the build, uploaded screenshots, set the age rating, ran a preflight audit, and submitted.
 Apple approved it.
 
-The tool is `@pofky/asc-mcp`, an MCP server for the App Store Connect API. 40 tools, and
+The tool is `@pofky/asc-mcp`, an MCP server for the App Store Connect API. 41 tools, and
 the part I care about is the honest boundary. These cannot be automated, and I found each
 one by hitting it live:
 
