@@ -36,8 +36,19 @@ Also moved the worker's pure logic to `logic.ts`. Exporting helpers from the ent
 `wrangler dev` refuse to start, which is why this licence server had only ever been tested in
 production.
 
-175 unit tests, 39 HTTP checks against a D1 migrated from the live table shape, 21 checks driving
-the built server over stdio. Green.
+**A fifth audit ran the billing lifecycle instead of the trial path, and found the release-blocker.**
+`subscription.revoked` switched the row off but left no mark on it, so the next `subscription.updated`
+carrying the pre-cancellation state, an ordinary Polar retry rather than an attack, wrote `active=1`
+straight back: revoked, non-paying users got a working key again. Reproduced locally, fixed by
+stamping `revoked_at` and guarding the upsert with `WHERE revoked_at IS NULL`. Same audit: every
+cancellation was collecting the 4-day renewal grace on top of the period it paid for, which is
+leakage since a cancelled subscription has no renewal to be late (`canceled_at` now suppresses it);
+and trialling with a personal address then checking out with a work one stranded the customer on a
+trial key that broke on day 8 (the paid branch now matches the trial on the fingerprint alone).
+
+180 unit tests, 39 HTTP checks against a D1 migrated from the live table shape, 21 checks driving
+the built server over stdio, 16 lifecycle checks driving real signed webhooks through a local
+worker. Green. Independent verification of the lifecycle fixes in progress.
 
 Open: nothing is deployed. `docs/deploy-prd-0001.md` is the runbook; the gate is re-validating all
 three paying keys immediately after the worker deploy. Needs `DELETE_SECRET` set, and
