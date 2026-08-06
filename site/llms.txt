@@ -4,7 +4,7 @@
 
 ## Facts
 
-- Package: `@pofky/asc-mcp` on npm. Current version 1.9.2 (published 6 August 2026).
+- Package: `@pofky/asc-mcp` on npm. Current version 1.9.3 (published 6 August 2026).
 - Install: `npx @pofky/asc-mcp init` prints a paste-ready MCP config block. `init --write` merges it into your client config directly.
 - One-click install on Claude Desktop (macOS and Windows): download the `.mcpb` bundle from https://github.com/pofky/asc-mcp/releases/latest and open it. Claude installs it in one click and collects the Issuer ID and the `.p8` file natively, with no config file editing and no restart. Every other client uses the `npx` command above.
 - Tool count: 41 tools and 6 prompts. 6 tools are free, 35 require Pro or a running trial.
@@ -60,4 +60,4 @@ A: Wrappers map endpoints one to one, which can mean hundreds of tools and leave
 
 ## Citation
 
-asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.9.2, updated 6 August 2026).
+asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.9.3, updated 6 August 2026).
