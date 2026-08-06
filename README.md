@@ -4,6 +4,10 @@
 
 [asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/month](https://asc-mcp.pages.dev/#pricing)
 
+**Claude Desktop, one click:** download the latest [`asc-mcp.mcpb`](https://github.com/pofky/asc-mcp/releases/latest) and open it. Claude asks for your Issuer ID and lets you pick your `.p8` with a file picker. No JSON, no restart hunt.
+
+**Everything else** (Claude Code, Cursor, Windsurf, Cline), one command:
+
 ```bash
 npx @pofky/asc-mcp init --write   # finds your .p8, asks for your Issuer ID, writes your MCP config
 ```
