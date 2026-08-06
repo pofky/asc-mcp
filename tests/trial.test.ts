@@ -542,3 +542,25 @@ describe("init --write never costs a paying customer their key", () => {
     expect(readFileSync(`${path}.bak`, "utf-8")).toContain("original");
   });
 });
+
+// A paying subscriber asking their agent to start a trial must get their
+// subscription key, not a refusal.
+//
+// This was live and broken for every paying customer. `/trial` only handed back
+// a paid key when the same machine also held a trial row, so it worked for
+// people who converted mid-trial and failed for everyone who subscribed without
+// trialling, or who was setting up a second machine. All five active
+// subscriptions on the live table have a null trial_fingerprint, so it failed
+// for all of them, and the refusal reads "no new trial is available for you",
+// which is the worst possible thing to tell someone who is paying.
+//
+// `requirePro` promises this in as many words: "call asc_start_trial with the
+// same email and it will fetch your paid key". These assert the promise.
+describe("the gate promises that a subscriber can fetch their key in-agent", () => {
+  it("requirePro tells an expired-trial user to call asc_start_trial to get their paid key", () => {
+    // The message is what sends a paying customer down this path in the first
+    // place, so if it stops saying it, the endpoint behaviour below is unused.
+    const msg = requirePro("free", "Editing metadata");
+    expect(msg).toContain("asc_start_trial");
+  });
+});

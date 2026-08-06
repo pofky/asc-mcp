@@ -585,44 +585,44 @@ async function handleTrial(
     .first<{ key: string; expires_at: string | null }>();
 
   if (paid) {
-    // They subscribed. If this machine is the one that started a trial on this
-    // same address, hand back the subscription key so it replaces the trial key
-    // sitting in their config.
+    // They subscribed, so hand back the subscription key. Two different people
+    // need this and only one of them used to get it.
     //
-    // Without this, converting is a trap: the config still holds the trial key,
-    // it keeps working until day 8, and then a paying customer's agent breaks
-    // with a message telling them to buy what they already bought.
+    // Someone who converted mid-trial has a trial key sitting in their config
+    // that keeps working until day 8 and then breaks, telling a paying customer
+    // to buy what they already bought.
     //
-    // The bar to get a key here is possession of the Apple developer account
-    // AND the email, which is strictly higher than the /key page has always
-    // asked (an email address alone), so this discloses nothing new.
+    // And someone who subscribed without ever trialling, or who is setting up a
+    // second machine, has no key in their config at all. `requirePro` tells them
+    // in as many words to "call asc_start_trial with the same email and it will
+    // fetch your paid key". That is the promise this endpoint exists to keep.
     //
-    // Matched on the fingerprint alone, deliberately. Requiring the trial row to
-    // carry the same address stranded anyone who trialled with a personal
-    // address and then checked out with a work one: their config kept the trial
-    // key and broke on day 8. The fingerprint is a 64-hex digest of an Issuer ID
-    // nobody else holds, so it is the strong half of the pair either way.
-    const ownTrial = await env.DB.prepare(
-      "SELECT id FROM licenses WHERE trial_fingerprint = ?",
-    )
-      .bind(fingerprint)
-      .first<{ id: number }>();
-
-    if (ownTrial) {
-      return json(
-        {
-          ok: true,
-          key: paid.key,
-          expires: paid.expires_at,
-          days_remaining: daysRemaining(paid.expires_at, now),
-          already_started: true,
-          subscription: true,
-        },
-        headers,
-      );
-    }
-
-    return json(trialRefused(email), headers, 409);
+    // This used to require a trial row carrying this machine's fingerprint,
+    // which meant it only ever worked for the converted-mid-trial case. Every
+    // subscriber who bought without trialling was refused, and the refusal reads
+    // as "no new trial is available for you", which is precisely the wrong thing
+    // to tell someone who is paying. All five active subscriptions on the live
+    // table have a null trial_fingerprint, so it was failing for every one of
+    // them, and it was found by a paying customer (me) running the documented
+    // flow on a new install.
+    //
+    // Dropping the fingerprint check discloses nothing that was not already
+    // public: /key renders the key on screen for an email address alone, with no
+    // second factor at all. The fingerprint was a strictly higher bar than the
+    // front door, guarding a side door. The real fix for both is to mail the key
+    // rather than display it, which is tracked separately; blocking paying
+    // customers in the meantime buys no security.
+    return json(
+      {
+        ok: true,
+        key: paid.key,
+        expires: paid.expires_at,
+        days_remaining: daysRemaining(paid.expires_at, now),
+        already_started: true,
+        subscription: true,
+      },
+      headers,
+    );
   }
 
   // Repeat call for a trial we already minted: hand back the same key. Asking an
