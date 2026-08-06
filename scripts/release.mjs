@@ -199,11 +199,26 @@ if (registryRoute === "local") {
   // "Failed to resolve action download info, Service Unavailable" before
   // reaching any of our code. That is worth one retry, not a lost release.
   console.log("\nWaiting for the tag-triggered registry workflow...");
-  const runId = () =>
-    execSync(
-      `gh run list --workflow=publish-mcp-registry.yml --limit 1 --json databaseId --jq '.[0].databaseId'`,
-      { cwd: root, encoding: "utf8" },
-    ).trim();
+  /**
+   * The run for THIS tag, matched on headBranch, not `--limit 1`.
+   *
+   * Taking the newest run raced the queue: cutting 1.9.3 it picked up the run
+   * from 1.9.2, waited on that run's old failure, re-ran the wrong workflow, and
+   * cancelled the real one as collateral. Poll until the run for this tag
+   * actually appears.
+   */
+  const runId = () => {
+    for (let i = 0; i < 12; i++) {
+      const id = execSync(
+        `gh run list --workflow=publish-mcp-registry.yml --limit 15 --json databaseId,headBranch ` +
+          `--jq '[.[] | select(.headBranch=="v${version}")][0].databaseId // empty'`,
+        { cwd: root, encoding: "utf8" },
+      ).trim();
+      if (id) return id;
+      execSync("sleep 10");
+    }
+    return "";
+  };
   const waitFor = (id) => {
     for (let i = 0; i < 60; i++) {
       const st = execSync(`gh run view ${id} --json status,conclusion --jq '.status+" "+(.conclusion//"")'`, {
@@ -217,9 +232,15 @@ if (registryRoute === "local") {
   };
   execSync("sleep 15");
   const id = runId();
-  let verdict = waitFor(id);
+  if (!id) {
+    console.log(
+      "  no workflow run appeared for this tag. The registry check below will fail;\n" +
+        "  publish it by hand with: mcp-publisher login github && mcp-publisher publish",
+    );
+  }
+  let verdict = id ? waitFor(id) : "missing";
   console.log(`  workflow ${id}: ${verdict}`);
-  if (!verdict.includes("success")) {
+  if (id && !verdict.includes("success")) {
     console.log("  retrying once");
     execSync(`gh run rerun ${id}`, { cwd: root, stdio: "inherit" });
     execSync("sleep 15");
