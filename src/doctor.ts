@@ -10,7 +10,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { homedir } from "node:os";
 import { getToken, clearTokenCache } from "./auth.js";
-import { validateLicense } from "./license.js";
+import { validateLicense, LICENSE_API_URL } from "./license.js";
 import { discoverPrivateKey } from "./setup.js";
 import { UPGRADE_URL } from "./gate.js";
 
@@ -150,16 +150,26 @@ export async function runDoctor(): Promise<DoctorReport> {
   }
 
   // 5. License tier.
+  //
+  // Whether the trial can be offered here depends on whether the server is in
+  // setup mode. With no credentials only asc_setup_check and asc_guide are
+  // registered, so telling that user to call `asc_start_trial` names a tool
+  // their client cannot see, and the agent relaying it hits "no such tool".
+  const credentialsPresent = checks.every(
+    (c) => c.name === "License" || c.status !== "fail",
+  );
   const licenseKey = process.env.ASC_LICENSE_KEY;
   if (!licenseKey) {
     checks.push({
       name: "License",
       status: "warn",
-      detail: "Free tier: read + intelligence tools only.",
-      fix:
-        "Run `asc_start_trial` for 7 days of everything, no card. " +
-        "It unlocks write/control (metadata, screenshots, builds, submit, IAP/subs) in this session, no restart. " +
-        "Or subscribe at " + UPGRADE_URL + " and set ASC_LICENSE_KEY.",
+      detail: "Free tier: read + intelligence tools only. Not a problem; the free tools work.",
+      fix: credentialsPresent
+        ? "Run `asc_start_trial` for 7 days of everything, no card. It unlocks write/control " +
+          "(metadata, screenshots, builds, submit, IAP/subs) in this session, no restart. " +
+          "Or subscribe at " + UPGRADE_URL + " and set ASC_LICENSE_KEY."
+        : "Fix the credential problems above first. Once the server restarts with working " +
+          "credentials, `asc_start_trial` will be available for 7 days of everything, no card.",
     });
   } else {
     const tier = await validateLicense(licenseKey);
@@ -170,7 +180,10 @@ export async function runDoctor(): Promise<DoctorReport> {
         name: "License",
         status: "fail",
         detail: "A license key is set but did not validate as Pro.",
-        fix: "Check the key (retrieve it at https://asc-mcp-license.remewdy.workers.dev/key). Network issues fall back to free; retry if you are online.",
+        fix:
+          `Check the key (retrieve it at ${LICENSE_API_URL}/key). ` +
+          "If the key is right, the license server may be unreachable: validation falls back to " +
+          "the free tier on a network error, so retry once you are online.",
       });
     }
   }

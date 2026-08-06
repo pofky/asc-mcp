@@ -41,40 +41,90 @@ export const SERVER_LAUNCH = {
   args: ["-y", "@pofky/asc-mcp"],
 } as const;
 
-/** Known client MCP config files, in the order we offer them. */
+/**
+ * Known client MCP config files, in the order we offer them.
+ *
+ * Claude Desktop stores its config in a different place on each platform, and
+ * listing only the macOS one meant a Windows user running `init --write` was
+ * never offered their real config and had no idea why. Every platform's path is
+ * offered; ones that do not exist yet are still valid targets, since the point
+ * of --write is to create the block.
+ */
 function clientConfigCandidates(): { label: string; path: string }[] {
-  const home = homedir();
+  return clientConfigCandidatesForTest(process.platform, homedir(), process.env.APPDATA);
+}
+
+/** Same logic with the platform injected, so all three can be tested anywhere. */
+export function clientConfigCandidatesForTest(
+  platform: string,
+  home: string,
+  appDataEnv?: string,
+): { label: string; path: string }[] {
+  const appData = appDataEnv || join(home, "AppData", "Roaming");
+
+  const desktop =
+    platform === "win32"
+      ? join(appData, "Claude", "claude_desktop_config.json")
+      : platform === "darwin"
+        ? join(home, "Library", "Application Support", "Claude", "claude_desktop_config.json")
+        : join(home, ".config", "Claude", "claude_desktop_config.json");
+
   return [
-    {
-      label: "Claude Desktop",
-      path: join(home, "Library", "Application Support", "Claude", "claude_desktop_config.json"),
-    },
+    { label: "Claude Desktop", path: desktop },
     { label: "Claude Code (global)", path: join(home, ".claude.json") },
     { label: "Project-local (.mcp.json in this folder)", path: join(process.cwd(), ".mcp.json") },
   ];
 }
 
 /**
+ * Take a one-time backup of a config file.
+ *
+ * Deliberately refuses to overwrite an existing .bak. Re-running a command that
+ * writes the config would otherwise replace the backup with an already-modified
+ * copy, so by the second run the pristine original is gone and the backup is
+ * worth nothing to someone trying to undo.
+ */
+function backupOnce(path: string): void {
+  const bak = `${path}.bak`;
+  if (!existsSync(bak)) copyFileSync(path, bak);
+}
+
+/**
  * Merge the asc-mcp server block into an existing client config file without
- * clobbering other servers. Backs up the original to <path>.bak first. Returns a
+ * clobbering other servers. Backs the original up to <path>.bak first. Returns a
  * status line for the user.
  */
 export function writeServerBlock(path: string, env: Record<string, string>): string {
   let existing: Record<string, unknown> = {};
-  if (existsSync(path)) {
+  const hadFile = existsSync(path);
+  if (hadFile) {
     try {
       existing = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
     } catch {
       return `Could not parse ${path} (not valid JSON). Left it untouched; paste the block manually.`;
     }
-    copyFileSync(path, `${path}.bak`);
+    backupOnce(path);
   }
   const servers = (existing.mcpServers as Record<string, unknown>) ?? {};
-  servers["appstore-connect"] = { ...SERVER_LAUNCH, env };
+
+  // Keep any env var already on the block that this run did not ask about.
+  //
+  // Replacing the block wholesale meant a paying customer who re-ran
+  // `init --write` to correct their Issuer ID, and pressed Enter at the
+  // optional licence-key prompt, silently lost ASC_LICENSE_KEY and dropped to
+  // the free tier with no message saying so. Anything the user typed this time
+  // wins; anything they did not is left alone.
+  const previous = (servers["appstore-connect"] as { env?: Record<string, string> } | undefined)?.env;
+  const merged = { ...(previous ?? {}), ...env };
+
+  servers["appstore-connect"] = { ...SERVER_LAUNCH, env: merged };
   existing.mcpServers = servers;
   writeFileSync(path, JSON.stringify(existing, null, 2) + "\n");
-  return existsSync(`${path}.bak`)
-    ? `Wrote ${path} (backup at ${path}.bak). Restart the client.`
+
+  const kept = Object.keys(previous ?? {}).filter((k) => !(k in env));
+  const keptNote = kept.length ? ` Kept your existing ${kept.join(", ")}.` : "";
+  return hadFile
+    ? `Wrote ${path} (backup at ${path}.bak).${keptNote} Restart the client.`
     : `Created ${path}. Restart the client.`;
 }
 
@@ -130,7 +180,7 @@ export function injectLicenseKey(
     if (!touched) continue;
 
     try {
-      copyFileSync(path, `${path}.bak`);
+      backupOnce(path);
       writeFileSync(path, JSON.stringify(parsed, null, 2) + "\n");
       updated.push(path);
     } catch {
@@ -175,7 +225,9 @@ export async function runInit(write = false): Promise<number> {
 
   if (!process.stdin.isTTY) {
     process.stdout.write(
-      "Non-interactive shell. Set ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY_PATH manually.\n",
+      discovered
+        ? "Non-interactive shell. The .p8 above was found automatically, so ASC_ISSUER_ID is the only variable you need to set.\n"
+        : "Non-interactive shell. Set ASC_KEY_ID, ASC_ISSUER_ID and ASC_PRIVATE_KEY_PATH manually.\n",
     );
     return discovered ? 0 : 1;
   }

@@ -67,7 +67,7 @@ export async function draftReviewResponse(
 ): Promise<DraftResult> {
   if (tier !== "pro") {
     return emptyResult(args, "default_factual", {
-      note: requirePro(tier, "draft_review_response", "draft_review_response")!,
+      note: requirePro(tier, "Drafting a reply to a review", "draft_review_response")!,
     });
   }
 

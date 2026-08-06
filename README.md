@@ -2,7 +2,7 @@
 
 > **Full control of App Store Connect from your coding agent.** 41 tools: read intelligence that thinks, plus write/control that ships your app end to end (edit metadata, upload screenshots, attach builds, TestFlight, submit, release, even build and upload the binary locally). 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper.
 
-[asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/mo](https://asc-mcp.pages.dev/#pricing)
+[asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/monthnth](https://asc-mcp.pages.dev/#pricing)
 
 Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Different angle, same API surface plus more.
 
@@ -93,7 +93,7 @@ Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-com
 | `app_details` | Version history, build status, release state, dates |
 | `review_status` | Current review state with human-readable context |
 
-### Pro (free 7-day trial, then $9/mo)
+### Pro (free 7-day trial, then $9/monthnth)
 
 | Tool | What it does | Why it matters |
 |------|-------------|----------------|
@@ -256,8 +256,8 @@ Lead with the most impactful change. Keep under 4000 chars.
 
 | | Raw API wrappers (free) | This server |
 |---|---|---|
-| **Tool count** | 80 to 293 | 36 opinionated tools (read + control) |
-| **MCP Prompts (slash commands)** | No | Yes, 3 pre-built workflows |
+| **Tool count** | 80 to 875 | 41 opinionated tools (read + control) |
+| **MCP Prompts (slash commands)** | No | Yes, 6 pre-built workflows |
 | **MCP Sampling (zero server-side LLM cost)** | No | Yes, review triage + response drafts |
 | **Claude Skill bundled** | No | Yes, one-line install |
 | **Pre-submission audit** | No | Yes, catches rejections before you submit |
@@ -265,7 +265,8 @@ Lead with the most impactful change. Keep under 4000 chars.
 | **Git-aware release notes** | No | Yes, reads your project's commit history |
 | **Smart review summaries** | No | Yes, theme clustering, action items |
 | **Setup** | Build from source (Swift or Node) | `npm install -g` (any OS) |
-| **Free tier** | Some | Yes, 3 tools, no account needed |
+| **Free tier** | Some | Yes, 6 tools, no account needed |
+| **Try the paid half** | n/a | 7 days, no card, started from inside your agent |
 
 Raw wrappers give you endpoints. This gives you answers.
 

@@ -21,7 +21,7 @@ import {
 import { fingerprintIssuer, requestTrial, TRIAL_FINGERPRINT_SALT } from "../src/trial.js";
 import { requirePro, upgradeUrl, CHECKOUT_URL } from "../src/gate.js";
 import { validateLicense, clearLicenseCache } from "../src/license.js";
-import { injectLicenseKey } from "../src/setup.js";
+import { injectLicenseKey, writeServerBlock } from "../src/setup.js";
 
 describe("input validation on /trial and /go", () => {
   it("accepts real tool names and rejects anything that could be injected", () => {
@@ -447,5 +447,74 @@ describe("injectLicenseKey only touches blocks that really are this server", () 
     });
     injectLicenseKey("ASC-K", [c]);
     expect(JSON.parse(readFileSync(c.path, "utf-8")).mcpServers["appstore-connect"].env.ASC_LICENSE_KEY).toBe("ASC-K");
+  });
+});
+
+describe("client config candidates per platform", () => {
+  /**
+   * `init --write` offered only the macOS Claude Desktop path, so a Windows
+   * user was never shown their real config and had no way to understand why.
+   */
+  it("points at the right Claude Desktop config on each platform", async () => {
+    const { clientConfigCandidatesForTest } = await import("../src/setup.js");
+    const win = clientConfigCandidatesForTest("win32", "C:\\Users\\dev", "C:\\Users\\dev\\AppData\\Roaming");
+    expect(win[0].path).toContain("AppData");
+    expect(win[0].path).toContain("Claude");
+
+    const mac = clientConfigCandidatesForTest("darwin", "/Users/dev");
+    expect(mac[0].path).toBe("/Users/dev/Library/Application Support/Claude/claude_desktop_config.json");
+
+    const linux = clientConfigCandidatesForTest("linux", "/home/dev");
+    expect(linux[0].path).toBe("/home/dev/.config/Claude/claude_desktop_config.json");
+
+    for (const list of [win, mac, linux]) {
+      expect(list.some((c) => c.label.includes("Claude Code"))).toBe(true);
+      expect(list).toHaveLength(3);
+    }
+  });
+});
+
+describe("init --write never costs a paying customer their key", () => {
+  const dir3 = mkdtempSync(join(tmpdir(), "asc-cfg3-"));
+
+  /**
+   * writeServerBlock replaced the whole env block. A subscriber who re-ran
+   * `init --write` to correct their Issuer ID, and pressed Enter at the
+   * optional licence prompt, silently lost ASC_LICENSE_KEY and dropped to the
+   * free tier with nothing telling them why.
+   */
+  it("keeps env vars this run did not ask about", () => {
+    const path = join(dir3, "claude.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        mcpServers: {
+          other: { command: "node", args: ["x.js"] },
+          "appstore-connect": {
+            command: "npx",
+            args: ["-y", "@pofky/asc-mcp"],
+            env: { ASC_ISSUER_ID: "old", ASC_LICENSE_KEY: "ASC-PAID-KEY", CUSTOM_VAR: "v" },
+          },
+        },
+      }),
+    );
+
+    const status = writeServerBlock(path, { ASC_ISSUER_ID: "new", ASC_KEY_ID: "K1" });
+    const after = JSON.parse(readFileSync(path, "utf-8")).mcpServers;
+
+    expect(after["appstore-connect"].env.ASC_LICENSE_KEY).toBe("ASC-PAID-KEY");
+    expect(after["appstore-connect"].env.CUSTOM_VAR).toBe("v");
+    expect(after["appstore-connect"].env.ASC_ISSUER_ID).toBe("new");
+    expect(after.other).toEqual({ command: "node", args: ["x.js"] });
+    expect(status).toContain("Kept your existing");
+  });
+
+  /** A second write must not replace the pristine backup with a modified copy. */
+  it("keeps the first backup, not the latest one", () => {
+    const path = join(dir3, "twice.json");
+    writeFileSync(path, JSON.stringify({ mcpServers: { "appstore-connect": { env: { ASC_ISSUER_ID: "original" } } } }));
+    writeServerBlock(path, { ASC_ISSUER_ID: "second" });
+    writeServerBlock(path, { ASC_ISSUER_ID: "third" });
+    expect(readFileSync(`${path}.bak`, "utf-8")).toContain("original");
   });
 });
