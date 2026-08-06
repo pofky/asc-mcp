@@ -1,5 +1,5 @@
 import type { Tier } from "./types.js";
-import { LICENSE_API_URL } from "./license.js";
+import { LICENSE_API_URL, lastLicenseStatus } from "./license.js";
 
 /**
  * The direct Polar checkout link. Kept in the package even though the normal
@@ -41,12 +41,24 @@ export function requirePro(
   tool?: string,
 ): string | null {
   if (tier === "pro") return null;
+
+  // Someone whose trial has already run out must not be told to start one. They
+  // would call asc_start_trial, be refused, and reasonably conclude the thing is
+  // broken. `reason` comes from the licence server's last verdict on their key.
+  const spent = lastLicenseStatus()?.reason === "trial_expired";
+
   return (
     `${capability} requires Pro.\n\n` +
-    `Free for 7 days, no card: call the \`asc_start_trial\` tool with the user's email. ` +
-    `It unlocks all 41 tools in this session immediately, no restart.\n\n` +
-    `Or subscribe now, $9/month: ${upgradeUrl(tool)}\n` +
-    `(direct link: ${CHECKOUT_URL})\n\n` +
-    `Already have a key? Set ASC_LICENSE_KEY in your MCP server config.`
+    (spent
+      ? "Your 7-day trial has ended. Pro is $9/month, cancel any time:\n" +
+        `  ${upgradeUrl(tool)}\n` +
+        `  (direct link: ${CHECKOUT_URL})\n\n` +
+        "If you already subscribed, call `asc_start_trial` with the same email and it will fetch " +
+        "your paid key and put it in your config.\n"
+      : "Free for 7 days, no card: call the `asc_start_trial` tool with the user's email. " +
+        "It unlocks all 41 tools in this session immediately, no restart.\n\n" +
+        `Or subscribe now, $9/month: ${upgradeUrl(tool)}\n` +
+        `(direct link: ${CHECKOUT_URL})\n`) +
+    `\nAlready have a key? Set ASC_LICENSE_KEY in your MCP server config.`
   );
 }

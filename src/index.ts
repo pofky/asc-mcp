@@ -260,16 +260,21 @@ async function main() {
 
       return text(
         [
-          result.already_started
-            ? `Trial already running: ${result.days_remaining} day(s) left.`
-            : `Pro trial started. ${result.days_remaining} day(s), no card, nothing to cancel.`,
+          result.subscription
+            ? "You already subscribed, so this is your paid license key, not a trial. " +
+              "It replaces the trial key that was in your config, which would have stopped working when the trial ran out."
+            : result.already_started
+              ? `Trial already running: ${result.days_remaining} day(s) left.`
+              : `Pro trial started. ${result.days_remaining} day(s), no card, nothing to cancel.`,
           "",
           `License key: ${result.key}`,
           persistence,
           skipped.length ? `Left untouched: ${skipped.join(", ")}` : "",
           "",
           "All 41 tools are unlocked in this session right now. Retry what you were doing.",
-          result.checkout_url ? `When the trial ends, Pro is $9/month: ${result.checkout_url}` : "",
+          result.subscription || !result.checkout_url
+            ? ""
+            : `When the trial ends, Pro is $9/month: ${result.checkout_url}`,
         ]
           .filter(Boolean)
           .join("\n"),

@@ -20,6 +20,7 @@ import {
 } from "../license-worker/src/logic.js";
 import { fingerprintIssuer, requestTrial, TRIAL_FINGERPRINT_SALT } from "../src/trial.js";
 import { requirePro, upgradeUrl, CHECKOUT_URL } from "../src/gate.js";
+import { validateLicense, clearLicenseCache } from "../src/license.js";
 import { injectLicenseKey } from "../src/setup.js";
 
 describe("input validation on /trial and /go", () => {
@@ -379,5 +380,72 @@ describe("timingSafeEqual", () => {
     expect(timingSafeEqual("abc", "abd")).toBe(false);
     expect(timingSafeEqual("abc", "ab")).toBe(false);
     expect(timingSafeEqual("", "")).toBe(true);
+  });
+});
+
+describe("the gate adapts to a trial that has already been spent", () => {
+  afterEach(() => clearLicenseCache());
+
+  it("offers the trial to someone who has never had one", () => {
+    clearLicenseCache();
+    const msg = requirePro("free", "Submitting for review", "submit_for_review")!;
+    expect(msg).toContain("Free for 7 days");
+    expect(msg).not.toContain("has ended");
+  });
+
+  /**
+   * Telling someone whose trial just expired to start a trial sends them into a
+   * refusal and makes the product look broken at the exact moment they were
+   * deciding whether to pay.
+   */
+  it("does not offer a second trial once the first has expired", async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ valid: false, tier: "free", reason: "trial_expired" }), {
+        status: 200,
+      })) as never;
+    await validateLicense("ASC-EXPIRED-TRIAL-KEY");
+    globalThis.fetch = realFetch;
+
+    const msg = requirePro("free", "Submitting for review", "submit_for_review")!;
+    expect(msg).toContain("Your 7-day trial has ended");
+    expect(msg).not.toContain("Free for 7 days");
+    // and it still tells a converted customer how to recover their paid key
+    expect(msg).toContain("already subscribed");
+  });
+});
+
+describe("injectLicenseKey only touches blocks that really are this server", () => {
+  const dir2 = mkdtempSync(join(tmpdir(), "asc-cfg2-"));
+  function cfg2(name: string, body: unknown) {
+    const path = join(dir2, name);
+    writeFileSync(path, JSON.stringify(body, null, 2));
+    return { label: name, path };
+  }
+
+  /**
+   * A substring test on the command wrote the paid licence key into any server
+   * whose binary path merely contained "asc-mcp": a wrapper, a proxy, a local
+   * checkout. That hands a paid key to a process with no claim to it.
+   */
+  it("does not write the key into an unrelated server with a similar binary name", () => {
+    const c = cfg2("wrapper.json", {
+      mcpServers: {
+        "my-wrapper": { command: "/usr/local/bin/asc-mcp-proxy", args: ["--serve"] },
+        "appstore-connect": { command: "npx", args: ["-y", "@pofky/asc-mcp"], env: {} },
+      },
+    });
+    injectLicenseKey("ASC-SECRET-KEY", [c]);
+    const after = JSON.parse(readFileSync(c.path, "utf-8"));
+    expect(after.mcpServers["my-wrapper"].env).toBeUndefined();
+    expect(after.mcpServers["appstore-connect"].env.ASC_LICENSE_KEY).toBe("ASC-SECRET-KEY");
+  });
+
+  it("still finds a genuine global install by its binary name", () => {
+    const c = cfg2("global.json", {
+      mcpServers: { "appstore-connect": { command: "/opt/homebrew/bin/asc-mcp", env: {} } },
+    });
+    injectLicenseKey("ASC-K", [c]);
+    expect(JSON.parse(readFileSync(c.path, "utf-8")).mcpServers["appstore-connect"].env.ASC_LICENSE_KEY).toBe("ASC-K");
   });
 });
