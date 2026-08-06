@@ -4,20 +4,40 @@
  * Endpoints:
  *   POST /validate       - check a license key, return tier
  *   POST /webhook/polar  - Polar subscription webhook (create/cancel keys)
+ *   POST /trial          - mint a 7-day Pro trial (in-agent, no card)
+ *   GET  /go             - counted redirect to checkout (buy-intent attribution)
  *   GET  /health         - liveness check
  *   GET  /success        - post-checkout redirect
  *   GET  /key            - key retrieval form
  *   POST /key            - key lookup by email (rate-limited)
+ *   GET  /admin/stats    - intent + trial funnel (ADMIN_TOKEN)
  */
 
-/**
- * The Polar checkout link. Lives in one place because moving the product to a
- * different Polar organization changes it, and the old link keeps working, so a
- * missed copy silently sells into the wrong org. The npm package has the same
- * value as `UPGRADE_URL` in `src/gate.ts`; both must change together.
- */
-const CHECKOUT_URL =
-  "https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj";
+import {
+  CHECKOUT_URL,
+  TRIAL_DAYS,
+  isValidToolName,
+  isValidFingerprint,
+  isValidEmail,
+  trialExpiry,
+  daysRemaining,
+  buildCheckoutUrl,
+  isLicenseUsable,
+  computeActiveFlag,
+  shouldBeActive,
+  classifyPolarEvent,
+  webhookSecrets,
+  resolveProductId,
+  isOwnProduct,
+  ACTIVE_EVENTS,
+  CANCEL_EVENTS,
+  IMMEDIATE_REVOKE_EVENTS,
+  verifyPolarSignature,
+  candidateKeys,
+  pickLookupRow,
+  type LookupRow,
+} from "./logic.js";
+
 
 interface Env {
   DB: D1Database;
@@ -49,13 +69,42 @@ interface ValidateRequest {
   key: string;
 }
 
-// Simple in-memory rate limiter for /key lookups (per worker instance)
+// Simple in-memory rate limiter, per worker instance. Shared by /key lookups and
+// /trial. Not a hard guarantee across instances; the real anti-abuse guarantee
+// for trials is the unique index on the Apple-account fingerprint.
 const keyLookupAttempts = new Map<string, { count: number; resetAt: number }>();
 const KEY_LOOKUP_MAX = 5;
 const KEY_LOOKUP_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
+/**
+ * A trial request gets a larger allowance than a key lookup. Retrying a trial is
+ * a normal thing for an agent to do (the user mistypes an address, the first
+ * call raced a restart), and the real guarantee against repeat trials is the
+ * unique index on the Apple-account fingerprint, not this counter. Locking
+ * someone out of starting a trial for fifteen minutes is a lost customer; five
+ * extra rows in a Map is nothing.
+ */
+const TRIAL_MAX = 10;
+
+/** Returns false when this IP has exhausted its allowance for `scope`. */
+function rateLimit(request: Request, scope: string): boolean {
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const bucket = `${scope}:${ip}`;
+  const max = scope === "trial" ? TRIAL_MAX : KEY_LOOKUP_MAX;
+  const now = Date.now();
+  const entry = keyLookupAttempts.get(bucket);
+
+  if (entry && now < entry.resetAt) {
+    if (entry.count >= max) return false;
+    entry.count++;
+    return true;
+  }
+  keyLookupAttempts.set(bucket, { count: 1, resetAt: now + KEY_LOOKUP_WINDOW_MS });
+  return true;
+}
+
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // CORS: only allow same-origin for HTML pages, open for /validate (MCP server calls it)
@@ -67,7 +116,13 @@ export default {
 
     // Only /validate and /health need open CORS (called from local MCP server process)
     // HTML pages (/key, /success) are same-origin form submissions - no CORS needed
-    if (url.pathname === "/validate" || url.pathname === "/health") {
+    // /trial joins these: like /validate it is called by the MCP server running
+    // on the user's own machine, not by a browser on this origin.
+    if (
+      url.pathname === "/validate" ||
+      url.pathname === "/health" ||
+      url.pathname === "/trial"
+    ) {
       corsHeaders["Access-Control-Allow-Origin"] = "*";
     }
 
@@ -86,6 +141,18 @@ export default {
 
       if (url.pathname === "/webhook/polar" && request.method === "POST") {
         return await handlePolarWebhook(request, env, corsHeaders);
+      }
+
+      if (url.pathname === "/trial" && request.method === "POST") {
+        return await handleTrial(request, env, corsHeaders);
+      }
+
+      if (url.pathname === "/go") {
+        return handleGo(url, ctx, env);
+      }
+
+      if (url.pathname === "/admin/stats" && request.method === "GET") {
+        return await handleAdminStats(request, env, corsHeaders);
       }
 
       if (url.pathname === "/admin/provision" && request.method === "POST") {
@@ -143,11 +210,35 @@ async function handleValidate(
     return json({ valid: false, tier: "free" }, headers, 400);
   }
 
-  const row = await env.DB.prepare(
-    "SELECT tier, expires_at, active FROM licenses WHERE key = ?",
-  )
-    .bind(body.key)
-    .first<{ tier: string; expires_at: string | null; active: number }>();
+  type ValidateRow = {
+    tier: string;
+    expires_at: string | null;
+    active: number;
+    source: string | null;
+  };
+
+  // `source` is a post-launch column. If this build ever reaches production
+  // ahead of the migration, selecting it throws "no such column", the outer
+  // handler turns that into a 500, and the client treats a 500 as "not valid"
+  // and drops to the free tier. That is every paying customer silently losing
+  // access because of a deploy ordering mistake. One fallback query is a cheap
+  // price for making that impossible.
+  let row: ValidateRow | null;
+  try {
+    row = await env.DB.prepare(
+      "SELECT tier, expires_at, active, source FROM licenses WHERE key = ?",
+    )
+      .bind(body.key)
+      .first<ValidateRow>();
+  } catch {
+    console.error("validate: falling back to pre-migration columns");
+    const legacy = await env.DB.prepare(
+      "SELECT tier, expires_at, active FROM licenses WHERE key = ?",
+    )
+      .bind(body.key)
+      .first<Omit<ValidateRow, "source">>();
+    row = legacy ? { ...legacy, source: null } : null;
+  }
 
   if (!row) {
     return json({ valid: false, tier: "free" }, headers);
@@ -159,183 +250,22 @@ async function handleValidate(
   }
 
   return json(
-    { valid: true, tier: row.tier, expires: row.expires_at, ...(verdict.grace ? { grace: true } : {}) },
+    {
+      valid: true,
+      tier: row.tier,
+      expires: row.expires_at,
+      ...(row.source === "trial" ? { trial: true } : {}),
+      ...(verdict.grace ? { grace: true } : {}),
+    },
     headers,
   );
 }
 
-/**
- * Renewals reach us as a `subscription.updated` webhook that pushes
- * `expires_at` to the new period end. If that delivery is late or dropped, the
- * old expiry is already in the past and a customer who paid gets demoted to the
- * free tier mid-session. Polar's own dunning runs for days, so a few days of
- * grace costs nothing and prevents a support ticket, or a cancellation, over
- * our own webhook plumbing.
- *
- * Exported for regression tests.
- */
-export const GRACE_DAYS = 4;
 
-export function isLicenseUsable(
-  row: { expires_at: string | null; active: number },
-  now: Date,
-): { usable: boolean; reason?: string; grace?: boolean } {
-  if (!row.active) return { usable: false, reason: "inactive" };
-  if (!row.expires_at) return { usable: true };
 
-  const expiry = new Date(row.expires_at);
-  if (Number.isNaN(expiry.getTime())) return { usable: true };
-  if (expiry >= now) return { usable: true };
 
-  const graceEnds = new Date(expiry.getTime() + GRACE_DAYS * 24 * 60 * 60 * 1000);
-  if (now <= graceEnds) return { usable: true, grace: true };
 
-  return { usable: false, reason: "expired" };
-}
 
-const ACTIVE_EVENTS = new Set([
-  "subscription.created",
-  "subscription.updated",
-  "subscription.active",
-  // A renewal starts a new billing period. Polar sends `cycled` for it, and
-  // historically `updated` too; handling only `updated` would leave a renewed
-  // customer on last period's `expires_at` if that ever stops being sent, and
-  // they would fall to the free tier once the grace window closed.
-  "subscription.cycled",
-  // Both mean access resumes with a fresh period end.
-  "subscription.uncanceled",
-  "subscription.resumed",
-]);
-// In Polar, `subscription.canceled` means "will not renew": the customer keeps
-// access until the period they already paid for ends. Only `revoked` means
-// access ends now. Treating both as immediate revocation took away time
-// customers had paid for, which is the one thing a licence server must not do.
-const CANCEL_EVENTS = new Set([
-  "subscription.canceled",
-  "subscription.revoked",
-]);
-const IMMEDIATE_REVOKE_EVENTS = new Set(["subscription.revoked"]);
-// Statuses that mean the subscription is NOT usable even though an
-// active-type event fired. Anything else (active, trialing, past_due,
-// incomplete, or absent) is treated as active so a paying customer is
-// never left without a key.
-//
-// `canceled` is deliberately NOT here. Polar sets it the moment a customer
-// turns off renewal, while `current_period_end` is still in the future and they
-// are still entitled. It arrives on a `subscription.updated`, so listing it as
-// dead demoted a paying customer the instant they cancelled, taking away time
-// they had already paid for. The CANCEL_EVENTS path was fixed for this in
-// v1.8.2; this is the same bug through the other door, and a sandbox
-// cancellation reproduced it against the live worker. `revoked` is what ends
-// access, and expires_at ends it naturally otherwise.
-const DEAD_STATUSES = new Set([
-  "revoked",
-  "incomplete_expired",
-  "unpaid",
-]);
-
-/**
- * Decide whether a subscription should be active given the status on an
- * active-type Polar event. Exported for regression tests: this is the exact
- * logic that three times now left paying customers at active=0. Anything that
- * is not a known-dead status (including an absent status, "active",
- * "trialing", "past_due", "incomplete", "canceled") activates the license.
- */
-export function computeActiveFlag(status?: string): 0 | 1 {
-  return status && DEAD_STATUSES.has(status) ? 0 : 1;
-}
-
-/**
- * The activation decision actually written to the row: the status verdict, and
- * additionally never active once the paid period is over.
- *
- * Two orderings make the status alone insufficient. Polar's own cancellation
- * emits `canceled` and `revoked` back to back, and any late or retried
- * `subscription.updated` carrying the still-live status would otherwise
- * resurrect a licence that `revoked` had just switched off. And a `cycled` or
- * `updated` replayed long after a subscription lapsed would reactivate it.
- * A period end in the past means no entitlement, whatever the status says.
- */
-export function shouldBeActive(
-  status: string | undefined,
-  currentPeriodEnd: string | null | undefined,
-  now: Date,
-): 0 | 1 {
-  if (!computeActiveFlag(status)) return 0;
-  if (!currentPeriodEnd) return 1;
-  const end = new Date(currentPeriodEnd);
-  if (Number.isNaN(end.getTime())) return 1;
-  return end > now ? 1 : 0;
-}
-
-export function classifyPolarEvent(
-  type: string,
-): "activate" | "cancel" | "ignore" {
-  if (ACTIVE_EVENTS.has(type)) return "activate";
-  if (CANCEL_EVENTS.has(type)) return "cancel";
-  return "ignore";
-}
-
-/**
- * Every webhook signing secret this worker will accept, newest first. Exported
- * for tests.
- */
-export function webhookSecrets(env: {
-  POLAR_WEBHOOK_SECRET?: string;
-  POLAR_WEBHOOK_SECRET_2?: string;
-  POLAR_WEBHOOK_SECRET_SANDBOX?: string;
-}): string[] {
-  return [
-    env.POLAR_WEBHOOK_SECRET_2,
-    env.POLAR_WEBHOOK_SECRET,
-    env.POLAR_WEBHOOK_SECRET_SANDBOX,
-  ].filter((s): s is string => typeof s === "string" && s.length > 0);
-}
-
-/**
- * Every asc-mcp Pro product, across organizations.
- *
- * Polar delivers each event to EVERY webhook endpoint registered in the
- * organization, so an endpoint in a shared org receives the other products'
- * sales too. That has already caused a real incident on this account: one
- * project's test purchase fanned out and minted three stray licences plus
- * welcome emails in a sibling project. The old org sold asc-mcp alongside other
- * products, so without this guard someone else's subscription would mint an
- * asc-mcp Pro key and email it to them.
- */
-const OWN_PRODUCT_IDS = new Set([
-  // Original product, in the shared organization c16ec812.
-  "7cf11984-03f1-4251-b765-4c0abb3ab99f",
-  // Dedicated asc-mcp organization 3bef20c6, where new signups go.
-  "7cd3dd0b-7ee2-43db-a920-f7d4371f9d9a",
-]);
-
-/**
- * Polar has emitted the product id under several shapes over time, and a guard
- * that reads only one of them silently falls through to "provision it" — which
- * is exactly how the stray-licence incident happened.
- */
-export function resolveProductId(data: Record<string, unknown>): string | null {
-  const direct = data.product_id ?? data.productId;
-  if (typeof direct === "string" && direct) return direct;
-  const nested = (data.product as { id?: unknown } | undefined)?.id;
-  return typeof nested === "string" && nested ? nested : null;
-}
-
-/**
- * Whether this event is for one of our products. An event with NO product id is
- * ours by default: dropping those would break the legacy payload shape that the
- * existing subscriptions still arrive in, and a false negative here costs a
- * paying customer their key.
- */
-export function isOwnProduct(
-  data: Record<string, unknown>,
-  extraIds: string[] = [],
-): boolean {
-  const id = resolveProductId(data);
-  if (!id) return true;
-  return OWN_PRODUCT_IDS.has(id) || extraIds.includes(id);
-}
 
 /** Sandbox or future product ids, comma-separated. Empty in a normal prod run. */
 function extraProductIds(env: Env): string[] {
@@ -451,6 +381,276 @@ async function handlePolarWebhook(
   }
 
   return json({ ok: true }, headers);
+}
+
+/**
+ * Bump a daily aggregate counter. Stores a day bucket, a kind and a tool name,
+ * and nothing else: no IP, no user agent, no identifier. Failures are swallowed
+ * because a analytics write must never be able to break a buy link.
+ */
+async function recordIntent(env: Env, kind: string, tool: string): Promise<void> {
+  const day = new Date().toISOString().slice(0, 10);
+  try {
+    await env.DB.prepare(
+      `INSERT INTO intent_events (day, kind, tool, count) VALUES (?, ?, ?, 1)
+       ON CONFLICT(day, kind, tool) DO UPDATE SET count = count + 1`,
+    )
+      .bind(day, kind, tool)
+      .run();
+  } catch {
+    console.error("intent write failed");
+  }
+}
+
+/**
+ * Counted redirect to checkout. This is the only demand signal we collect, and
+ * it is collected from a link the user deliberately opened, not from a beacon
+ * inside the MCP process. See the privacy note in PRD-0001.
+ *
+ * The redirect target is the CHECKOUT_URL constant with validated parameters
+ * appended, so no input reaches the Location header.
+ */
+function handleGo(url: URL, ctx: ExecutionContext, env: Env): Response {
+  const raw = url.searchParams.get("tool");
+  const tool = isValidToolName(raw) ? raw : "unknown";
+  // Counting must not add latency to, or be able to fail, the path to payment.
+  ctx.waitUntil(recordIntent(env, "checkout_click", tool));
+  return Response.redirect(
+    buildCheckoutUrl(tool === "unknown" ? undefined : tool),
+    302,
+  );
+}
+
+interface TrialRequest {
+  fingerprint?: string;
+  email?: string;
+  tool?: string;
+}
+
+/**
+ * Mint a 7-day Pro trial, no card, called by the MCP server on the user's
+ * machine when they ask their agent to start a trial.
+ *
+ * The abuse anchor is `fingerprint`: a salted SHA-256 of the user's App Store
+ * Connect Issuer ID, hashed on their machine. Getting a second one means paying
+ * Apple for a second developer account, which is a $99/year answer to a $9/month
+ * question. Email is a second, independent anchor.
+ *
+ * Uniqueness is enforced by two partial unique indexes rather than by a
+ * check-then-insert, because D1 gives no transaction across statements and two
+ * concurrent calls would otherwise both pass the check and both insert.
+ */
+async function handleTrial(
+  request: Request,
+  env: Env,
+  headers: Record<string, string>,
+): Promise<Response> {
+  let body: TrialRequest;
+  try {
+    body = (await request.json()) as TrialRequest;
+  } catch {
+    return json({ error: "bad_request", message: "Body must be JSON." }, headers, 400);
+  }
+
+  if (!isValidFingerprint(body.fingerprint)) {
+    return json(
+      { error: "bad_request", message: "fingerprint must be a 64-character SHA-256 hex digest." },
+      headers,
+      400,
+    );
+  }
+  if (!isValidEmail(body.email)) {
+    return json(
+      { error: "bad_request", message: "A valid email is required so we can send you the key." },
+      headers,
+      400,
+    );
+  }
+  // Rate limiting sits AFTER validation on purpose. Charging the budget for
+  // malformed input meant an agent that sent a bad address twice could lock its
+  // user out of starting a trial for fifteen minutes, which is the opposite of
+  // what this endpoint is for. Only well-formed requests, the ones that reach
+  // the database, count against it.
+  if (!rateLimit(request, "trial")) {
+    return json(
+      { error: "rate_limited", message: "Too many trial requests. Wait 15 minutes and try again." },
+      headers,
+      429,
+    );
+  }
+
+  const fingerprint = body.fingerprint;
+  const email = body.email.trim().toLowerCase();
+  const tool = isValidToolName(body.tool) ? body.tool : null;
+  const now = new Date();
+
+  // Paying customers are checked FIRST, before the trial lookup.
+  //
+  // Someone who converts mid-trial holds both rows. If the fingerprint branch
+  // ran first it would keep handing back the trial key, that key is what ends up
+  // in their config, and the day the trial expires a paying subscriber loses
+  // access with a message telling them to buy the thing they already bought.
+  //
+  // The key itself is not returned: this endpoint takes an unauthenticated
+  // email, so it must never become a way to read someone else's licence.
+  const paid = await env.DB.prepare(
+    "SELECT id FROM licenses WHERE email = ? AND source = 'polar' AND active = 1",
+  )
+    .bind(email)
+    .first<{ id: number }>();
+
+  if (paid) {
+    return json(
+      {
+        error: "already_pro",
+        message:
+          "That email already has an active Pro subscription, so there is nothing to trial. " +
+          "Retrieve the key at https://asc-mcp-license.remewdy.workers.dev/key and set it as ASC_LICENSE_KEY.",
+      },
+      headers,
+      409,
+    );
+  }
+
+  // Repeat call for a trial we already minted: hand back the same key. Asking an
+  // agent to "start my trial" twice is normal and must not fail or double-mint.
+  const existing = await env.DB.prepare(
+    "SELECT key, expires_at, active FROM licenses WHERE trial_fingerprint = ?",
+  )
+    .bind(fingerprint)
+    .first<{ key: string; expires_at: string | null; active: number }>();
+
+  if (existing) {
+    const verdict = isLicenseUsable({ ...existing, source: "trial" }, now);
+    if (verdict.usable) {
+      return json(
+        {
+          ok: true,
+          key: existing.key,
+          expires: existing.expires_at,
+          days_remaining: daysRemaining(existing.expires_at, now),
+          already_started: true,
+        },
+        headers,
+      );
+    }
+    return json(
+      {
+        error: "trial_used",
+        message: `Your ${TRIAL_DAYS}-day trial has ended. Pro is $9/month.`,
+        checkout_url: buildCheckoutUrl("trial_expired", email),
+      },
+      headers,
+      409,
+    );
+  }
+
+  const key = generateLicenseKey();
+  const expiresAt = trialExpiry(now);
+
+  // OR IGNORE, not ON CONFLICT: either partial unique index (fingerprint or
+  // trial email) can be the one that blocks, and both mean "no second trial".
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO licenses
+       (key, tier, email, expires_at, active, source, trial_fingerprint, trigger_tool, created_at)
+     VALUES (?, 'pro', ?, ?, 1, 'trial', ?, ?, datetime('now'))`,
+  )
+    .bind(key, email, expiresAt, fingerprint, tool)
+    .run();
+
+  const minted = await env.DB.prepare(
+    "SELECT key, expires_at FROM licenses WHERE trial_fingerprint = ?",
+  )
+    .bind(fingerprint)
+    .first<{ key: string; expires_at: string | null }>();
+
+  if (!minted) {
+    // The insert was ignored and no row carries this fingerprint, so it was the
+    // email index that blocked: this address has already had its trial on
+    // another Apple account.
+    return json(
+      {
+        error: "trial_used",
+        message: `${email} has already used a ${TRIAL_DAYS}-day trial. Pro is $9/month.`,
+        checkout_url: buildCheckoutUrl("trial_used", email),
+      },
+      headers,
+      409,
+    );
+  }
+
+  await recordIntent(env, "trial_started", tool || "direct");
+
+  const sent = await sendTrialEmail(env, email, minted.key, minted.expires_at);
+  if (sent) {
+    await env.DB.prepare(
+      "UPDATE licenses SET key_emailed = 1 WHERE trial_fingerprint = ?",
+    )
+      .bind(fingerprint)
+      .run();
+  }
+
+  return json(
+    {
+      ok: true,
+      key: minted.key,
+      expires: minted.expires_at,
+      days_remaining: daysRemaining(minted.expires_at, now),
+      already_started: false,
+      checkout_url: buildCheckoutUrl("trial", email),
+    },
+    headers,
+  );
+}
+
+/**
+ * Read side of the only question this instrumentation exists to answer: which
+ * locked tools make people reach for their card, and does the trial convert.
+ */
+async function handleAdminStats(
+  request: Request,
+  env: Env,
+  headers: Record<string, string>,
+): Promise<Response> {
+  const auth = request.headers.get("x-admin-secret") || "";
+  if (!env.ADMIN_TOKEN || auth !== env.ADMIN_TOKEN) {
+    return json({ error: "Unauthorized" }, headers, 401);
+  }
+
+  const intent = await env.DB.prepare(
+    `SELECT kind, tool, SUM(count) AS total FROM intent_events
+     GROUP BY kind, tool ORDER BY total DESC`,
+  ).all<{ kind: string; tool: string; total: number }>();
+
+  const trials = await env.DB.prepare(
+    `SELECT
+       COUNT(*) AS issued,
+       SUM(CASE WHEN active = 1 AND expires_at > datetime('now') THEN 1 ELSE 0 END) AS live,
+       SUM(CASE WHEN expires_at <= datetime('now') THEN 1 ELSE 0 END) AS ended
+     FROM licenses WHERE source = 'trial'`,
+  ).first<{ issued: number; live: number; ended: number }>();
+
+  const paid = await env.DB.prepare(
+    `SELECT COUNT(*) AS total,
+       SUM(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS active
+     FROM licenses WHERE source = 'polar'`,
+  ).first<{ total: number; active: number }>();
+
+  // A conversion is an email that holds both a trial row and a paid row.
+  const converted = await env.DB.prepare(
+    `SELECT COUNT(DISTINCT t.email) AS n FROM licenses t
+     JOIN licenses p ON p.email = t.email AND p.source = 'polar'
+     WHERE t.source = 'trial'`,
+  ).first<{ n: number }>();
+
+  return json(
+    {
+      intent: intent.results ?? [],
+      trials: { ...trials, converted: converted?.n ?? 0 },
+      paid,
+    },
+    headers,
+  );
 }
 
 /**
@@ -642,103 +842,63 @@ async function sendLicenseEmail(
 }
 
 /**
- * Verify a Polar webhook using the Standard Webhooks spec
- * (https://www.standardwebhooks.com). Polar signs `${id}.${timestamp}.${body}`
- * with HMAC-SHA256 using the base64 secret (whsec_ prefix), and sends the
- * result base64-encoded as space-delimited `v1,<sig>` entries.
+ * The trial key, by email. Sent even though the agent already printed the key,
+ * because the address is the only channel we have to a free user: without it a
+ * trial that expires while someone is busy is simply lost.
  */
-export async function verifyPolarSignature(
-  reqHeaders: Headers,
-  rawBody: string,
-  secrets: string[],
+async function sendTrialEmail(
+  env: Env,
+  email: string,
+  key: string,
+  expires: string | null,
 ): Promise<boolean> {
-  const id = reqHeaders.get("webhook-id");
-  const timestamp = reqHeaders.get("webhook-timestamp");
-  const sigHeader = reqHeaders.get("webhook-signature");
-  if (!id || !timestamp || !sigHeader || !secrets.length) return false;
+  if (!env.BREVO_API_KEY) return false;
 
-  // Replay protection: reject timestamps more than 5 minutes from now.
-  const ts = Number(timestamp);
-  if (!Number.isFinite(ts)) return false;
-  const skew = Math.abs(Math.floor(Date.now() / 1000) - ts);
-  if (skew > 300) return false;
+  const safeKey = escapeHtml(key);
+  const ends = expires ? new Date(expires).toUTCString() : `${TRIAL_DAYS} days from now`;
 
-  const signed = new TextEncoder().encode(`${id}.${timestamp}.${rawBody}`);
+  const htmlContent = `
+    <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
+      <h1 style="font-size:20px">Your ${TRIAL_DAYS}-day App Store Connect MCP Pro trial</h1>
+      <p>All 41 tools are unlocked on this key until <strong>${escapeHtml(ends)}</strong>. No card, nothing to cancel.</p>
+      <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
+      <p>Your agent has already written this into your MCP config. If you need it on another machine, paste it in yourself:</p>
+      <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">${CONFIG_SNIPPET(safeKey)}</pre>
+      <p><strong>Worth trying first:</strong> ask your agent to run a release preflight on your app, or to give you a morning briefing across all of them. Those two answer the question "is this worth $9" faster than anything else here.</p>
+      <p>When the trial ends, Pro is $9 per month: <a href="${CHECKOUT_URL}">subscribe here</a>. Cancel any time.</p>
+      <p style="color:#666;font-size:14px">Hit a bug, or something did not work? Just reply to this email. A person reads it.</p>
+    </div>`;
 
-  // Each Polar organization signs with its own secret, and during the move to a
-  // dedicated org both deliver at once: the old org still sends renewals and
-  // cancellations for the grandfathered subscriptions while the new one sends
-  // new signups. Accept a signature from any configured secret.
-  for (const secret of secrets) {
-    for (const keyBytes of candidateKeys(secret)) {
-      const key = await crypto.subtle.importKey(
-        "raw",
-        keyBytes,
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"],
-      );
-      const sigBuf = await crypto.subtle.sign("HMAC", key, signed);
-      const expected = bytesToBase64(new Uint8Array(sigBuf));
-
-      // Header may carry multiple space-delimited signatures (key rotation).
-      const match = sigHeader.split(" ").some((part) => {
-        const [version, sig] = part.split(",");
-        return version === "v1" && sig != null && timingSafeEqual(sig, expected);
-      });
-      if (match) return true;
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": env.BREVO_API_KEY,
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        sender: {
+          name: env.BREVO_SENDER_NAME || "App Store Connect MCP",
+          email: env.BREVO_SENDER_EMAIL || "license@brewist.app",
+        },
+        to: [{ email }],
+        subject: `Your ${TRIAL_DAYS}-day App Store Connect MCP Pro trial key`,
+        htmlContent,
+      }),
+    });
+    if (!res.ok) {
+      console.error("Brevo trial send failed", res.status);
+      return false;
     }
+    return true;
+  } catch {
+    console.error("Brevo trial send error");
+    return false;
   }
-
-  return false;
 }
 
-/**
- * The HMAC key bytes to try for one secret.
- *
- * A secret copied from the Polar dashboard looks like `polar_whs_...`, and the
- * key is the raw UTF-8 of the whole string: Polar's `validateEvent`
- * base64-encodes the secret before handing it to the Standard Webhooks library,
- * which base64-decodes it straight back. Getting this wrong meant zero licence
- * rows were ever created and the first paying customer got no key.
- *
- * A secret minted through `POST /v1/webhooks/endpoints` comes back as
- * `whsec_<base64>`, the canonical Standard Webhooks shape, where the key is the
- * base64-decoded remainder. Rather than bet a customer's first purchase on
- * which convention applies, try both. Two extra HMACs on a rejected request.
- */
-export function candidateKeys(secret: string): Uint8Array[] {
-  if (!secret) return [];
-  const keys = [new TextEncoder().encode(secret)];
 
-  const marker = secret.indexOf("_");
-  if (marker > 0) {
-    const body = secret.slice(marker + 1);
-    try {
-      const bin = atob(body);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      if (bytes.length) keys.push(bytes);
-    } catch {
-      // Not base64: the raw-UTF-8 candidate is the only one.
-    }
-  }
-
-  return keys;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin);
-}
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let r = 0;
-  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return r === 0;
-}
 
 function generateLicenseKey(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -788,27 +948,18 @@ function handleKeyPage(headers: Record<string, string>): Response {
   `, headers);
 }
 
+
 async function handleKeyLookup(
   request: Request,
   env: Env,
   headers: Record<string, string>,
 ): Promise<Response> {
-  // Rate limit by IP
-  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-  const now = Date.now();
-  const entry = keyLookupAttempts.get(ip);
-
-  if (entry && now < entry.resetAt) {
-    if (entry.count >= KEY_LOOKUP_MAX) {
-      return html(
-        "<h1>Too many attempts</h1><p>Please wait 15 minutes before trying again.</p>",
-        headers,
-        429,
-      );
-    }
-    entry.count++;
-  } else {
-    keyLookupAttempts.set(ip, { count: 1, resetAt: now + KEY_LOOKUP_WINDOW_MS });
+  if (!rateLimit(request, "key")) {
+    return html(
+      "<h1>Too many attempts</h1><p>Please wait 15 minutes before trying again.</p>",
+      headers,
+      429,
+    );
   }
 
   const formData = await request.formData();
@@ -818,11 +969,13 @@ async function handleKeyLookup(
     return html("<h1>Email required</h1><p><a href='/key'>Try again</a></p>", headers, 400);
   }
 
-  const row = await env.DB.prepare(
-    "SELECT key, tier, active FROM licenses WHERE email = ? AND active = 1 ORDER BY created_at DESC LIMIT 1",
+  const candidates = await env.DB.prepare(
+    "SELECT key, tier, active, expires_at, source FROM licenses WHERE email = ? AND active = 1 ORDER BY created_at DESC",
   )
     .bind(email)
-    .first<{ key: string; tier: string; active: number }>();
+    .all<LookupRow>();
+
+  const row = pickLookupRow(candidates.results ?? [], new Date());
 
   if (!row) {
     return html(`
@@ -850,7 +1003,7 @@ async function handleKeyLookup(
 function handlePrivacy(headers: Record<string, string>): Response {
   return html(`
     <h1>Privacy Policy</h1>
-    <p><em>Last updated: April 13, 2026</em></p>
+    <p><em>Last updated: August 6, 2026</em></p>
 
     <h2>What we collect</h2>
     <p>When you purchase a Pro license, we store:</p>
@@ -859,18 +1012,34 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>A generated license key</li>
       <li>Your subscription ID (for managing renewals and cancellations)</li>
     </ul>
-    <p>When you use the free MCP server, we store nothing. The server runs locally on your machine.</p>
+    <p>When you start a free 7-day trial with the <code>asc_start_trial</code> tool, we store:</p>
+    <ul>
+      <li>The email address you give the tool, so we can send you the key</li>
+      <li>A generated license key and its expiry date</li>
+      <li>A one-way SHA-256 fingerprint of your App Store Connect Issuer ID (see below)</li>
+      <li>The name of the tool you were trying to use when you started the trial, if any</li>
+    </ul>
+    <p>Using the free tier, or using Pro once your key is set, stores nothing. The server runs locally on your machine.</p>
+
+    <h2>The trial fingerprint, specifically</h2>
+    <p>A trial gives away paid software, so we need to know that one person cannot take an unlimited number of them. The anchor we use is your App Store Connect Issuer ID, because it identifies an Apple developer account rather than a person.</p>
+    <p><strong>Your Issuer ID is not sent to us.</strong> It is hashed with SHA-256 on your own machine and only the resulting digest is transmitted. The digest cannot be reversed into your Issuer ID, is useless to anyone who obtains it, and is sent only at the moment you explicitly ask to start a trial. It is never sent on startup, never sent during normal use, and never sent if you never start a trial.</p>
 
     <h2>What we don't collect</h2>
     <ul>
-      <li>Your Apple API credentials (.p8 key, Key ID, Issuer ID) never leave your machine</li>
+      <li>Your Apple API credentials never leave your machine. The .p8 private key and Key ID are never transmitted anywhere by this software, and your Issuer ID is only ever sent as the one-way digest described above, only when you start a trial</li>
       <li>No App Store Connect data passes through our servers</li>
-      <li>No analytics, telemetry, or tracking</li>
-      <li>No cookies</li>
+      <li>No usage analytics or telemetry from the software. The MCP server does not report which tools you run, or when, or how often</li>
+      <li>No cookies, no advertising identifiers, no third-party trackers</li>
     </ul>
 
     <h2>How your data flows</h2>
-    <p>The MCP server runs locally. It talks directly to Apple's API from your computer. The only network call to our infrastructure is a single license key validation check on startup, which sends only the license key string.</p>
+    <p>The MCP server runs locally. It talks directly to Apple's API from your computer. It makes exactly two kinds of call to our infrastructure, both of which you control:</p>
+    <ul>
+      <li>A license key validation check, sending only the license key string. This happens on startup when you have a key set, and the result is cached for 24 hours.</li>
+      <li>A trial request, sending the email you provided, the one-way fingerprint, and the tool name. This happens only when you call <code>asc_start_trial</code>.</li>
+    </ul>
+    <p>Separately, when you click a subscribe link from inside your agent, it passes through a redirect on our server that increments a daily counter of the form "3 people clicked the buy link from the submit_for_review tool today". That counter holds a date, a tool name and a number. It records no identifier, no IP address, no user agent, and nothing that could be tied back to you.</p>
 
     <h2>Data storage</h2>
     <p>License data is stored on Cloudflare D1 (EU region). Cloudflare acts as our infrastructure provider under their <a href="https://www.cloudflare.com/cloudflare-customer-dpa/">Data Processing Agreement</a>.</p>
@@ -880,6 +1049,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
 
     <h2>Data retention</h2>
     <p>Active subscription data is kept while your subscription is active. After cancellation, your email and license data are deleted within 90 days.</p>
+    <p>Trial records (email, key, expiry, fingerprint) are kept after the trial ends, because deleting them is the same as handing out a second free trial. You can delete them at any time at <a href="/delete">/delete</a>, which also removes the fingerprint.</p>
 
     <h2>Your rights (GDPR)</h2>
     <p>You can request access to, correction of, or deletion of your personal data at any time. To delete your data, visit <a href="/delete">/delete</a> or email us.</p>
@@ -894,7 +1064,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
 function handleTerms(headers: Record<string, string>): Response {
   return html(`
     <h1>Terms of Service</h1>
-    <p><em>Last updated: April 13, 2026</em></p>
+    <p><em>Last updated: August 6, 2026</em></p>
 
     <h2>What this is</h2>
     <p>App Store Connect MCP Server is a developer tool that connects AI coding agents to Apple's App Store Connect API. It runs locally on your machine.</p>
@@ -907,7 +1077,11 @@ function handleTerms(headers: Record<string, string>): Response {
     </ul>
 
     <h2>Free and Pro tiers</h2>
-    <p>Five of the 40 tools are free with no account needed: <code>asc_setup_check</code>, <code>asc_guide</code>, <code>list_apps</code>, <code>app_details</code> and <code>review_status</code>. The other 35, covering customer reviews, sales reports, preflight audits and the full write/control plane (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release), require a $9/month subscription managed through <a href="https://polar.sh">Polar.sh</a>.</p>
+    <p>Six of the 41 tools are free with no account needed: <code>asc_setup_check</code>, <code>asc_guide</code>, <code>asc_start_trial</code>, <code>list_apps</code>, <code>app_details</code> and <code>review_status</code>. The other 35, covering customer reviews, sales reports, preflight audits and the full write/control plane (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release), require either a running trial or a $9/month subscription managed through <a href="https://polar.sh">Polar.sh</a>.</p>
+
+    <h2>Free trial</h2>
+    <p>You can unlock every Pro tool for 7 days at no cost by calling the <code>asc_start_trial</code> tool from your agent. No card is required, nothing renews, and there is nothing to cancel: the key simply stops working when the 7 days are up.</p>
+    <p>One trial per Apple developer account and per email address. The account is identified by a one-way fingerprint of your Issuer ID, described in the <a href="/privacy">privacy policy</a>. We may decline or withdraw a trial where it is being used to avoid paying for continued use, for example by cycling accounts or addresses.</p>
 
     <h2>Subscriptions</h2>
     <p>Pro subscriptions are billed monthly through Polar. You can cancel anytime through Polar's subscription management. Polar's terms of service apply to the payment process.</p>
