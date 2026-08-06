@@ -153,7 +153,28 @@ run("git", ["push", "origin", "master"], { mutating: true });
 run("git", ["push", "origin", `v${version}`], { mutating: true });
 
 run("npm", ["publish", "--access", "public"], { mutating: true });
-run("gh", ["release", "create", `v${version}`, bundle, "--title", `v${version}`, "--generate-notes"], {
+
+/**
+ * Release notes are written by hand, into RELEASE_NOTES.md, and the release
+ * refuses to proceed without them.
+ *
+ * v1.9.2 shipped with `--generate-notes`, which produced a body consisting
+ * entirely of a compare link. Anyone landing on the release page to download the
+ * bundle, which is now the primary install path for Claude Desktop, was told
+ * nothing about what they were installing or whether they needed it.
+ */
+const notesPath = join(root, "RELEASE_NOTES.md");
+if (!existsSync(notesPath)) {
+  fail(
+    "RELEASE_NOTES.md is missing. Write the notes for this version first: what changed, and whether an existing user needs it.",
+  );
+}
+const notes = readFileSync(notesPath, "utf8").trim();
+if (notes.length < 120) fail("RELEASE_NOTES.md is too short to be useful. Say what changed and who needs it.");
+const title = notes.split("\n")[0].replace(/^#+\s*/, "").trim();
+const body = notes.split("\n").slice(1).join("\n").trim();
+
+run("gh", ["release", "create", `v${version}`, bundle, "--title", title, "--notes", body], {
   mutating: true,
 });
 // Local publish, not the workflow. See the header.
