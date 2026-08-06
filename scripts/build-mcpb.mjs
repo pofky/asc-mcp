@@ -78,6 +78,11 @@ const manifest = {
         ASC_ISSUER_ID: "${user_config.asc_issuer_id}",
         ASC_PRIVATE_KEY_PATH: "${user_config.asc_private_key}",
         ASC_LICENSE_KEY: "${user_config.asc_license_key}",
+        // Marks a one-click install. There is no server block in any client
+        // config file for an extension, so the trial tool must point people at
+        // the extension's own License key field rather than at JSON they will
+        // never find.
+        ASC_INSTALL: "mcpb",
       },
     },
   },

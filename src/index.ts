@@ -260,8 +260,18 @@ async function main() {
       const { updated, skipped } = injectLicenseKey(result.key);
       const persistence = updated.length
         ? `Saved to ${updated.join(", ")} (backup alongside), so it survives a restart.`
-        : "Could not find an asc-mcp block in a known client config, so add ASC_LICENSE_KEY yourself to keep it after a restart:\n" +
-          `  "ASC_LICENSE_KEY": "${result.key}"`;
+        : // A one-click install has no server block in any client config file:
+          // Claude Desktop keeps an extension's settings in its own registry, and
+          // the key belongs in the extension's own License key field. Telling a
+          // bundle user to hand-edit JSON sends them looking for a file that does
+          // not exist, right after they chose the install path that exists to
+          // avoid JSON entirely. The manifest sets ASC_INSTALL so this branch can
+          // tell the two populations apart.
+          process.env.ASC_INSTALL === "mcpb"
+          ? "To keep it after a restart, paste it into the extension's own settings: " +
+            "Claude Settings > Extensions > asc-mcp > Configure > License key, then Save."
+          : "Could not find an asc-mcp block in a known client config, so add ASC_LICENSE_KEY yourself to keep it after a restart:\n" +
+            `  "ASC_LICENSE_KEY": "${result.key}"`;
 
       return text(
         [
