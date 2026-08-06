@@ -156,6 +156,58 @@ worker), independent senior tester (business logic: can a free user get two tria
 customer ever lose access), security scan (open redirect, secrets, injection, PII), SEO/CRO audit on
 the changed landing page, commit hygiene. Release only when every gate is green.
 
+## Amendment 1, after the security review (2026-08-06)
+
+An independent security pass found four issues at HIGH or CRITICAL, three of them
+in code this PRD introduced. The scope below is added; nothing already built is
+removed.
+
+**The email anchor is dropped as a uniqueness constraint.** `/trial` currently
+refuses when the email has had a trial, even under a new fingerprint. That is
+what makes the following attack work: `isValidFingerprint` only checks the shape
+of the digest, not that the caller derived it from an Issuer ID they hold, so
+anyone can post a fabricated fingerprint with a victim's email address and
+permanently consume that person's one free trial before they ever hear of the
+product. Made worse by `Access-Control-Allow-Origin: *`, which lets any web page
+do it from a visitor's browser, charging the rate limit to the victim's IP.
+
+Anchoring on the Apple account alone removes the attack outright, because a
+victim's real fingerprint stays unused and an attacker cannot guess it. What it
+costs is the person who owns two Apple developer accounts and takes two trials:
+$198 a year of Apple membership to avoid $9 a month. That is a trade worth
+making. The email is still recorded, still emailed the key, and still the thing
+we follow up on.
+
+**`/trial` stops distinguishing its refusals.** Branching between "already a
+subscriber" and "already trialled" told an unauthenticated caller, from any
+origin, whether a given address is a paying customer. One refusal message,
+covering both, still tells a real user what to do.
+
+**CORS.** `/trial` is called by a Node process on the user's machine, which has
+no origin and needs no CORS. The wildcard is removed.
+
+**A daily cap on trial creation.** Each trial sends mail through Brevo, whose
+free tier is 300 a day, and the in-memory rate limiter is per-isolate so it does
+not bind across PoPs. A count of today's trial rows, checked before minting,
+puts a hard ceiling on both the spend and the damage to sender reputation.
+
+**`/delete` is fixed, though it predates this PRD.** It takes an email in an
+unauthenticated form post and deletes that person's licence row: anyone who
+knows a customer's address can revoke their access, and the customer stays
+broken until their next renewal webhook. It now emails a signed, expiring
+confirmation link and answers identically whether or not the address is known.
+Out of the original scope, in scope for shipping: this change adds a second
+reason to care about that row existing.
+
+**Timing-safe admin token comparison**, and the privacy page's 90-day deletion
+promise reworded to match what the code actually does, which is deletion on
+request.
+
+Two findings are accepted rather than fixed, and belong in the operator runbook
+instead: `POLAR_WEBHOOK_SECRET_SANDBOX` must be confirmed absent before deploy,
+and `ANNOUNCE_TOKEN` must be a strong random value because `/admin/announce`
+sends operator-supplied HTML to customers.
+
 ## Definition of done
 
 1. `npm test` green, including new cases for every bullet in M1, M2, M3 and M4.

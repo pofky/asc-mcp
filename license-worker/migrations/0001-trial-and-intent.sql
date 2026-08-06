@@ -20,9 +20,19 @@ ALTER TABLE licenses ADD COLUMN trigger_tool TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_licenses_trial_fp
   ON licenses(trial_fingerprint) WHERE trial_fingerprint IS NOT NULL;
 
--- Same reasoning for one-trial-per-email.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_licenses_trial_email
-  ON licenses(email) WHERE source = 'trial' AND email IS NOT NULL;
+-- Deliberately NOT a unique index on the trial email.
+--
+-- The fingerprint proves nothing about who sent it: it is a 64-hex string, and
+-- the server cannot check that the caller derived it from an Issuer ID they
+-- actually hold. So if the email were also a uniqueness anchor, anyone could
+-- post a made-up fingerprint with someone else's address and permanently burn
+-- that person's free trial before they had ever heard of this product.
+--
+-- Uniqueness rests on the Apple account alone, which an attacker cannot guess
+-- and a freeloader cannot cheaply duplicate ($99/year per developer account
+-- against $9/month). The email is still stored, still sent the key, and still
+-- the channel we follow up on; it just cannot be used as a weapon.
+CREATE INDEX IF NOT EXISTS idx_licenses_email ON licenses(email);
 
 -- Aggregated counts only: a day bucket, a kind, and a tool name. No identifiers,
 -- no IP, no user agent, nothing that could be tied back to a person.

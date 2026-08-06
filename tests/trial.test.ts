@@ -13,6 +13,10 @@ import {
   isLicenseUsable,
   pickLookupRow,
   GRACE_DAYS,
+  signDeleteToken,
+  verifyDeleteToken,
+  DELETE_TOKEN_TTL_MS,
+  timingSafeEqual,
 } from "../license-worker/src/logic.js";
 import { fingerprintIssuer, requestTrial, TRIAL_FINGERPRINT_SALT } from "../src/trial.js";
 import { requirePro, upgradeUrl, CHECKOUT_URL } from "../src/gate.js";
@@ -324,5 +328,56 @@ describe("injectLicenseKey", () => {
       updated: [],
       skipped: [],
     });
+  });
+});
+
+describe("the deletion confirmation link", () => {
+  const SECRET = "test-delete-secret";
+  const EMAIL = "customer@example.com";
+
+  it("round-trips a token it just signed", async () => {
+    const t = await signDeleteToken(SECRET, EMAIL, Date.now() + DELETE_TOKEN_TTL_MS);
+    expect(await verifyDeleteToken(SECRET, EMAIL, t, Date.now())).toBe(true);
+  });
+
+  /**
+   * The whole point: /delete used to remove a paying customer's licence on a
+   * bare form post, so anyone who knew their address could revoke their access.
+   */
+  it("cannot be forged without the secret", async () => {
+    const t = await signDeleteToken("attacker-guess", EMAIL, Date.now() + DELETE_TOKEN_TTL_MS);
+    expect(await verifyDeleteToken(SECRET, EMAIL, t, Date.now())).toBe(false);
+  });
+
+  it("is bound to one address, so it cannot be replayed against another customer", async () => {
+    const t = await signDeleteToken(SECRET, EMAIL, Date.now() + DELETE_TOKEN_TTL_MS);
+    expect(await verifyDeleteToken(SECRET, "someone.else@example.com", t, Date.now())).toBe(false);
+  });
+
+  it("expires", async () => {
+    const t = await signDeleteToken(SECRET, EMAIL, Date.now() - 1000);
+    expect(await verifyDeleteToken(SECRET, EMAIL, t, Date.now())).toBe(false);
+  });
+
+  it("rejects junk instead of throwing", async () => {
+    for (const junk of ["", ".", "abc", "999999999999.nothex", `${Date.now() + 1000}.`]) {
+      expect(await verifyDeleteToken(SECRET, EMAIL, junk, Date.now())).toBe(false);
+    }
+  });
+
+  it("does not accept a token whose expiry was edited to extend it", async () => {
+    const realExpiry = Date.now() - 1000;
+    const t = await signDeleteToken(SECRET, EMAIL, realExpiry);
+    const tampered = `${Date.now() + 60_000}.${t.split(".")[1]}`;
+    expect(await verifyDeleteToken(SECRET, EMAIL, tampered, Date.now())).toBe(false);
+  });
+});
+
+describe("timingSafeEqual", () => {
+  it("matches equal strings and rejects everything else", () => {
+    expect(timingSafeEqual("abc", "abc")).toBe(true);
+    expect(timingSafeEqual("abc", "abd")).toBe(false);
+    expect(timingSafeEqual("abc", "ab")).toBe(false);
+    expect(timingSafeEqual("", "")).toBe(true);
   });
 });
