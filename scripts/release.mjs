@@ -133,15 +133,21 @@ if (!dry) {
 // the registry publish is at the end of it, so a token that is about to expire
 // gets refreshed here rather than discovered three commands too late.
 if (!dry) {
-  let left = registryTokenSecondsLeft();
+  const left = registryTokenSecondsLeft();
   if (left < 120) {
-    console.log(
-      `\nRegistry token has ${left}s left, which will not survive the publish sequence.` +
-        "\nStarting the device login now. Approve it, and the release continues automatically.\n",
+    // Fail, do not launch the login here.
+    //
+    // The first version of this ran `mcp-publisher login github` inline, which
+    // blocks on a device-code approval in a browser. Run from an agent or any
+    // non-interactive shell that never comes, and the release hangs forever
+    // holding a dirty tree with the version already bumped. A release script
+    // must never wait on a human it cannot reach; it stops and says what to do.
+    fail(
+      `registry token has ${left}s left, which will not survive the publish sequence.\n\n` +
+        "  Run this, approve it in the browser, then re-run the release:\n" +
+        "    mcp-publisher login github\n\n" +
+        "Nothing has been published. The token lasts about five minutes, so start the release right after.",
     );
-    execFileSync("mcp-publisher", ["login", "github"], { cwd: root, stdio: "inherit" });
-    left = registryTokenSecondsLeft();
-    if (left < 120) fail("registry token is still not usable after login.");
   }
   console.log(`\nRegistry token good for ${left}s. Publishing.`);
 }
