@@ -37,12 +37,18 @@ few hundred impressions a month, for minutes of work.
 
 ## 2. Resubmit to mcpservers.org, DONE 6 August
 
-Submitted through the browser. Fields sent: Server Name "App Store Connect", Short Description
-"41 tools to ship an App Store release from your agent: metadata, screenshots, builds, TestFlight,
-in-app purchases, submit and release.", Link `https://github.com/pofky/asc-mcp`, Category
-Development, Contact povkonop@gmail.com. Premium Submit ($39) deliberately left unchecked, since
-listings are free and only the review is expedited. Confirmation says reviewed within 12 hours with
-an email on approval. Watch for that email; if it does not arrive by 8 August, resubmit.
+Submitted twice, and the second one is the one that should win.
+
+The first submission used Server Name "App Store Connect", the bare Apple mark as the product name.
+That is the one trademark posture worth avoiding, so it was resubmitted minutes later as `asc-mcp`
+with the mark used descriptively in the sentence instead: "An MCP server for App Store Connect:
+41 tools to ship a release from your agent, covering metadata, screenshots, builds, TestFlight,
+in-app purchases, submit and release." Link `https://github.com/pofky/asc-mcp`, Category
+Development, Contact povkonop@gmail.com. Premium Submit ($39) left unchecked both times.
+
+Both are in the same review queue. **If both get approved, ask them to remove the "App Store
+Connect" one.** Reviewed within 12 hours with an email on approval; if nothing arrives by
+8 August, resubmit.
 
 Original instructions kept below in case a resubmission is needed.
 
@@ -75,11 +81,15 @@ path, "Paid submission $39, one-time publishing fee", covering publish without r
 placement, a verified badge and a dofollow link. The "submit a ticket" link next to it is support,
 not a free listing. Nothing was submitted, because spending money is your call.
 
-**Recommendation: pay it.** Glama, the only directory we can now measure, produced 845 profile views
-in 30 days. If mcp.so is within an order of magnitude of that, $39 once against $9/month
-subscriptions pays back on the first or second customer, and the dofollow link has SEO value on its
-own. The counter-argument is that we have zero evidence about mcp.so's actual traffic, unlike Glama.
-If you want that evidence first, wait for the 13 August Glama re-read and decide then.
+**Decided 6 August: skip it for now.** No paid placement until a free surface has proven that
+directory traffic converts, not just that it exists. Glama gives 845 profile views a month and, so
+far, zero attributable signups, because nothing measures that hop yet. Paying $39 into a directory
+whose traffic we cannot measure at all, before we know the measurable one converts, is buying a
+second unknown.
+
+**Revisit when either is true:** the 13 August or 6 September Glama re-read shows a CTR above zero
+against the new snippet, or a paying customer arrives whose `/go?tool=` attribution traces back to a
+directory. At that point $39 once against $9/month is an easy yes.
 
 To do it: <https://mcp.so/submit?type=server>, Repository URL `https://github.com/pofky/asc-mcp`,
 Name `App Store Connect`, then pay.

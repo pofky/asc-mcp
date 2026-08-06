@@ -1,34 +1,33 @@
-# App Store Connect MCP Server
+# asc-mcp
 
-> **Full control of App Store Connect from your coding agent.** 41 tools: read intelligence that thinks, plus write/control that ships your app end to end (edit metadata, upload screenshots, attach builds, TestFlight, submit, release, even build and upload the binary locally). 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper.
+> **Ship an App Store release from your coding agent.** An MCP server for App Store Connect: 41 tools that edit version metadata, upload screenshots, attach builds, drive TestFlight, create in-app purchases, submit and release, plus an intelligence layer that audits a version before you submit and summarizes your reviews. 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper.
 
 [asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/month](https://asc-mcp.pages.dev/#pricing)
-
-Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Different angle, same API surface plus more.
 
 ```bash
 npx @pofky/asc-mcp init --write   # finds your .p8, asks for your Issuer ID, writes your MCP config
 ```
 
-Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. That unlocks all 41 tools for 7 days with no card and nothing to cancel, and it activates in the session you are already in, so the tool that was just refused works on the next call. Six tools work without any license at all.
-
-## What Makes This Different
-
-Other ASC MCP servers wrap the API and give you 80 to 293 raw endpoints. This one gives you 41 opinionated tools, 6 slash-command Prompts, and a Claude Skill that all think. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
-
-**Why full control is possible without fastlane:** fastlane's `deliver` and `pilot` are just calls to the same App Store Connect REST API this server authenticates against with your `.p8`. So nearly everything you would script with fastlane is a tool here, no Ruby toolchain required. The only step that needs your Mac is building and signing the binary, which `build_and_archive` and `upload_binary` drive via Xcode.
+Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 41 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month. Six tools stay free, and three of those need nothing but Node.
 
 | You say | What happens |
 |---------|-------------|
 | "Run a preflight check on my app" | Audits metadata, character limits, screenshots, build status. Catches the issues that cause 40% of rejections. |
 | "Give me a morning briefing" | Summarizes all your apps: who's in review, who got rejected, new low-rating reviews, action items. |
 | "Generate release notes from my git history" | Reads commits since last tag, categorizes them, and gives you structured data to write "What's New" text. |
-| "List my apps" | Shows all your iOS/macOS apps with bundle IDs |
 | "Is my app in review?" | Exact review state with context ("typical time: 24-48 hours") |
 | "Show me 1-star reviews" | Customer reviews filtered by rating, territory, sorted by date |
 | "What were my downloads this week?" | Sales and revenue summary by territory |
 
 No context switching. No portal. Just ask.
+
+## What Makes This Different
+
+Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Different angle, same API surface plus more.
+
+Other ASC MCP servers wrap the API and give you 80 to 982 raw endpoints. This one gives you 41 opinionated tools, 6 slash-command Prompts, and a Claude Skill that all think. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
+
+**Why full control is possible without fastlane:** fastlane's `deliver` and `pilot` are just calls to the same App Store Connect REST API this server authenticates against with your `.p8`. So nearly everything you would script with fastlane is a tool here, no Ruby toolchain required. The only step that needs your Mac is building and signing the binary, which `build_and_archive` and `upload_binary` drive via Xcode.
 
 ## Setup (3 minutes)
 
@@ -83,7 +82,7 @@ Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-com
 
 ## Tools
 
-### Free (no account needed)
+### Free (no signup, no license key)
 
 | Tool | What it does |
 |------|-------------|
@@ -119,6 +118,7 @@ These tools write to App Store Connect. Every outward-facing action (submit, rel
 | `update_version_metadata` | Edit description, keywords, what's-new, promo text, URLs, app name, subtitle. Validates Apple's character limits and refuses over-limit writes |
 | `upload_screenshots` | Upload screenshots for a device display type (reserve, upload, commit, with checksum) |
 | `list_builds` | List recent builds and their processing state (VALID = ready) |
+| `wait_for_build` | Poll until a build finishes processing, so the chain does not need a manual pause |
 | `attach_build` | Attach a build to the editable version (defaults to newest processed build) |
 | `submit_for_review` | Submit the version to App Review (modern reviewSubmissions flow). `confirm: true` required |
 | `release_version` | Release an approved version to the public App Store. `confirm: true` required |
@@ -257,7 +257,7 @@ Lead with the most impactful change. Keep under 4000 chars.
 
 | | Raw API wrappers (free) | This server |
 |---|---|---|
-| **Tool count** | 80 to 875 | 41 opinionated tools (read + control) |
+| **Tool count** | 80 to 982 | 41 opinionated tools (read + control) |
 | **MCP Prompts (slash commands)** | No | Yes, 6 pre-built workflows |
 | **MCP Sampling (zero server-side LLM cost)** | No | Yes, review triage + response drafts |
 | **Claude Skill bundled** | No | Yes, one-line install |
@@ -265,8 +265,8 @@ Lead with the most impactful change. Keep under 4000 chars.
 | **Cross-app briefings** | No | Yes, one call, all apps |
 | **Git-aware release notes** | No | Yes, reads your project's commit history |
 | **Smart review summaries** | No | Yes, theme clustering, action items |
-| **Setup** | Build from source (Swift or Node) | `npm install -g` (any OS) |
-| **Free tier** | Some | Yes, 6 tools, no account needed |
+| **Setup** | Build from source (Swift or Node) | One command, `init --write` writes your config |
+| **Free tier** | Some | Yes, 6 tools, no signup. Three of them need nothing but Node |
 | **Try the paid half** | n/a | 7 days, no card, started from inside your agent |
 
 Raw wrappers give you endpoints. This gives you answers.
