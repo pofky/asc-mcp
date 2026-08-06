@@ -29,7 +29,7 @@ feature.
 
 ## 4 (what it does do)
 
-40 tools, all job-shaped instead of one-per-endpoint:
+41 tools, all job-shaped instead of one-per-endpoint:
 
 - age rating in one call (fetch, merge the full declaration set, submit, because a partial
   patch silently drops declarations)

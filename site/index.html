@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>App Store Connect MCP: ship a release from your agent</title>
-<meta name="description" content="An MCP server with 40 tools that drives App Store Connect from Claude Code, Cursor, or any MCP client: metadata, screenshots, builds, TestFlight, submit, release. Free tier, Pro is $9 per month.">
+<meta name="description" content="An MCP server with 41 tools that drives App Store Connect from Claude Code, Cursor, or any MCP client: metadata, screenshots, builds, TestFlight, submit, release. Free tier, Pro is $9 per month.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://asc-mcp.pages.dev/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://asc-mcp.pages.dev/">
 <meta property="og:title" content="App Store Connect MCP: ship a release from your agent">
-<meta property="og:description" content="40 tools that drive App Store Connect from your coding agent. Every step the API cannot do is flagged before you hit it. Free tier, Pro is $9 per month.">
+<meta property="og:description" content="41 tools that drive App Store Connect from your coding agent. Every step the API cannot do is flagged before you hit it. Free tier, Pro is $9 per month.">
 <meta property="og:image" content="https://asc-mcp.pages.dev/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="App Store Connect MCP: ship a release from your agent">
-<meta name="twitter:description" content="40 tools that drive App Store Connect from your coding agent. Free tier, Pro is $9 per month.">
+<meta name="twitter:description" content="41 tools that drive App Store Connect from your coding agent. Free tier, Pro is $9 per month.">
 <meta name="twitter:image" content="https://asc-mcp.pages.dev/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230E1116'/%3E%3Cpath d='M8 21l4.6-11h1.9L19 21h-2.2l-1-2.6h-4.6L10.2 21H8zm4-4.4h3.2l-1.6-4.3-1.6 4.3z' fill='%23F0A828'/%3E%3Ccircle cx='24' cy='11' r='2.5' fill='%233DC48F'/%3E%3C/svg%3E">
 <style>
@@ -195,7 +195,7 @@ footer a{color:var(--muted)}
     <a href="#setup">Setup</a>
     <a href="#faq">FAQ</a>
     <a href="https://github.com/pofky/asc-mcp">GitHub</a>
-    <span class="ver">v1.8.8</span>
+    <span class="ver">v1.9.0</span>
   </nav>
 </div>
 
@@ -203,7 +203,7 @@ footer a{color:var(--muted)}
   <div class="wrap">
     <span class="eyebrow">App Store Connect MCP server</span>
     <h1>Ship an App Store release without leaving your agent.</h1>
-    <p class="lede">40 tools that drive App Store Connect from Claude Code, Cursor, or any MCP client:
+    <p class="lede">41 tools that drive App Store Connect from Claude Code, Cursor, or any MCP client:
       edit metadata, upload screenshots, attach builds, run TestFlight, submit, release.
       <b>The steps Apple's API cannot do are flagged before you hit them</b>, not after you are half done.</p>
 
@@ -214,7 +214,7 @@ footer a{color:var(--muted)}
       </div>
       <a class="btn ghost" href="#setup">How setup works</a>
     </div>
-    <p class="reassure">Free tier needs no account. Your .p8 key stays on your machine.</p>
+    <p class="reassure">Every tool free for 7 days, no card: ask your agent for <code>asc_start_trial</code>. Your .p8 key stays on your machine.</p>
 
     <div class="session" aria-label="Terminal output from the setup check">
       <div class="session-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
@@ -229,7 +229,7 @@ footer a{color:var(--muted)}
 <span class="ok">[OK]</span>   Issuer ID: 69a1c7f4-••••-••••-••••-••••••••••••
 <span class="ok">[OK]</span>   Live connection: Authenticated against App Store Connect and listed apps.
 <span class="warn">[WARN]</span> License: Free tier: read + intelligence tools only.
-        Fix: To unlock write/control tools, set ASC_LICENSE_KEY.
+        Fix: Run `asc_start_trial` for 7 days of everything, no card.
 
 Ready. Try `list_apps`, then `asc_guide` (topic:overview) to see every flow.</code></pre>
     </div>
@@ -323,16 +323,17 @@ Ready. Try `list_apps`, then `asc_guide` (topic:overview) to see every flow.</co
     <div class="q">
       <h3>How is this different from an MCP server that wraps the API?</h3>
       <p>Wrappers expose Apple's endpoints one to one, which can mean hundreds of tools. That fills an agent's
-      context and leaves the sequencing to it. <span class="fact">This server ships 40 opinionated tools</span>
+      context and leaves the sequencing to it. <span class="fact">This server ships 41 opinionated tools</span>
       that each complete a job: one call sets an age rating by merging the full declaration set, one call prices a
       subscription across every territory and adds the trial, one call audits a version before submission.</p>
     </div>
 
     <div class="q">
       <h3>What does it actually cost?</h3>
-      <p><span class="fact">Pro is $9 per month, billed through Polar, cancel any time.</span> Five tools are free
-      with no account: the setup check, the playbook, listing apps, app details, and review status. The other
-      35 need a Pro key.</p>
+      <p><span class="fact">Nothing, for the first seven days.</span> Ask your agent to run
+      <code>asc_start_trial</code> and every tool unlocks for a week, no card, nothing to cancel. After that Pro is
+      $9 per month through Polar, cancel any time. Six tools stay free with no account at all: the setup check, the
+      playbook, the trial starter, listing apps, app details, and review status.</p>
     </div>
 
     <div class="q">
@@ -361,12 +362,15 @@ Ready. Try `list_apps`, then `asc_guide` (topic:overview) to see every flow.</co
 <section id="pricing">
   <div class="wrap">
     <span class="eyebrow">Pricing</span>
-    <h2>Read for free. Pay to write.</h2>
+    <h2>Try it on your own app first.</h2>
+    <p class="lede" style="margin-bottom:28px">Every tool, free for seven days, without a card. Ask your agent to
+      run <code>asc_start_trial</code> and it unlocks in the same conversation, no restart.</p>
     <div class="tiers">
       <div class="tier">
         <h3>Free</h3>
         <p class="price">$0</p>
         <ul>
+          <li><code>asc_start_trial</code>, 7 days of everything below, no card, nothing to cancel</li>
           <li><code>asc_setup_check</code>, diagnoses your setup with a live authenticated call</li>
           <li><code>asc_guide</code>, the full playbook per flow with manual steps flagged</li>
           <li><code>list_apps</code>, <code>app_details</code>, <code>review_status</code></li>
@@ -378,7 +382,7 @@ Ready. Try `list_apps`, then `asc_guide` (topic:overview) to see every flow.</co
         <h3>Pro</h3>
         <p class="price">$9 <span>per month</span></p>
         <ul>
-          <li>All 40 tools, including the full write and control plane</li>
+          <li>All 41 tools, including the full write and control plane</li>
           <li>Metadata, screenshots, builds, TestFlight, submit, release, phased rollout</li>
           <li>Subscriptions and in-app purchases, priced and localized in one call</li>
           <li>Reviews, sales reports, preflight audits, keyword and competitor intelligence</li>
@@ -467,9 +471,9 @@ Ready. Try `list_apps`, then `asc_guide` (topic:overview) to see every flow.</co
       <a href="https://asc-mcp-license.remewdy.workers.dev/privacy">Privacy</a>
       <a href="/llms.txt">llms.txt</a>
     </div>
-    <p style="margin:0">asc-mcp v1.8.8, MIT licensed. Built and maintained by Povilas Konopackas, sole trader,
+    <p style="margin:0">asc-mcp v1.9.0, MIT licensed. Built and maintained by Povilas Konopackas, sole trader,
       Lithuania. Not affiliated with Apple Inc. App Store and App Store Connect are trademarks of Apple Inc.</p>
-    <p style="margin:8px 0 0">Last updated 30 July 2026.</p>
+    <p style="margin:8px 0 0">Last updated 6 August 2026.</p>
   </div>
 </footer>
 
@@ -495,9 +499,10 @@ document.getElementById('copy').addEventListener('click', async function () {
 {"@context":"https://schema.org","@graph":[
 {"@type":"Organization","@id":"https://asc-mcp.pages.dev/#org","name":"asc-mcp","url":"https://asc-mcp.pages.dev/","email":"povkonop@gmail.com","founder":{"@type":"Person","name":"Povilas Konopackas"},"sameAs":["https://github.com/pofky/asc-mcp","https://www.npmjs.com/package/@pofky/asc-mcp"]},
 {"@type":"WebSite","@id":"https://asc-mcp.pages.dev/#site","url":"https://asc-mcp.pages.dev/","name":"App Store Connect MCP","publisher":{"@id":"https://asc-mcp.pages.dev/#org"},"inLanguage":"en"},
-{"@type":"SoftwareApplication","name":"App Store Connect MCP (asc-mcp)","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows (Node 18+)","softwareVersion":"1.8.8","url":"https://asc-mcp.pages.dev/","downloadUrl":"https://www.npmjs.com/package/@pofky/asc-mcp","publisher":{"@id":"https://asc-mcp.pages.dev/#org"},"description":"MCP server with 40 tools that drives App Store Connect from any MCP client: metadata, screenshots, builds, TestFlight, in-app purchases, submission, release, plus preflight audits and review intelligence.","featureList":["Release preflight audit","App Store metadata editing with Apple character-limit validation","Screenshot upload per display type","Build, sign and upload a binary locally","TestFlight groups and testers","Submit for review and release, behind an explicit confirm flag","Phased release control","Subscriptions and in-app purchases with territory pricing and free trials","Customer review triage and reply drafting","Sales and download reports","Keyword and competitor intelligence"],"offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"USD","description":"Five tools: setup check, playbook, list apps, app details, review status. No account required."},{"@type":"Offer","name":"Pro","price":"9","priceCurrency":"USD","description":"All 40 tools including the full write and control plane. Billed monthly through Polar, cancel any time.","url":"https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj"}],"dateModified":"2026-08-01"},
+{"@type":"SoftwareApplication","name":"App Store Connect MCP (asc-mcp)","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows (Node 18+)","softwareVersion":"1.9.0","url":"https://asc-mcp.pages.dev/","downloadUrl":"https://www.npmjs.com/package/@pofky/asc-mcp","publisher":{"@id":"https://asc-mcp.pages.dev/#org"},"description":"MCP server with 41 tools that drives App Store Connect from any MCP client: metadata, screenshots, builds, TestFlight, in-app purchases, submission, release, plus preflight audits and review intelligence.","featureList":["Release preflight audit","App Store metadata editing with Apple character-limit validation","Screenshot upload per display type","Build, sign and upload a binary locally","TestFlight groups and testers","Submit for review and release, behind an explicit confirm flag","Phased release control","Subscriptions and in-app purchases with territory pricing and free trials","Customer review triage and reply drafting","Sales and download reports","Keyword and competitor intelligence"],"offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"USD","description":"Six tools with no account: trial starter, setup check, playbook, list apps, app details, review status. Plus a 7-day free trial of all 41 tools, started in-agent with asc_start_trial, no credit card."},{"@type":"Offer","name":"Pro","price":"9","priceCurrency":"USD","description":"All 41 tools including the full write and control plane. Free for 7 days, then billed monthly through Polar, cancel any time.","url":"https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj"}],"dateModified":"2026-08-06"},
 {"@type":"FAQPage","mainEntity":[
-{"@type":"Question","name":"How much does asc-mcp cost?","acceptedAnswer":{"@type":"Answer","text":"Pro is $9 per month, billed through Polar and cancellable any time. Five tools are free with no account: asc_setup_check, asc_guide, list_apps, app_details and review_status. The other 35 tools require a Pro license key."}},
+{"@type":"Question","name":"How much does asc-mcp cost?","acceptedAnswer":{"@type":"Answer","text":"There is a free 7-day trial of everything, with no credit card: ask your agent to run the asc_start_trial tool and all 41 tools unlock immediately. After that Pro is $9 per month, billed through Polar and cancellable any time. Six tools are free permanently with no account: asc_start_trial, asc_setup_check, asc_guide, list_apps, app_details and review_status."}},
+{"@type":"Question","name":"Is there a free trial of asc-mcp?","acceptedAnswer":{"@type":"Answer","text":"Yes. All 41 tools are free for 7 days, no credit card and nothing to cancel. You start it from inside your coding agent by calling the asc_start_trial tool with your email address, rather than signing up on a website. The trial activates in the running session, so the tool you were blocked on works on the next call without restarting your agent. One trial per Apple developer account."}},
 {"@type":"Question","name":"Can an AI agent submit an app to the App Store?","acceptedAnswer":{"@type":"Answer","text":"Yes, with limits. asc-mcp can edit version metadata, upload screenshots, attach a build, set the age rating, price and availability, then submit for review and release. Three things must still be done on the App Store Connect website: creating the app record, the App Privacy nutrition label, and EU trader status. An app's very first in-app purchases must also be submitted with the version on the website."}},
 {"@type":"Question","name":"Is it safe to give an MCP server an App Store Connect API key?","acceptedAnswer":{"@type":"Answer","text":"With asc-mcp the .p8 private key never leaves your machine. JWTs are signed locally and API calls go directly from your computer to api.appstoreconnect.apple.com with no proxy. The only other network call is a license validation that sends the license key, not your Apple credentials."}},
 {"@type":"Question","name":"What can the App Store Connect API not do?","acceptedAnswer":{"@type":"Answer","text":"Creating an app record (POST /v1/apps is forbidden for API keys), creating App Groups, setting the App Privacy nutrition label, declaring EU trader status, submitting an app's first in-app purchases, posting public replies to reviews, and Xcode cloud signing with a least-privilege key. asc-mcp returns the exact manual steps and deep links for each instead of failing silently."}},

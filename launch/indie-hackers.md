@@ -13,7 +13,7 @@ metadata across locales, screenshots per device size, age ratings, territory pri
 review contact, submit, release.
 
 So I built an MCP server that lets my coding agent do it. It is on npm as `@pofky/asc-mcp`,
-40 tools, and it has actually shipped a real app's 1.0 end to end.
+41 tools, and it has actually shipped a real app's 1.0 end to end.
 
 **The pricing decision.** There are several free App Store Connect MCP servers. They wrap
 Apple's endpoints one to one, sometimes hundreds of tools. I could not out-free them and I

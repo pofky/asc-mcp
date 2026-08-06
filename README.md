@@ -1,8 +1,8 @@
 # App Store Connect MCP Server
 
-> **Full control of App Store Connect from your coding agent.** 40 tools: read intelligence that thinks, plus write/control that ships your app end to end (edit metadata, upload screenshots, attach builds, TestFlight, submit, release, even build and upload the binary locally). 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper.
+> **Full control of App Store Connect from your coding agent.** 41 tools: read intelligence that thinks, plus write/control that ships your app end to end (edit metadata, upload screenshots, attach builds, TestFlight, submit, release, even build and upload the binary locally). 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper.
 
-[asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: free tier, Pro $9/mo](https://asc-mcp.pages.dev/#pricing)
+[asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/mo](https://asc-mcp.pages.dev/#pricing)
 
 Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Different angle, same API surface plus more.
 
@@ -13,7 +13,7 @@ npx @pofky/asc-mcp install-skill   # one-line, optional, for auto-routed review 
 
 ## What Makes This Different
 
-Other ASC MCP servers wrap the API and give you 80 to 293 raw endpoints. This one gives you 40 opinionated tools, 6 slash-command Prompts, and a Claude Skill that all think. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
+Other ASC MCP servers wrap the API and give you 80 to 293 raw endpoints. This one gives you 41 opinionated tools, 6 slash-command Prompts, and a Claude Skill that all think. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
 
 **Why full control is possible without fastlane:** fastlane's `deliver` and `pilot` are just calls to the same App Store Connect REST API this server authenticates against with your `.p8`. So nearly everything you would script with fastlane is a tool here, no Ruby toolchain required. The only step that needs your Mac is building and signing the binary, which `build_and_archive` and `upload_binary` drive via Xcode.
 
@@ -76,6 +76,8 @@ With the `.p8` in `~/.appstoreconnect/private_keys/`, `ASC_ISSUER_ID` is the onl
 
 **Step 3.** Ask your agent: "List my App Store Connect apps"
 
+**Step 4, to try the paid half.** Ask your agent: "start my asc-mcp trial, my email is you@example.com". It calls `asc_start_trial`, which unlocks all 41 tools for 7 days with no card and nothing to cancel. The key activates in the running session, so whatever you were blocked on works on the very next call, and it is written into your MCP config so it survives a restart. One trial per Apple developer account.
+
 Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-compatible client.
 
 ## Tools
@@ -84,13 +86,14 @@ Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-com
 
 | Tool | What it does |
 |------|-------------|
+| `asc_start_trial` | **7 days of everything, no card.** Ask your agent to run it with your email. Unlocks all 41 tools in the running session, no restart, nothing to cancel. |
 | `asc_setup_check` | **Run first if anything's off.** Checks your key, Issuer ID, a live App Store Connect connection, and license tier, and prints the exact fix for each failure. |
 | `asc_guide` | **Start here.** The in-agent playbook for every flow (first release, update, IAP, subscriptions, reviews, TestFlight, binary), with each manual App Store Connect website step flagged inline. See also [USER_GUIDE.md](USER_GUIDE.md) and [LIMITATIONS.md](LIMITATIONS.md). |
 | `list_apps` | List all your apps with name, bundle ID, SKU, platform |
 | `app_details` | Version history, build status, release state, dates |
 | `review_status` | Current review state with human-readable context |
 
-### Pro ($9/mo)
+### Pro (free 7-day trial, then $9/mo)
 
 | Tool | What it does | Why it matters |
 |------|-------------|----------------|
