@@ -20,7 +20,10 @@ CREATE TABLE IF NOT EXISTS licenses (
   -- Set by subscription.revoked. Terminal: no later event reactivates the row.
   revoked_at TEXT,
   -- Set when the customer turns off renewal. Suppresses the grace window.
-  canceled_at TEXT
+  canceled_at TEXT,
+  -- Which machine claimed this paid licence through /trial. See
+  -- migrations/0002-claim-fingerprint.sql.
+  claim_fingerprint TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_licenses_key ON licenses(key);

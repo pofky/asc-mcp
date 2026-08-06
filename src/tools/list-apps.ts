@@ -38,10 +38,13 @@ export async function listApps(
     return "No apps found in your App Store Connect account.";
   }
 
-  const lines = apps.map(
-    (app) =>
-      `- **${app.attributes.name}** (${app.attributes.bundleId}) - ID: ${app.id}`,
-  );
+  // SKU is already in the response, and it is the identifier Sales and Trends
+  // reports key on, so a user reconciling revenue needs it. It was fetched and
+  // then dropped, while the docs promised it.
+  const lines = apps.map((app) => {
+    const sku = app.attributes.sku ? `, SKU: ${app.attributes.sku}` : "";
+    return `- **${app.attributes.name}** (${app.attributes.bundleId}) - ID: ${app.id}${sku}`;
+  });
 
   return `Found ${apps.length} app(s):\n\n${lines.join("\n")}`;
 }

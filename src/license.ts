@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import type { LicenseStatus, Tier } from "./types.js";
 
 export const LICENSE_API_URL =
@@ -43,6 +47,15 @@ export async function validateLicense(licenseKey?: string): Promise<Tier> {
       body: JSON.stringify({ key: licenseKey }),
     });
 
+    // A 5xx is our server failing, not a verdict on their key. Treating it as
+    // "not Pro" demotes a paying customer for the whole session, and because
+    // the only cache was in memory, every new session during an outage demoted
+    // them again. A 4xx IS a verdict and is honoured.
+    if (response.status >= 500) {
+      console.error(`License server error ${response.status}; using the last known verdict.`);
+      return offlineTier(licenseKey);
+    }
+
     if (!response.ok) {
       console.error(`License validation failed: ${response.status}`);
       return "free";
@@ -51,11 +64,71 @@ export async function validateLicense(licenseKey?: string): Promise<Tier> {
     const status = (await response.json()) as LicenseStatus;
     cachedStatus = status;
     cachedAt = now;
+    if (status.valid && status.tier === "pro") rememberPro(licenseKey, status);
 
     return status.valid ? status.tier : "free";
   } catch (err) {
-    // Network error - fail open to free tier (don't block the user)
     console.error("License validation network error:", err);
+    return offlineTier(licenseKey);
+  }
+}
+
+/**
+ * How long a previously-confirmed Pro key keeps working while the licence
+ * server cannot be reached.
+ *
+ * Deliberately generous, and deliberately one-directional: only a verdict of
+ * Pro is ever remembered, so this can extend a paying customer through an
+ * outage but can never grant Pro to a key the server has not already approved.
+ * The same reasoning as the server's own renewal grace window: our plumbing
+ * failing must not cost someone access they paid for.
+ */
+const OFFLINE_GRACE_MS = 14 * 24 * 60 * 60 * 1000;
+
+function offlineCachePath(): string {
+  return join(homedir(), ".asc-mcp", "last-verdict.json");
+}
+
+/** Fingerprint of the key, so the cache file never contains the key itself. */
+function keyDigest(key: string): string {
+  return createHash("sha256").update(key.trim()).digest("hex");
+}
+
+function rememberPro(key: string, status: LicenseStatus): void {
+  try {
+    const path = offlineCachePath();
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(
+      path,
+      JSON.stringify({ key: keyDigest(key), tier: "pro", expires: status.expires ?? null, at: Date.now() }),
+      { mode: 0o600 },
+    );
+  } catch {
+    // A read-only or sandboxed home is not a reason to fail a validation.
+  }
+}
+
+/**
+ * The tier to use when the licence server could not give an answer. Free unless
+ * this exact key was confirmed Pro recently and its own expiry has not passed.
+ */
+function offlineTier(key: string): Tier {
+  try {
+    const cached = JSON.parse(readFileSync(offlineCachePath(), "utf-8")) as {
+      key?: string;
+      tier?: string;
+      expires?: string | null;
+      at?: number;
+    };
+    if (cached.tier !== "pro" || cached.key !== keyDigest(key)) return "free";
+    if (!cached.at || Date.now() - cached.at > OFFLINE_GRACE_MS) return "free";
+    if (cached.expires && new Date(cached.expires).getTime() < Date.now()) return "free";
+
+    console.error("asc-mcp: license server unreachable, honouring the last confirmed Pro verdict.");
+    cachedStatus = { valid: true, tier: "pro", expires: cached.expires ?? undefined } as LicenseStatus;
+    cachedAt = Date.now();
+    return "pro";
+  } catch {
     return "free";
   }
 }

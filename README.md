@@ -93,7 +93,7 @@ Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-com
 | `asc_start_trial` | **7 days of everything, no card.** Ask your agent to run it with your email. Unlocks all 41 tools in the running session, no restart, nothing to cancel. |
 | `asc_setup_check` | **Run first if anything's off.** Checks your key, Issuer ID, a live App Store Connect connection, and license tier, and prints the exact fix for each failure. |
 | `asc_guide` | **Start here.** The in-agent playbook for every flow (first release, update, IAP, subscriptions, reviews, TestFlight, binary), with each manual App Store Connect website step flagged inline. See also [USER_GUIDE.md](USER_GUIDE.md) and [LIMITATIONS.md](LIMITATIONS.md). |
-| `list_apps` | List all your apps with name, bundle ID, SKU, platform |
+| `list_apps` | List all your apps with name, bundle ID, SKU and App ID |
 | `app_details` | Version history, build status, release state, dates |
 | `review_status` | Current review state with human-readable context |
 
@@ -144,7 +144,7 @@ These tools write to App Store Connect. Every outward-facing action (submit, rel
 | `build_and_archive` | Build, archive, and export a signed `.ipa` via xcodebuild (needs Xcode on your Mac) |
 | `upload_binary` | Upload the `.ipa` to App Store Connect via altool, using your API key. `confirm: true` required |
 
-The whole flow chains: `setup_app_store_signing` to `build_and_archive` to `upload_binary` to `list_builds` (wait for VALID) to `attach_build` to `update_version_metadata` to `upload_screenshots` to `set_app_metadata`/`set_app_price`/`set_app_availability`/`set_age_rating`/`set_review_contact` to `release_preflight` to `submit_for_review` to `release_version`. The `/asc-ship-release` slash command drives it for you.
+The whole flow chains: `setup_app_store_signing` to `build_and_archive` to `upload_binary` to `wait_for_build` (blocks until VALID) to `attach_build` to `update_version_metadata` to `upload_screenshots` to `set_app_metadata`/`set_app_price`/`set_app_availability`/`set_age_rating`/`set_review_contact` to `release_preflight` to `submit_for_review` to `release_version`. The `/asc-ship-release` slash command drives it for you.
 
 `release_preflight` is the single source of truth for "is this submittable": it checks every API-addressable field and ends with a tailored "Manual steps to finish" list for the few things Apple only allows in the website (first-IAP bundling, App Privacy nutrition labels, EU trader status).
 
