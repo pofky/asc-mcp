@@ -20,7 +20,10 @@
 <style>
 :root{
   --ink:#0e1116; --panel:#161b22; --panel-2:#1b2129; --line:#232a33;
-  --text:#e7ecf2; --muted:#95a1b0; --dim:#6d7986;
+  /* --dim was #6d7986, which measures 4.26:1 on --ink and fails WCAG AA for the
+     small text it is used on (eyebrows, footer, meta). #7d8b9a clears 4.5:1
+     without collapsing into --muted. */
+  --text:#e7ecf2; --muted:#95a1b0; --dim:#7d8b9a;
   --amber:#f0a828; --green:#3dc48f; --flag:#e0705a;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
@@ -196,7 +199,7 @@ footer a{color:var(--muted)}
     <a href="#different">Q&amp;A</a>
     <a href="#faq">Limits</a>
     <a href="https://github.com/pofky/asc-mcp">GitHub</a>
-    <span class="ver">v1.9.0</span>
+    <span class="ver">v1.9.2</span>
   </nav>
 </div>
 
@@ -407,6 +410,10 @@ Ready. Try `list_apps`, then `asc_guide` (topic:overview) to see every flow.</co
   <div class="wrap narrow">
     <span class="eyebrow">Setup</span>
     <h2>Three steps, about five minutes</h2>
+    <p style="color:var(--muted);margin:0 0 22px"><b style="color:var(--text)">On Claude Desktop, skip all of it.</b>
+      Download <a href="https://github.com/pofky/asc-mcp/releases/latest">the .mcpb bundle</a> and open it. Claude
+      installs it in one click, asks for your Issuer ID, and lets you pick your .p8 with a file picker. No config
+      file, no restart. The steps below are for every other client.</p>
     <ol class="steps">
       <li><b>Create an App Store Connect API key.</b> In App Store Connect, open Users and Access, then
         Integrations, then App Store Connect API. Generate a key with the App Manager role and download the .p8.
@@ -480,7 +487,7 @@ Ready. Try `list_apps`, then `asc_guide` (topic:overview) to see every flow.</co
       <a href="https://asc-mcp-license.remewdy.workers.dev/privacy">Privacy</a>
       <a href="/llms.txt">llms.txt</a>
     </div>
-    <p style="margin:0">asc-mcp v1.9.0, MIT licensed. Built and maintained by Povilas Konopackas, sole trader,
+    <p style="margin:0">asc-mcp v1.9.2, MIT licensed. Built and maintained by Povilas Konopackas, sole trader,
       Lithuania. Not affiliated with Apple Inc. App Store and App Store Connect are trademarks of Apple Inc.</p>
     <p style="margin:8px 0 0">Last updated 6 August 2026.</p>
   </div>
@@ -508,7 +515,7 @@ document.getElementById('copy').addEventListener('click', async function () {
 {"@context":"https://schema.org","@graph":[
 {"@type":"Organization","@id":"https://asc-mcp.pages.dev/#org","name":"asc-mcp","url":"https://asc-mcp.pages.dev/","email":"povkonop@gmail.com","founder":{"@type":"Person","name":"Povilas Konopackas"},"sameAs":["https://github.com/pofky/asc-mcp","https://www.npmjs.com/package/@pofky/asc-mcp"]},
 {"@type":"WebSite","@id":"https://asc-mcp.pages.dev/#site","url":"https://asc-mcp.pages.dev/","name":"App Store Connect MCP","publisher":{"@id":"https://asc-mcp.pages.dev/#org"},"inLanguage":"en"},
-{"@type":"SoftwareApplication","name":"App Store Connect MCP (asc-mcp)","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows (Node 18+)","softwareVersion":"1.9.0","url":"https://asc-mcp.pages.dev/","downloadUrl":"https://www.npmjs.com/package/@pofky/asc-mcp","publisher":{"@id":"https://asc-mcp.pages.dev/#org"},"description":"MCP server with 41 tools that drives App Store Connect from any MCP client: metadata, screenshots, builds, TestFlight, in-app purchases, submission, release, plus preflight audits and review intelligence.","featureList":["Release preflight audit","App Store metadata editing with Apple character-limit validation","Screenshot upload per display type","Build, sign and upload a binary locally","TestFlight groups and testers","Submit for review and release, behind an explicit confirm flag","Phased release control","Subscriptions and in-app purchases with territory pricing and free trials","Customer review triage and reply drafting","Sales and download reports","Keyword and competitor intelligence"],"offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"USD","description":"Six tools with no account: trial starter, setup check, playbook, list apps, app details, review status. Plus a 7-day free trial of all 41 tools, started in-agent with asc_start_trial, no credit card."},{"@type":"Offer","name":"Pro","price":"9","priceCurrency":"USD","description":"All 41 tools including the full write and control plane. Free for 7 days, then billed monthly through Polar, cancel any time.","url":"https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj"}],"datePublished":"2026-04-13","dateModified":"2026-08-06"},
+{"@type":"SoftwareApplication","name":"App Store Connect MCP (asc-mcp)","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows (Node 18+)","softwareVersion":"1.9.2","url":"https://asc-mcp.pages.dev/","downloadUrl":"https://www.npmjs.com/package/@pofky/asc-mcp","publisher":{"@id":"https://asc-mcp.pages.dev/#org"},"description":"MCP server with 41 tools that drives App Store Connect from any MCP client: metadata, screenshots, builds, TestFlight, in-app purchases, submission, release, plus preflight audits and review intelligence.","featureList":["Release preflight audit","App Store metadata editing with Apple character-limit validation","Screenshot upload per display type","Build, sign and upload a binary locally","TestFlight groups and testers","Submit for review and release, behind an explicit confirm flag","Phased release control","Subscriptions and in-app purchases with territory availability and free trials","Customer review triage and reply drafting","Sales and download reports","Keyword and competitor intelligence"],"offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"USD","description":"Six tools with no account: trial starter, setup check, playbook, list apps, app details, review status. Plus a 7-day free trial of all 41 tools, started in-agent with asc_start_trial, no credit card."},{"@type":"Offer","name":"Pro","price":"9","priceCurrency":"USD","description":"All 41 tools including the full write and control plane. Free for 7 days, then billed monthly through Polar, cancel any time.","url":"https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj"}],"datePublished":"2026-04-13","dateModified":"2026-08-06"},
 {"@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"How much does asc-mcp cost?","acceptedAnswer":{"@type":"Answer","text":"There is a free 7-day trial of everything, with no credit card: ask your agent to run the asc_start_trial tool and all 41 tools unlock immediately. After that Pro is $9 per month, billed through Polar and cancellable any time. Six tools are free permanently with no account: asc_start_trial, asc_setup_check, asc_guide, list_apps, app_details and review_status."}},
 {"@type":"Question","name":"How do I start the asc-mcp free trial?","acceptedAnswer":{"@type":"Answer","text":"Ask your coding agent to call the asc_start_trial tool with your email address. There is no website signup and no credit card. The key it returns activates in the running session, so the Pro tool you were blocked on works on the very next call without restarting your agent, and the key is written into your MCP config so it survives a restart. One trial per Apple developer account."}},

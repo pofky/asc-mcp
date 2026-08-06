@@ -4,8 +4,9 @@
 
 ## Facts
 
-- Package: `@pofky/asc-mcp` on npm. Current version 1.9.0 (published 6 August 2026).
+- Package: `@pofky/asc-mcp` on npm. Current version 1.9.2 (published 6 August 2026).
 - Install: `npx @pofky/asc-mcp init` prints a paste-ready MCP config block. `init --write` merges it into your client config directly.
+- One-click install on Claude Desktop (macOS and Windows): download the `.mcpb` bundle from https://github.com/pofky/asc-mcp/releases/latest and open it. Claude installs it in one click and collects the Issuer ID and the `.p8` file natively, with no config file editing and no restart. Every other client uses the `npx` command above.
 - Tool count: 41 tools and 6 prompts. 6 tools are free, 35 require Pro or a running trial.
 - Free tools: `asc_start_trial`, `asc_setup_check`, `asc_guide`, `list_apps`, `app_details`, `review_status`. No asc-mcp account or signup is required for any of them. The first three need nothing at all; the other three read from App Store Connect, so they need your own Apple API key like every other tool here.
 - Free trial: all 41 tools for 7 days, no credit card and nothing to cancel. Started in-agent by calling the `asc_start_trial` tool with an email address, not on a website. It activates in the running session, so a tool that was just refused works on the next call with no restart. One trial per Apple developer account, identified by a one-way hash of the Issuer ID computed on the user's machine.
@@ -59,4 +60,4 @@ A: Wrappers map endpoints one to one, which can mean hundreds of tools and leave
 
 ## Citation
 
-asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.9.0, updated 6 August 2026).
+asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.9.2, updated 6 August 2026).
