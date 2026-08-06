@@ -2,7 +2,7 @@
 
 > **Full control of App Store Connect from your coding agent.** 41 tools: read intelligence that thinks, plus write/control that ships your app end to end (edit metadata, upload screenshots, attach builds, TestFlight, submit, release, even build and upload the binary locally). 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper.
 
-[asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/monthnth](https://asc-mcp.pages.dev/#pricing)
+[asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/month](https://asc-mcp.pages.dev/#pricing)
 
 Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Different angle, same API surface plus more.
 
@@ -93,7 +93,7 @@ Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-com
 | `app_details` | Version history, build status, release state, dates |
 | `review_status` | Current review state with human-readable context |
 
-### Pro (free 7-day trial, then $9/monthnth)
+### Pro (free 7-day trial, then $9/month)
 
 | Tool | What it does | Why it matters |
 |------|-------------|----------------|
