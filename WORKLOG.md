@@ -1,6 +1,50 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**In-agent 7-day trial, buy-intent attribution, and a security pass (2026-08-06, v1.9.0, NOT YET DEPLOYED).**
+
+Built because the funnel said the product converts and nobody sees it. 9 Polar checkouts in 4 days,
+1 paid, and not one of the 8 abandoned sessions typed an email address: people leave on sight,
+before the card. Meanwhile 1,727 npm "downloads" is a vanity number, since the documented launch
+command is `npx -y`, which re-resolves on every client restart; 28 unique GitHub visitors in 14
+days is closer to the truth. The repo also has 0 stars against competitors at 46, 24 and 11.
+
+`asc_start_trial` (free tool #6 of 41): user gives their email, the server mints a 7-day Pro key,
+it is written into their MCP config, and `tier` is reassigned in the running process so the tool
+that was just refused works on the next call with no restart. One trial per Apple developer
+account, anchored on a SHA-256 of the Issuer ID computed on the user's machine. Every Pro gate now
+routes through `requirePro` with the tool name attached, and `/go?tool=X` counts the click before
+redirecting to Polar with utm attribution, so a purchase is finally traceable to what the user was
+reaching for. `/admin/stats` reads it back.
+
+Deliberately NOT built: the anonymous gate-hit counter. Counting locked-tool hits inside the
+process is telemetry, and the live privacy page promises there is none. Demand is measured only
+from things the user initiates.
+
+**Three reviews, three rounds of real findings.** Architect: a converted customer would have kept
+the trial key and lost access on day 8 while paying; the 4-day renewal grace would have made every
+7-day trial an 11-day one; deploying the worker before the migration returns 500, which the client
+reads as "invalid", silently dropping all three paying customers to free (now has a fallback).
+Security: the email was a second uniqueness anchor while the fingerprint proves nothing about who
+sent it, so anyone could burn a stranger's trial with a made-up fingerprint, and open CORS made it
+a drive-by; refusal messages revealed subscriber status; and `/delete`, which predates all of this,
+revoked a licence on an unauthenticated form post. Tester: converting was still a trap in the
+messaging, and `injectLicenseKey` matched "asc-mcp" as a substring, writing a paid key into
+unrelated servers.
+
+Also moved the worker's pure logic to `logic.ts`. Exporting helpers from the entry module made
+`wrangler dev` refuse to start, which is why this licence server had only ever been tested in
+production.
+
+175 unit tests, 39 HTTP checks against a D1 migrated from the live table shape, 21 checks driving
+the built server over stdio. Green.
+
+Open: nothing is deployed. `docs/deploy-prd-0001.md` is the runbook; the gate is re-validating all
+three paying keys immediately after the worker deploy. Needs `DELETE_SECRET` set, and
+`POLAR_WEBHOOK_SECRET_SANDBOX` confirmed absent. Not done and worth doing: 0 stars is the most
+likely cause of the checkout abandonment, and a benchmark post against the 875-tool competitor
+(context cost and tool-selection accuracy) is the strongest available answer to them.
+
 **asc-mcp sells through its own Polar organization (2026-08-02, v1.8.8).**
 
 New signups now go to org `asc-mcp` (`3bef20c6`), product "App Store Connect MCP Pro" at $9/mo USD,
