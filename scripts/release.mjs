@@ -67,6 +67,33 @@ for (const [tool, probe] of [
   }
 }
 
+/**
+ * Seconds of life left in the registry token, or 0 if there is no usable one.
+ *
+ * v1.9.2 published to npm and cut a GitHub release before `mcp-publisher
+ * publish` failed with "Invalid or expired Registry JWT token", and the Actions
+ * backstop happened to be down with Service Unavailable at the same moment. npm
+ * was live at 1.9.2 while the registry, which every downstream directory
+ * mirrors, sat at 1.9.1.
+ *
+ * The token turned out to last about five minutes, which is shorter than the
+ * test and bundle gates take. So checking it once at startup proves nothing by
+ * the time it is needed: it is checked again immediately before the irreversible
+ * steps, and the login is offered there, at the only moment it is useful.
+ */
+const tokenPath = join(process.env.HOME ?? "", ".mcp_publisher_token");
+function registryTokenSecondsLeft() {
+  if (!existsSync(tokenPath)) return 0;
+  try {
+    const raw = JSON.parse(readFileSync(tokenPath, "utf8"));
+    const jwt = raw.token ?? raw.access_token ?? "";
+    const payload = JSON.parse(Buffer.from(jwt.split(".")[1] ?? "", "base64").toString("utf8"));
+    return Math.max(0, payload.exp - Math.floor(Date.now() / 1000));
+  } catch {
+    return 0;
+  }
+}
+
 // --- version, in both files that carry it -----------------------------------
 
 for (const file of ["package.json", "server.json"]) {
@@ -101,6 +128,23 @@ if (!dry) {
 }
 
 // --- publish ----------------------------------------------------------------
+
+// Last honest moment to check. Everything below this line is irreversible, and
+// the registry publish is at the end of it, so a token that is about to expire
+// gets refreshed here rather than discovered three commands too late.
+if (!dry) {
+  let left = registryTokenSecondsLeft();
+  if (left < 120) {
+    console.log(
+      `\nRegistry token has ${left}s left, which will not survive the publish sequence.` +
+        "\nStarting the device login now. Approve it, and the release continues automatically.\n",
+    );
+    execFileSync("mcp-publisher", ["login", "github"], { cwd: root, stdio: "inherit" });
+    left = registryTokenSecondsLeft();
+    if (left < 120) fail("registry token is still not usable after login.");
+  }
+  console.log(`\nRegistry token good for ${left}s. Publishing.`);
+}
 
 run("git", ["add", "-A"], { mutating: true });
 run("git", ["commit", "-m", `release: v${version}`], { mutating: true });
