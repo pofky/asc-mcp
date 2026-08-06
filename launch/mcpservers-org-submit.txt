@@ -1,8 +1,8 @@
 Server Name
-App Store Connect
+asc-mcp
 
 Short Description
-41 tools to ship an App Store release from your agent: metadata, screenshots, builds, TestFlight, in-app purchases, submit and release.
+An MCP server for App Store Connect: 41 tools to ship a release from your agent, covering metadata, screenshots, builds, TestFlight, in-app purchases, submit and release.
 
 Link
 https://github.com/pofky/asc-mcp
