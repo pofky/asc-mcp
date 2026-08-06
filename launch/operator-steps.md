@@ -96,14 +96,40 @@ Name `App Store Connect`, then pay.
 
 ---
 
-## 4. Create a Smithery account (5 minutes, then it is scriptable forever)
+## 4. Smithery, which turned out to be the wrong question
 
-Not listed at all. `smithery.yaml` is already committed with the stdio start command and the config
-schema for the three required environment variables, so the repo side is done.
+Smithery no longer lists a local server from a repo plus a `smithery.yaml`. It now takes exactly two
+things: a **hosted HTTPS server** behind its gateway, which is impossible here because the whole
+security story is that the `.p8` never leaves the user's machine, or a **prebuilt `.mcpb` bundle**
+that clients download and run locally. The `smithery.yaml` written earlier on 6 August was based on
+stale documentation and has been deleted.
 
-1. Sign up at <https://smithery.ai> with GitHub
-2. Tell me once you are in, and the publish itself (`smithery mcp build`, then
-   `smithery mcp publish`) runs from the terminal
+So the account was never the blocker. The bundle was, and it now exists.
+
+`npm run mcpb` produces `build/asc-mcp-<version>.mcpb`, 3.3 MB, from `scripts/build-mcpb.mjs`. The
+manifest is generated from `package.json` so the version cannot drift, and production dependencies
+are resolved by npm rather than copied from the dev tree, so a dev dependency cannot ride along into
+a file users download.
+
+**The bundle matters more than the Smithery listing.** Claude for macOS and Windows installs an
+`.mcpb` in one click, and its manifest collects config natively: a file picker for the `.p8` and one
+text field for the Issuer ID. That replaces the current onboarding, which is "find your client's
+JSON config, paste a server block, know where your .p8 lives, restart", where every step is a place
+to give up and all of them happen before the product has done anything for you.
+
+Two code changes were needed to make it actually work, both verified by running the extracted bundle:
+
+- The Key ID is now derived from the `.p8` filename when the file is outside Apple's standard
+  directory. A file picker almost never returns a path in that directory, so before this every
+  bundle install would have failed with "missing credentials" while holding a file whose name
+  contains the missing value.
+- A license key that arrives as the unsubstituted literal `${user_config.asc_license_key}`, which is
+  what an optional field left blank can produce, is treated as no key instead of being posted to the
+  license server on every start.
+
+Remaining, and it needs your call: the bundle has to be attached to a GitHub release to be
+installable, which means cutting v1.9.1 (npm publish plus the registry). See the release note at the
+bottom of this file.
 
 ---
 
@@ -139,3 +165,21 @@ thread produces no such request, that is the answer, and it cost a day rather th
 - **The site does not deploy on `git push`.** It needs
   `npx wrangler pages deploy site --project-name=asc-mcp --branch=master`. Deploying to `main`
   silently lands as a preview.
+
+---
+
+## Pending decision: cut v1.9.1 to ship the bundle
+
+The `.mcpb` is built and verified locally, but it is not distributable until it is attached to a
+GitHub release. That means a version bump, an npm publish and a registry publish, all of which touch
+a package with paying customers, so it is not something to do without asking.
+
+What would go into 1.9.1:
+
+- Key ID derived from the `.p8` filename for keys outside the standard directory (fixes every MCPB
+  install, and also helps anyone who keeps their key somewhere else today).
+- Unsubstituted config placeholders no longer sent to the license server.
+- `.mcpb` bundle attached as a release asset, plus a one-click install line in the README.
+- The registry description finally goes out, which is what fixes the stale PulseMCP listing.
+
+186 tests pass. The npm-lag lesson applies: publish in the same session as the version bump.

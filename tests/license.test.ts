@@ -69,3 +69,16 @@ describe("validateLicense", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+// The .mcpb bundle declares the license key as optional, and an optional field
+// left blank can arrive as the literal placeholder instead of as an absent
+// variable. Sending that to /validate is a guaranteed-invalid round trip on
+// every start for someone who has simply not bought anything yet.
+describe("license key placeholder from an .mcpb install", () => {
+  it("treats an unsubstituted placeholder as no key", async () => {
+    expect(await validateLicense("${user_config.asc_license_key}")).toBe("free");
+  });
+  it("treats whitespace as no key", async () => {
+    expect(await validateLicense("   ")).toBe("free");
+  });
+});

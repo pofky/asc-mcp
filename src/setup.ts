@@ -31,6 +31,23 @@ export function discoverPrivateKey(dir = STANDARD_KEY_DIR): DiscoveredKey | null
 }
 
 /**
+ * The Key ID encoded in a `.p8` filename, for a key that is NOT in the standard
+ * directory.
+ *
+ * Apple names the download `AuthKey_XXXXXXXXXX.p8` wherever it lands, so a user
+ * who points at their own path has already told us the Key ID. Without this,
+ * anyone whose key lives outside `~/.appstoreconnect/private_keys` has to find
+ * and type a 10-character string that is sitting in the filename they just
+ * picked. That is the whole friction of the MCPB install, where the user
+ * chooses the file with a native picker and never sees a path at all.
+ */
+export function keyIdFromPath(path: string): string | null {
+  const base = path.split(/[\\/]/).pop() ?? "";
+  const match = /^AuthKey_([A-Z0-9]{10})\.p8$/i.exec(base);
+  return match ? match[1] : null;
+}
+
+/**
  * How the client should launch the server. The documented install path is
  * `npx @pofky/asc-mcp init`, which never puts an `asc-mcp` binary on PATH, so a
  * config saying `"command": "asc-mcp"` fails to start for everyone who did not
