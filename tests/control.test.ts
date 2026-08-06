@@ -4,7 +4,7 @@ import { ASCAPIError } from "../src/client.js";
 import { listBuilds } from "../src/tools/builds.js";
 import { createIAP } from "../src/tools/iap.js";
 import { setAppAvailability } from "../src/tools/availability.js";
-import { discoverPrivateKey } from "../src/setup.js";
+import { discoverPrivateKey, keyIdFromPath } from "../src/setup.js";
 import { updateVersionMetadata } from "../src/tools/update-version-metadata.js";
 import { createVersion, submitForReview } from "../src/tools/version-control.js";
 import { listBuilds, attachBuild } from "../src/tools/builds.js";
@@ -176,6 +176,27 @@ describe("discoverPrivateKey", () => {
     const found = discoverPrivateKey(dir);
     expect(found?.keyId).toBe("ABCDE12345");
     expect(found?.path).toContain("AuthKey_ABCDE12345.p8");
+  });
+});
+
+// The MCPB bundle hands us a path the user chose with a native file picker, so
+// it is almost never in the standard directory and ASC_KEY_ID is never set.
+// Without deriving it from the filename, every such install fails with "missing
+// credentials" while holding a file whose name contains the missing value.
+describe("keyIdFromPath", () => {
+  it("derives the Key ID from a path outside the standard directory", () => {
+    expect(keyIdFromPath("/Users/x/Downloads/AuthKey_ABCDE12345.p8")).toBe("ABCDE12345");
+  });
+  it("handles Windows separators", () => {
+    expect(keyIdFromPath("C:\\Users\\x\\Desktop\\AuthKey_ABCDE12345.p8")).toBe("ABCDE12345");
+  });
+  it("is case-insensitive on the prefix but preserves the Key ID", () => {
+    expect(keyIdFromPath("/tmp/authkey_abcde12345.p8")).toBe("abcde12345");
+  });
+  it("returns null for a renamed key, rather than guessing", () => {
+    expect(keyIdFromPath("/tmp/my-apple-key.p8")).toBeNull();
+    expect(keyIdFromPath("/tmp/AuthKey_TOOSHORT.p8")).toBeNull();
+    expect(keyIdFromPath("")).toBeNull();
   });
 });
 

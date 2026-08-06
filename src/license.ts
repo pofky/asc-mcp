@@ -8,12 +8,28 @@ let cachedStatus: LicenseStatus | null = null;
 let cachedAt = 0;
 
 /**
+ * Whether a key is worth sending to the license server at all.
+ *
+ * The `.mcpb` bundle declares the license key as an optional user config field,
+ * and an optional field the user leaves blank can reach the process as the
+ * literal `${user_config.asc_license_key}` rather than as an absent variable.
+ * Posting that to /validate is a guaranteed-invalid round trip on every start,
+ * and it puts a nonsense row in the license server's rate limiter for someone
+ * who has simply not bought anything yet.
+ */
+function usableKey(key?: string): key is string {
+  if (!key) return false;
+  const trimmed = key.trim();
+  return trimmed.length > 0 && !trimmed.includes("${");
+}
+
+/**
  * Validate the license key against the remote license server.
  * Returns the user's tier (free or pro).
  * Results are cached for 24 hours to avoid per-call latency.
  */
 export async function validateLicense(licenseKey?: string): Promise<Tier> {
-  if (!licenseKey) return "free";
+  if (!usableKey(licenseKey)) return "free";
 
   const now = Date.now();
   if (cachedStatus && now - cachedAt < CACHE_TTL_MS) {

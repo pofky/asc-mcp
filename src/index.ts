@@ -40,7 +40,7 @@ import { setAppAvailability } from "./tools/availability.js";
 import { setupAppStoreSigning } from "./tools/signing.js";
 import { ascGuide } from "./tools/guide.js";
 import { runDoctor, formatDoctor } from "./doctor.js";
-import { discoverPrivateKey, runInit, injectLicenseKey } from "./setup.js";
+import { discoverPrivateKey, keyIdFromPath, runInit, injectLicenseKey } from "./setup.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { UPGRADE_URL } from "./gate.js";
@@ -73,9 +73,15 @@ function getConfig(): ASCConfig | null {
   // Auto-discover the .p8 in Apple's standard path so a dropped key + Issuer ID
   // is enough - no need to hand-set ASC_KEY_ID / ASC_PRIVATE_KEY_PATH.
   const discovered = discoverPrivateKey();
-  const keyId = process.env.ASC_KEY_ID || discovered?.keyId;
   const issuerId = process.env.ASC_ISSUER_ID;
   const privateKeyPath = process.env.ASC_PRIVATE_KEY_PATH || discovered?.path;
+  // An explicit path outside the standard directory still carries its Key ID in
+  // the filename Apple gave it, so derive it rather than demanding the user
+  // retype what they just pointed at.
+  const keyId =
+    process.env.ASC_KEY_ID ||
+    discovered?.keyId ||
+    (privateKeyPath ? keyIdFromPath(privateKeyPath) : null);
 
   if (!keyId || !issuerId || !privateKeyPath) return null;
 
