@@ -22,10 +22,12 @@ CREATE TABLE IF NOT EXISTS licenses (
 CREATE INDEX IF NOT EXISTS idx_licenses_key ON licenses(key);
 CREATE INDEX IF NOT EXISTS idx_licenses_polar_sub ON licenses(polar_subscription_id);
 
+-- One trial per Apple developer account. Not per email: an email address is
+-- something anyone can type, so making it an anchor would let a stranger burn a
+-- real user's trial. See migrations/0001-trial-and-intent.sql.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_licenses_trial_fp
   ON licenses(trial_fingerprint) WHERE trial_fingerprint IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_licenses_trial_email
-  ON licenses(email) WHERE source = 'trial' AND email IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_licenses_email ON licenses(email);
 
 CREATE TABLE IF NOT EXISTS intent_events (
   day TEXT NOT NULL,

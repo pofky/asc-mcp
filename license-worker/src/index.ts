@@ -11,6 +11,8 @@
  *   GET  /key            - key retrieval form
  *   POST /key            - key lookup by email (rate-limited)
  *   GET  /admin/stats    - intent + trial funnel (ADMIN_TOKEN)
+ *   POST /delete         - request deletion; emails a signed confirmation link
+ *   GET  /delete/confirm - the signed link; this is what actually deletes
  */
 
 import {
@@ -35,6 +37,10 @@ import {
   verifyPolarSignature,
   candidateKeys,
   pickLookupRow,
+  timingSafeEqual,
+  signDeleteToken,
+  verifyDeleteToken,
+  DELETE_TOKEN_TTL_MS,
   type LookupRow,
 } from "./logic.js";
 
@@ -63,6 +69,9 @@ interface Env {
   ADMIN_TOKEN?: string;
   // Guards POST /admin/announce (product announcement to an existing customer).
   ANNOUNCE_TOKEN?: string;
+  // Signs the emailed confirmation link for GDPR deletion. Falls back to
+  // ADMIN_TOKEN; with neither, /delete refuses instead of deleting unverified.
+  DELETE_SECRET?: string;
 }
 
 interface ValidateRequest {
@@ -116,13 +125,12 @@ export default {
 
     // Only /validate and /health need open CORS (called from local MCP server process)
     // HTML pages (/key, /success) are same-origin form submissions - no CORS needed
-    // /trial joins these: like /validate it is called by the MCP server running
-    // on the user's own machine, not by a browser on this origin.
-    if (
-      url.pathname === "/validate" ||
-      url.pathname === "/health" ||
-      url.pathname === "/trial"
-    ) {
+    //
+    // /trial is deliberately NOT here. It is called by a Node process on the
+    // user's machine, which has no origin and needs no CORS header at all.
+    // Granting the wildcard only enabled one thing: any web page a user visits
+    // silently POSTing a trial request in their browser, charged to their IP.
+    if (url.pathname === "/validate" || url.pathname === "/health") {
       corsHeaders["Access-Control-Allow-Origin"] = "*";
     }
 
@@ -185,6 +193,10 @@ export default {
 
       if (url.pathname === "/delete" && request.method === "POST") {
         return await handleDeleteRequest(request, env, corsHeaders);
+      }
+
+      if (url.pathname === "/delete/confirm" && request.method === "GET") {
+        return await handleDeleteConfirm(url, env, corsHeaders);
       }
 
       if (url.pathname === "/delete" && request.method === "GET") {
@@ -428,6 +440,43 @@ interface TrialRequest {
 }
 
 /**
+ * The single refusal, used for every reason a trial cannot start.
+ *
+ * Branching the message told an unauthenticated caller whether a given email
+ * belonged to a paying subscriber, which with a handful of customers is a
+ * meaningful disclosure. One message covers all of it and still tells a real
+ * user the two things they can do.
+ */
+function trialRefused(email: string) {
+  return {
+    error: "trial_unavailable",
+    message:
+      `No new trial is available for ${email}. If you already have Pro, get your key at ` +
+      "https://asc-mcp-license.remewdy.workers.dev/key . If your trial has ended, Pro is $9/month.",
+    checkout_url: buildCheckoutUrl("trial_unavailable", email),
+  };
+}
+
+/**
+ * Ceiling on trials created in one UTC day.
+ *
+ * Every trial sends mail through Brevo, whose free tier is 300 a day, and the
+ * per-IP limiter lives in one isolate's memory so it does not bind across
+ * Cloudflare PoPs. Without a hard cap, a distributed script could exhaust the
+ * mail quota, which would take down the licence emails paying customers depend
+ * on and put the sender domain's reputation at risk. Well above any plausible
+ * real day: 30 trials a day would be a very good problem.
+ */
+const TRIALS_PER_DAY_MAX = 60;
+
+async function trialsCreatedToday(env: Env): Promise<number> {
+  const row = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM licenses WHERE source = 'trial' AND created_at >= datetime('now','start of day')",
+  ).first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+/**
  * Mint a 7-day Pro trial, no card, called by the MCP server on the user's
  * machine when they ask their agent to start a trial.
  *
@@ -500,16 +549,7 @@ async function handleTrial(
     .first<{ id: number }>();
 
   if (paid) {
-    return json(
-      {
-        error: "already_pro",
-        message:
-          "That email already has an active Pro subscription, so there is nothing to trial. " +
-          "Retrieve the key at https://asc-mcp-license.remewdy.workers.dev/key and set it as ASC_LICENSE_KEY.",
-      },
-      headers,
-      409,
-    );
+    return json(trialRefused(email), headers, 409);
   }
 
   // Repeat call for a trial we already minted: hand back the same key. Asking an
@@ -534,14 +574,22 @@ async function handleTrial(
         headers,
       );
     }
+    return json(trialRefused(email), headers, 409);
+  }
+
+  // Checked only on the path that actually creates a row, so a legitimate
+  // repeat caller is never turned away by someone else's abuse.
+  if ((await trialsCreatedToday(env)) >= TRIALS_PER_DAY_MAX) {
+    console.error("daily trial cap reached");
     return json(
       {
-        error: "trial_used",
-        message: `Your ${TRIAL_DAYS}-day trial has ended. Pro is $9/month.`,
-        checkout_url: buildCheckoutUrl("trial_expired", email),
+        error: "capacity",
+        message:
+          "Trials are temporarily unavailable. Email povkonop@gmail.com and you will get one manually, same day.",
+        checkout_url: buildCheckoutUrl("trial_capacity", email),
       },
       headers,
-      409,
+      503,
     );
   }
 
@@ -565,17 +613,17 @@ async function handleTrial(
     .first<{ key: string; expires_at: string | null }>();
 
   if (!minted) {
-    // The insert was ignored and no row carries this fingerprint, so it was the
-    // email index that blocked: this address has already had its trial on
-    // another Apple account.
+    // Uniqueness is on the fingerprint, which we already checked, so reaching
+    // here means the insert lost to something else entirely (a key collision,
+    // a write failure). Do not claim the trial was used.
+    console.error("trial insert produced no row");
     return json(
       {
-        error: "trial_used",
-        message: `${email} has already used a ${TRIAL_DAYS}-day trial. Pro is $9/month.`,
-        checkout_url: buildCheckoutUrl("trial_used", email),
+        error: "mint_failed",
+        message: "Could not create the trial just now. Try again in a moment.",
       },
       headers,
-      409,
+      503,
     );
   }
 
@@ -613,7 +661,7 @@ async function handleAdminStats(
   headers: Record<string, string>,
 ): Promise<Response> {
   const auth = request.headers.get("x-admin-secret") || "";
-  if (!env.ADMIN_TOKEN || auth !== env.ADMIN_TOKEN) {
+  if (!env.ADMIN_TOKEN || !timingSafeEqual(auth, env.ADMIN_TOKEN)) {
     return json({ error: "Unauthorized" }, headers, 401);
   }
 
@@ -664,7 +712,7 @@ async function handleAdminProvision(
   headers: Record<string, string>,
 ): Promise<Response> {
   const auth = request.headers.get("x-admin-secret") || "";
-  if (!env.ADMIN_TOKEN || auth !== env.ADMIN_TOKEN) {
+  if (!env.ADMIN_TOKEN || !timingSafeEqual(auth, env.ADMIN_TOKEN)) {
     return json({ error: "Unauthorized" }, headers, 401);
   }
 
@@ -716,7 +764,7 @@ async function handleAdminAnnounce(
   headers: Record<string, string>,
 ): Promise<Response> {
   const auth = request.headers.get("x-announce-token") || "";
-  if (!env.ANNOUNCE_TOKEN || auth !== env.ANNOUNCE_TOKEN) {
+  if (!env.ANNOUNCE_TOKEN || !timingSafeEqual(auth, env.ANNOUNCE_TOKEN)) {
     return json({ error: "Unauthorized" }, headers, 401);
   }
 
@@ -1048,11 +1096,11 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <p>Payments are handled by <a href="https://polar.sh">Polar.sh</a>, who acts as Merchant of Record. We never see your credit card details. Polar's privacy policy applies to the checkout process.</p>
 
     <h2>Data retention</h2>
-    <p>Active subscription data is kept while your subscription is active. After cancellation, your email and license data are deleted within 90 days.</p>
-    <p>Trial records (email, key, expiry, fingerprint) are kept after the trial ends, because deleting them is the same as handing out a second free trial. You can delete them at any time at <a href="/delete">/delete</a>, which also removes the fingerprint.</p>
+    <p>We keep your email, license key and subscription id for as long as the record exists, including after a subscription is cancelled or a trial ends. Two honest reasons: a cancelled subscriber who resubscribes should get their history back rather than a support ticket, and deleting a finished trial record is the same as handing out a second free trial.</p>
+    <p>You can delete all of it whenever you like at <a href="/delete">/delete</a>. We email you a confirmation link first, so that nobody can remove your license by typing your address into a form, and the deletion runs when you click it. This is the only deletion mechanism: there is no automatic purge on a timer, and we would rather say so than publish a promise no code keeps.</p>
 
     <h2>Your rights (GDPR)</h2>
-    <p>You can request access to, correction of, or deletion of your personal data at any time. To delete your data, visit <a href="/delete">/delete</a> or email us.</p>
+    <p>You can request access to, correction of, or deletion of your personal data at any time. To delete your data, visit <a href="/delete">/delete</a> and click the link we email you, or just email us and we will do it by hand.</p>
 
     <h2>Contact</h2>
     <p>For privacy questions: povkonop@gmail.com</p>
@@ -1125,16 +1173,123 @@ function handleDeletePage(headers: Record<string, string>): Response {
   `, headers);
 }
 
+/**
+ * The secret used to sign deletion links. Falls back to the admin token so this
+ * cannot silently degrade to an unsigned flow if a dedicated secret was never
+ * set; if neither exists the endpoint refuses rather than deleting.
+ */
+function deleteSecret(env: Env): string | null {
+  return env.DELETE_SECRET || env.ADMIN_TOKEN || null;
+}
+
+/**
+ * Step one of deletion: email a signed, expiring confirmation link.
+ *
+ * This used to delete on a bare unauthenticated form post, which meant anyone
+ * who knew a customer's address could revoke that customer's licence and leave
+ * them broken until their next renewal webhook rebuilt the row. It also erased
+ * the trial fingerprint, handing out a second free trial.
+ *
+ * The response is identical whether or not the address is known, so this is not
+ * a way to discover who the customers are.
+ */
 async function handleDeleteRequest(
   request: Request,
   env: Env,
   headers: Record<string, string>,
 ): Promise<Response> {
-  const formData = await request.formData();
-  const email = formData.get("email") as string;
+  if (!rateLimit(request, "delete")) {
+    return html(
+      "<h1>Too many attempts</h1><p>Please wait 15 minutes before trying again.</p>",
+      headers,
+      429,
+    );
+  }
 
-  if (!email) {
+  const formData = await request.formData();
+  const email = ((formData.get("email") as string) || "").trim().toLowerCase();
+
+  if (!isValidEmail(email)) {
     return html("<h1>Email required</h1><p><a href='/delete'>Try again</a></p>", headers, 400);
+  }
+
+  const sameAnswer = html(`
+    <h1>Check your email</h1>
+    <p>If <strong>${escapeHtml(email)}</strong> has data here, a confirmation link is on its way. It is valid for one hour.</p>
+    <p>Deleting is not reversible, so the link is the confirmation step: nobody can remove your licence by typing your address into this form.</p>
+  `, headers);
+
+  const secret = deleteSecret(env);
+  if (!secret) {
+    console.error("delete requested but no signing secret configured");
+    return html(
+      "<h1>Not available right now</h1><p>Email povkonop@gmail.com and your data will be deleted manually, same day.</p>",
+      headers,
+      503,
+    );
+  }
+
+  const row = await env.DB.prepare("SELECT id FROM licenses WHERE email = ?")
+    .bind(email)
+    .first<{ id: number }>();
+  if (!row) return sameAnswer;
+
+  if (!env.BREVO_API_KEY) {
+    console.error("delete requested but email is not configured");
+    return html(
+      "<h1>Not available right now</h1><p>Email povkonop@gmail.com and your data will be deleted manually, same day.</p>",
+      headers,
+      503,
+    );
+  }
+
+  const token = await signDeleteToken(secret, email, Date.now() + DELETE_TOKEN_TTL_MS);
+  const link = `https://asc-mcp-license.remewdy.workers.dev/delete/confirm?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+
+  await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": env.BREVO_API_KEY,
+      "Content-Type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender: {
+        name: env.BREVO_SENDER_NAME || "App Store Connect MCP",
+        email: env.BREVO_SENDER_EMAIL || "license@brewist.app",
+      },
+      to: [{ email }],
+      subject: "Confirm deleting your App Store Connect MCP data",
+      htmlContent: `
+        <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
+          <h1 style="font-size:20px">Confirm deletion</h1>
+          <p>Someone asked to delete the App Store Connect MCP licence data for this address. If that was you, confirm here:</p>
+          <p><a href="${link}">Delete my data</a></p>
+          <p>The link expires in one hour. Your licence key stops working once you use it, and if you have an active subscription you should cancel it separately at polar.sh.</p>
+          <p style="color:#666;font-size:14px">If this was not you, ignore this email. Nothing has been deleted, and nobody can delete your data without this link.</p>
+        </div>`,
+    }),
+  });
+
+  return sameAnswer;
+}
+
+/** Step two: the signed link actually deletes. */
+async function handleDeleteConfirm(
+  url: URL,
+  env: Env,
+  headers: Record<string, string>,
+): Promise<Response> {
+  const email = (url.searchParams.get("email") || "").trim().toLowerCase();
+  const token = url.searchParams.get("token") || "";
+  const secret = deleteSecret(env);
+
+  if (!secret || !isValidEmail(email) || !(await verifyDeleteToken(secret, email, token, Date.now()))) {
+    return html(
+      "<h1>This link is not valid</h1><p>It may have expired (they last one hour). <a href='/delete'>Request a new one</a>.</p>",
+      headers,
+      400,
+    );
   }
 
   await env.DB.prepare("DELETE FROM licenses WHERE email = ?").bind(email).run();
@@ -1142,7 +1297,7 @@ async function handleDeleteRequest(
   return html(`
     <h1>Data Deleted</h1>
     <p>All license data associated with <strong>${escapeHtml(email)}</strong> has been removed from our systems.</p>
-    <p>If you have an active Polar subscription, please cancel it separately at <a href="https://polar.sh">polar.sh</a>.</p>
+    <p>If you have an active Polar subscription, please cancel it separately at <a href="https://polar.sh">polar.sh</a>, otherwise it will keep billing and issue you a new key.</p>
   `, headers);
 }
 

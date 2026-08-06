@@ -365,9 +365,53 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
+/**
+ * Constant-time string compare. Used for webhook signatures and for the admin
+ * tokens: `!==` short-circuits on the first differing character, which leaks
+ * the prefix of a secret to anyone willing to measure.
+ */
+export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let r = 0;
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
 }
+
+/** How long a deletion confirmation link stays valid. */
+export const DELETE_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+export async function signDeleteToken(
+  secret: string,
+  email: string,
+  expiresAt: number,
+): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(`${email}.${expiresAt}`),
+  );
+  const hex = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${expiresAt}.${hex}`;
+}
+
+export async function verifyDeleteToken(
+  secret: string,
+  email: string,
+  token: string,
+  now: number,
+): Promise<boolean> {
+  const dot = token.indexOf(".");
+  if (dot <= 0) return false;
+  const expiresAt = Number(token.slice(0, dot));
+  if (!Number.isFinite(expiresAt) || expiresAt < now) return false;
+  const expected = await signDeleteToken(secret, email, expiresAt);
+  return timingSafeEqual(token, expected);
+}
+
