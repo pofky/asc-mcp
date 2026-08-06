@@ -267,7 +267,7 @@ function renderFlow(f: Flow): string {
 
 function renderOverview(): string {
   const lines = [
-    "# App Store Connect MCP - Guide",
+    "# asc-mcp guide (App Store Connect)",
     "",
     "Call `asc_guide` with a `topic` for the exact playbook. Manual steps (things no API can do) are flagged inline so you never get blocked mid-flow.",
     "",

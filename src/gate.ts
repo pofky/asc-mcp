@@ -80,5 +80,12 @@ function keyAdvice(): string {
       `${LICENSE_API_URL}/health`
     );
   }
-  return "Already have a key? Set ASC_LICENSE_KEY in your MCP server config.";
+  // A one-click install has no server block in any client config file, so
+  // "set ASC_LICENSE_KEY in your MCP server config" sends a bundle user hunting
+  // for JSON that does not exist. Same split as the trial tool's persistence
+  // message: the manifest sets ASC_INSTALL, and that is the only way to tell
+  // the two populations apart from inside the process.
+  return process.env.ASC_INSTALL === "mcpb"
+    ? "Already have a key? Paste it into Claude Settings > Extensions > asc-mcp > Configure > License key, then Save."
+    : "Already have a key? Set ASC_LICENSE_KEY in your MCP server config.";
 }

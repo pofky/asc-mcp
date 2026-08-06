@@ -163,7 +163,7 @@ export async function runDoctor(): Promise<DoctorReport> {
     checks.push({
       name: "License",
       status: "warn",
-      detail: "Free tier: read + intelligence tools only. Not a problem; the free tools work.",
+      detail: "Free tier: the read tools (list_apps, app_details, review_status) work. The write, control and intelligence tools need Pro.",
       fix: credentialsPresent
         ? "Run `asc_start_trial` for 7 days of everything, no card. It unlocks write/control " +
           "(metadata, screenshots, builds, submit, IAP/subs) in this session, no restart. " +
@@ -196,7 +196,7 @@ const ICON: Record<CheckStatus, string> = { ok: "[OK]  ", warn: "[WARN]", fail: 
 
 /** Human-readable report for the CLI and the MCP tool. */
 export function formatDoctor(report: DoctorReport): string {
-  const lines = ["App Store Connect MCP, setup check", "=".repeat(40), ""];
+  const lines = ["asc-mcp setup check", "=".repeat(40), ""];
   for (const c of report.checks) {
     lines.push(`${ICON[c.status]} ${c.name}: ${c.detail}`);
     if (c.fix && c.status !== "ok") lines.push(`        Fix: ${c.fix}`);

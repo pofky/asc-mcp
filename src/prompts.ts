@@ -39,7 +39,7 @@ export function registerPrompts(server: McpServer): PromptRegistration[] {
           content: {
             type: "text" as const,
             text: [
-              "I'm new to this App Store Connect MCP. Get me oriented. Do this in order and keep it friendly and concise:",
+              "I'm new to asc-mcp, an MCP server for App Store Connect. Get me oriented. Do this in order and keep it friendly and concise:",
               "",
               "1. Call `asc_setup_check`. If anything is [FAIL], stop and walk me through the printed fix (most often a wrong Issuer ID, or a .p8 that is not where the tool looks). Do not continue until the connection is OK. A [WARN] about the license is not a failure: the free tier works, so carry on.",
               "2. Call `list_apps` and show me my apps with their IDs.",

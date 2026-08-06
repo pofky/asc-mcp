@@ -437,6 +437,31 @@ describe("the gate adapts to a trial that has already been spent", () => {
     // and it still tells a converted customer how to recover their paid key
     expect(msg).toContain("already subscribed");
   });
+
+  /**
+   * The last line of the gate told everyone to "set ASC_LICENSE_KEY in your MCP
+   * server config". A one-click install has no server block in any config file,
+   * so that sent bundle users hunting for JSON that does not exist, right after
+   * they chose the install path whose whole point is that there is no JSON.
+   * Same split, and same ASC_INSTALL marker, as the trial tool's own message.
+   */
+  it("points a one-click install at its own settings field, not at JSON", () => {
+    clearLicenseCache();
+    const before = process.env.ASC_INSTALL;
+    try {
+      process.env.ASC_INSTALL = "mcpb";
+      const bundled = requirePro("free", "Submitting for review", "submit_for_review")!;
+      expect(bundled).toContain("Extensions > asc-mcp > Configure > License key");
+      expect(bundled).not.toContain("in your MCP server config");
+
+      delete process.env.ASC_INSTALL;
+      const npx = requirePro("free", "Submitting for review", "submit_for_review")!;
+      expect(npx).toContain("Set ASC_LICENSE_KEY in your MCP server config");
+    } finally {
+      if (before === undefined) delete process.env.ASC_INSTALL;
+      else process.env.ASC_INSTALL = before;
+    }
+  });
 });
 
 describe("injectLicenseKey only touches blocks that really are this server", () => {
