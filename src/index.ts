@@ -207,7 +207,7 @@ async function main() {
     {
       title: "Start a free 7-day Pro trial",
       description:
-        "Start a FREE 7-day trial of Pro, with no credit card, unlocking all 41 tools including the full write/control plane. Call this whenever a Pro tool is refused and the user wants to proceed: ask them for an email address first, then call this. The trial activates in THIS session immediately, so you can retry the tool that was blocked without any restart. Free.",
+        "Start a free 7-day Pro trial, no credit card, unlocking all 41 tools including the full write/control plane. Call this whenever a Pro tool is refused and the user wants to proceed: ask them for an email address first, then call this. The trial activates in THIS session immediately, so you can retry the tool that was blocked without any restart. Free.",
       inputSchema: {
         email: z
           .string()
@@ -241,8 +241,7 @@ async function main() {
 
       if (!result.ok) {
         return text(
-          `Could not start a trial: ${result.message}` +
-            (result.checkout_url ? `\n\nSubscribe: ${result.checkout_url}` : ""),
+          result.message + (result.checkout_url ? `\n\nSubscribe: ${result.checkout_url}` : ""),
         );
       }
 
@@ -336,21 +335,21 @@ async function main() {
 
   server.tool(
     "release_preflight",
-    "Pre-submission audit: checks metadata, character limits, screenshots, build status. Catches rejection causes before you submit.",
+    "Pre-submission audit: checks metadata, character limits, screenshots, build status. Catches rejection causes before you submit. Pro feature.",
     { app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID") },
     safe((args) => releasePreflight(client, args, tier)),
   );
 
   server.tool(
     "daily_briefing",
-    "Morning briefing across all apps: version status, recent reviews, rejections, action items. One call for full situational awareness.",
+    "Morning briefing across all apps: version status, recent reviews, rejections, action items. One call for full situational awareness. Pro feature.",
     { days: z.number().optional().describe("Look back N days for reviews (default 3)") },
     safe((args) => dailyBriefing(client, args, tier)),
   );
 
   server.tool(
     "release_notes",
-    "Extract git commits since last tag and return structured data for writing App Store 'What's New' text. Categorizes changes and provides writing guidelines.",
+    "Extract git commits since last tag and return structured data for writing App Store 'What's New' text. Categorizes changes and provides writing guidelines. Pro feature.",
     {
       project_path: z.string().optional().describe("Path to git project (default: current directory)"),
       since_tag: z.string().optional().describe("Git tag to diff from (default: latest tag)"),
@@ -361,7 +360,7 @@ async function main() {
 
   server.tool(
     "keyword_insights",
-    "Analyze your app's keywords against search competition. Shows difficulty, competing apps, and budget usage. Uses iTunes Search API.",
+    "Analyze your app's keywords against search competition. Shows difficulty, competing apps, and budget usage. Uses iTunes Search API. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       extra_keywords: z.string().optional().describe("Extra comma-separated keywords to analyze beyond current metadata"),
@@ -371,7 +370,7 @@ async function main() {
 
   server.tool(
     "competitor_snapshot",
-    "Look up any app on the App Store: ratings, reviews, version, price, category, release notes. Search by name or App Store ID.",
+    "Look up any app on the App Store: ratings, reviews, version, price, category, release notes. Search by name or App Store ID. Pro feature.",
     {
       query: z.string().describe('App name (e.g. "Medisafe") or numeric App Store ID'),
       country: z.string().optional().describe("Two-letter country code (default: us)"),
@@ -381,7 +380,7 @@ async function main() {
 
   server.tool(
     "metadata_diff",
-    "Compare metadata between your live and pending app versions. Shows what changed in descriptions, keywords, and release notes across locales.",
+    "Compare metadata between your live and pending app versions. Shows what changed in descriptions, keywords, and release notes across locales. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
     },
@@ -503,7 +502,7 @@ async function main() {
 
   server.tool(
     "wait_for_build",
-    "Poll until the newest uploaded build finishes processing (VALID), so the ship flow is one call. Pro feature.",
+    "Poll until the newest uploaded build finishes processing (VALID), so the ship flow is one call. Blocks for up to 30 minutes by default; if you should not hold the session that long, call list_builds yourself instead. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       max_wait_seconds: z.number().optional().describe("Max seconds to wait (default 1800, cap 3600)"),

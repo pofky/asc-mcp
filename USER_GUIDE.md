@@ -35,7 +35,7 @@ Steps:
 
 Manual interruptions you must do yourself:
 - MANUAL: generating the API key and downloading the .p8 is a one-time App Store Connect website action. The .p8 cannot be re-downloaded; if lost, revoke and make a new one.
-- Free tier is read/intelligence only. To unlock every write/control tool, call `asc_start_trial` with the user's email: 7 days, no card, and it takes effect in the running session with no restart. After that it is $9/mo (ASC_LICENSE_KEY).
+- Free tier is read/intelligence only. To unlock every write/control tool, call `asc_start_trial` with the user's email: 7 days, no card, and it takes effect in the running session with no restart. After that it is $9/month (ASC_LICENSE_KEY).
 
 ---
 

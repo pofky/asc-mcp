@@ -893,7 +893,7 @@ async function sendLicenseEmail(
       <h1 style="font-size:20px">Your App Store Connect MCP Pro license</h1>
       <p>Thanks for subscribing. Here is your license key:</p>
       <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
-      <p>Add it to your MCP server config alongside your App Store Connect credentials:</p>
+      <p>If your <code>.p8</code> is in <code>~/.appstoreconnect/private_keys/</code>, this block is complete once you fill in your Issuer ID. If the key lives somewhere else, add <code>ASC_PRIVATE_KEY_PATH</code> to the same env block.</p>
       <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">${CONFIG_SNIPPET(safeKey)}</pre>
       <p>Not set up yet? Drop your <code>.p8</code> into <code>~/.appstoreconnect/private_keys/</code> and run <code>npx @pofky/asc-mcp init --write</code>; it asks for your Issuer ID and this key, then writes the config for you.</p>
       <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.), then ask it to "list my App Store Connect apps" to confirm Pro is active.</p>
@@ -1004,34 +1004,42 @@ function generateLicenseKey(): string {
   return `ASC-${parts.join("-")}`;
 }
 
+const EMAIL_FIELD = (label: string, button: string, colour = "#4f46e5") => `
+    <form method="POST" action="/key">
+      <label for="email">${label}</label>
+      <input id="email" type="email" name="email" placeholder="you@example.com" required autocomplete="email"
+        style="padding:10px;font-size:16px;width:min(300px,100%);border:1px solid #555;border-radius:6px;background:#1a1a2e;color:#fff">
+      <button type="submit"
+        style="padding:10px 20px;font-size:16px;background:${colour};color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:8px">
+        ${button}
+      </button>
+    </form>`;
+
+/**
+ * Where Polar sends someone the moment they pay. It is the first thing they see
+ * after trusting an unknown developer with $9 and, shortly, an Apple signing
+ * key, so it says what happens next and who to contact rather than presenting a
+ * bare form.
+ */
 function handleSuccess(headers: Record<string, string>): Response {
   return html(`
-    <h1>Thanks for subscribing!</h1>
-    <p>Your Pro license is ready. Enter the email you used at checkout to retrieve your license key:</p>
-    <form method="POST" action="/key">
-      <input type="email" name="email" placeholder="you@example.com" required
-        style="padding:10px;font-size:16px;width:300px;border:1px solid #555;border-radius:6px;background:#1a1a2e;color:#fff">
-      <button type="submit"
-        style="padding:10px 20px;font-size:16px;background:#4f46e5;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-left:8px">
-        Get License Key
-      </button>
-    </form>
-  `, headers);
+    <h1>Subscription confirmed</h1>
+    <p>Your key is being generated now, and it usually takes a few seconds. It is also emailed to you, so you do not have to keep this page.</p>
+    ${EMAIL_FIELD("The email you used at checkout", "Get my license key")}
+
+    <h2>Then what</h2>
+    <p>Put the key in your MCP config as <code>ASC_LICENSE_KEY</code> and restart your agent, or run <code>npx @pofky/asc-mcp init --write</code> and it will do it for you. The next page gives you a complete config block to paste.</p>
+
+    <p class="muted">Nothing showing after a minute? That is on us, not you. Email <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a> with the address you checked out with and you will get a key back the same day.</p>
+  `, headers, 200, { title: "Subscription confirmed", noindex: true });
 }
 
 function handleKeyPage(headers: Record<string, string>): Response {
   return html(`
-    <h1>Retrieve Your License Key</h1>
-    <p>Enter the email you used when purchasing App Store Connect MCP Pro:</p>
-    <form method="POST" action="/key">
-      <input type="email" name="email" placeholder="you@example.com" required
-        style="padding:10px;font-size:16px;width:300px;border:1px solid #555;border-radius:6px;background:#1a1a2e;color:#fff">
-      <button type="submit"
-        style="padding:10px 20px;font-size:16px;background:#4f46e5;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-left:8px">
-        Look Up Key
-      </button>
-    </form>
-  `, headers);
+    <h1>Retrieve your license key</h1>
+    <p>Enter the email you subscribed with, or the one you started a trial with.</p>
+    ${EMAIL_FIELD("Your email address", "Look up my key")}
+  `, headers, 200, { title: "Retrieve your license key", noindex: true });
 }
 
 
@@ -1069,8 +1077,8 @@ async function handleKeyLookup(
       <p>No active Pro license found for <strong>${escapeHtml(email)}</strong>.</p>
       <p>If you just purchased, it may take a minute for the webhook to process. <a href="/key">Try again</a>.</p>
       <p>Still nothing after a few minutes? Email <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a> with the email you checked out with and we will sort it out quickly.</p>
-      <p>Need to subscribe? <a href="${CHECKOUT_URL}">Get Pro</a></p>
-    `, headers);
+      <p>Never had one? Pro is $9/month, and there is a free 7-day trial you start from inside your agent by asking it to run <code>asc_start_trial</code>. <a href="${CHECKOUT_URL}">Subscribe here</a>.</p>
+    `, headers, 200, { title: "No active license found", noindex: true });
   }
 
   return html(`
@@ -1083,7 +1091,7 @@ async function handleKeyLookup(
     <p>Not set up yet? Drop your <code>.p8</code> into <code>~/.appstoreconnect/private_keys/</code> and run <code>npx @pofky/asc-mcp init --write</code>, which asks for your Issuer ID and this key and writes the config for you.</p>
     <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.) so it reloads with the key. Then ask it to "list my App Store Connect apps" to confirm Pro is active.</p>
     <p style="color:#888;font-size:14px">Keep this key private. It unlocks Pro tools on your machine.</p>
-  `, headers);
+  `, headers, 200, { title: "Your license key", noindex: true });
 }
 
 function handlePrivacy(headers: Record<string, string>): Response {
@@ -1144,7 +1152,11 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <p>For privacy questions: povkonop@gmail.com</p>
 
     <p style="color:#888;font-size:13px;margin-top:40px">This project is not affiliated with, endorsed by, or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, iOS, and macOS are trademarks of Apple Inc.</p>
-  `, headers);
+  `, headers, 200, {
+    title: "Privacy Policy",
+    canonical: "https://asc-mcp-license.remewdy.workers.dev/privacy",
+    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"App Store Connect MCP","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Privacy Policy"}]},{"@type":"WebPage","name":"Privacy Policy","url":"https://asc-mcp-license.remewdy.workers.dev/privacy","dateModified":"2026-08-06","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
+  });
 }
 
 function handleTerms(headers: Record<string, string>): Response {
@@ -1163,7 +1175,7 @@ function handleTerms(headers: Record<string, string>): Response {
     </ul>
 
     <h2>Free and Pro tiers</h2>
-    <p>Six of the 41 tools are free with no account needed: <code>asc_setup_check</code>, <code>asc_guide</code>, <code>asc_start_trial</code>, <code>list_apps</code>, <code>app_details</code> and <code>review_status</code>. The other 35, covering customer reviews, sales reports, preflight audits and the full write/control plane (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release), require either a running trial or a $9/month subscription managed through <a href="https://polar.sh">Polar.sh</a>.</p>
+    <p>Six of the 41 tools are free with no subscription: <code>asc_setup_check</code>, <code>asc_guide</code>, <code>asc_start_trial</code>, <code>list_apps</code>, <code>app_details</code> and <code>review_status</code>. Three of those (the setup check, the playbook and the trial starter) need nothing at all; the other three read from App Store Connect, so they need your own Apple API key like every other tool here. The remaining 35, covering customer reviews, sales reports, preflight audits and the full write/control plane (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release), require either a running trial or a $9/month subscription managed through <a href="https://polar.sh">Polar.sh</a>.</p>
 
     <h2>Free trial</h2>
     <p>You can unlock every Pro tool for 7 days at no cost by calling the <code>asc_start_trial</code> tool from your agent. No card is required, nothing renews, and there is nothing to cancel: the key simply stops working when the 7 days are up.</p>
@@ -1192,7 +1204,11 @@ function handleTerms(headers: Record<string, string>): Response {
     <p>Questions: povkonop@gmail.com</p>
 
     <p style="color:#888;font-size:13px;margin-top:40px">This project is not affiliated with, endorsed by, or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, iOS, and macOS are trademarks of Apple Inc.</p>
-  `, headers);
+  `, headers, 200, {
+    title: "Terms of Service",
+    canonical: "https://asc-mcp-license.remewdy.workers.dev/terms",
+    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"App Store Connect MCP","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Terms of Service"}]},{"@type":"WebPage","name":"Terms of Service","url":"https://asc-mcp-license.remewdy.workers.dev/terms","dateModified":"2026-08-06","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
+  });
 }
 
 function handleDeletePage(headers: Record<string, string>): Response {
@@ -1200,15 +1216,16 @@ function handleDeletePage(headers: Record<string, string>): Response {
     <h1>Delete Your Data</h1>
     <p>Enter the email associated with your license to delete all your data from our systems.</p>
     <form method="POST" action="/delete">
-      <input type="email" name="email" placeholder="you@example.com" required
-        style="padding:10px;font-size:16px;width:300px;border:1px solid #555;border-radius:6px;background:#1a1a2e;color:#fff">
+      <label for="email">Your email address</label>
+      <input id="email" type="email" name="email" placeholder="you@example.com" required autocomplete="email"
+        style="padding:10px;font-size:16px;width:min(300px,100%);border:1px solid #555;border-radius:6px;background:#1a1a2e;color:#fff">
       <button type="submit"
-        style="padding:10px 20px;font-size:16px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-left:8px">
-        Delete My Data
+        style="padding:10px 20px;font-size:16px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:8px">
+        Email me a deletion link
       </button>
     </form>
-    <p style="color:#888;font-size:13px;margin-top:20px">This will permanently delete your email and license key from our database. Your subscription (if active) should be canceled separately through Polar.</p>
-  `, headers);
+    <p class="muted" style="margin-top:20px">We email you a confirmation link first, so nobody can remove your license by typing your address into this form. Confirming permanently deletes your email and license key. If you have an active subscription, cancel it separately through Polar, otherwise it will bill again and issue a new key.</p>
+  `, headers, 200, { title: "Delete your data", noindex: true });
 }
 
 /**
@@ -1255,7 +1272,7 @@ async function handleDeleteRequest(
     <h1>Check your email</h1>
     <p>If <strong>${escapeHtml(email)}</strong> has data here, a confirmation link is on its way. It is valid for one hour.</p>
     <p>Deleting is not reversible, so the link is the confirmation step: nobody can remove your licence by typing your address into this form.</p>
-  `, headers);
+  `, headers, 200, { title: "Check your email", noindex: true });
 
   const secret = deleteSecret(env);
   if (!secret) {
@@ -1303,7 +1320,7 @@ async function handleDeleteRequest(
           <h1 style="font-size:20px">Confirm deletion</h1>
           <p>Someone asked to delete the App Store Connect MCP licence data for this address. If that was you, confirm here:</p>
           <p><a href="${link}">Delete my data</a></p>
-          <p>The link expires in one hour. Your licence key stops working once you use it, and if you have an active subscription you should cancel it separately at polar.sh.</p>
+          <p>The link expires in one hour. Your licence key stops working the moment you confirm, and if you have an active subscription you should cancel it separately at polar.sh.</p>
           <p style="color:#666;font-size:14px">If this was not you, ignore this email. Nothing has been deleted, and nobody can delete your data without this link.</p>
         </div>`,
     }),
@@ -1333,21 +1350,49 @@ async function handleDeleteConfirm(
   await env.DB.prepare("DELETE FROM licenses WHERE email = ?").bind(email).run();
 
   return html(`
-    <h1>Data Deleted</h1>
+    <h1>Data deleted</h1>
     <p>All license data associated with <strong>${escapeHtml(email)}</strong> has been removed from our systems.</p>
     <p>If you have an active Polar subscription, please cancel it separately at <a href="https://polar.sh">polar.sh</a>, otherwise it will keep billing and issue you a new key.</p>
-  `, headers);
+  `, headers, 200, { title: "Data deleted", noindex: true });
 }
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function html(body: string, extraHeaders: Record<string, string>, status = 200): Response {
-  const page = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>App Store Connect MCP</title>
-<style>body{font-family:-apple-system,system-ui,sans-serif;max-width:600px;margin:40px auto;padding:0 20px;background:#0d0d1a;color:#e0e0e0}
-a{color:#818cf8}h1{color:#fff}pre{color:#a5b4fc}</style></head><body>${body}</body></html>`;
+interface PageOptions {
+  /** Page title. Every page shared one, so a customer's tabs and history were
+   *  all identically labelled and the legal pages had no context in search. */
+  title?: string;
+  /** Transactional pages (checkout return, key retrieval, deletion) should not
+   *  be indexed. Privacy and terms should. */
+  noindex?: boolean;
+  /** Full canonical URL, for the pages that are meant to be found. */
+  canonical?: string;
+  /** Extra head markup, e.g. structured data for the legal pages. */
+  head?: string;
+}
+
+function html(
+  body: string,
+  extraHeaders: Record<string, string>,
+  status = 200,
+  opts: PageOptions = {},
+): Response {
+  const title = opts.title
+    ? `${opts.title} | App Store Connect MCP`
+    : "App Store Connect MCP";
+  const page = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<meta name="robots" content="${opts.noindex ? "noindex,nofollow" : "index,follow"}">${
+    opts.canonical ? `\n<link rel="canonical" href="${opts.canonical}">` : ""
+  }${opts.head ?? ""}
+<style>body{font-family:-apple-system,system-ui,sans-serif;max-width:600px;margin:40px auto;padding:0 20px;background:#0d0d1a;color:#e0e0e0;line-height:1.6}
+a{color:#818cf8}h1{color:#fff}h2{color:#fff;font-size:1.05rem;margin-top:28px}pre{color:#a5b4fc}
+label{display:block;margin-bottom:6px;color:#c0c0c0;font-size:14px}
+.muted{color:#888;font-size:14px}</style></head><body>${body}
+<p class="muted" style="margin-top:40px">&larr; <a href="https://asc-mcp.pages.dev/">App Store Connect MCP</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="mailto:povkonop@gmail.com">povkonop@gmail.com</a></p>
+</body></html>`;
   return new Response(page, {
     status,
     headers: { "Content-Type": "text/html;charset=utf-8", ...extraHeaders },

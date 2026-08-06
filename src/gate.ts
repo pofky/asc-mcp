@@ -59,6 +59,26 @@ export function requirePro(
         "It unlocks all 41 tools in this session immediately, no restart.\n\n" +
         `Or subscribe now, $9/month: ${upgradeUrl(tool)}\n` +
         `(direct link: ${CHECKOUT_URL})\n`) +
-    `\nAlready have a key? Set ASC_LICENSE_KEY in your MCP server config.`
+    `\n${keyAdvice()}`
   );
+}
+
+/**
+ * The last line of the gate message.
+ *
+ * A key that is set but never validated means the licence server could not be
+ * reached, and validation fails open to the free tier. Telling that person to
+ * "set ASC_LICENSE_KEY" sends a paying customer to check a config that is
+ * already correct, during an outage that is ours.
+ */
+function keyAdvice(): string {
+  const keySet = Boolean(process.env.ASC_LICENSE_KEY);
+  if (keySet && lastLicenseStatus() === null) {
+    return (
+      "ASC_LICENSE_KEY is set but could not be checked, so the license server is probably " +
+      "unreachable from here. Your key is fine. Retry in a moment, or check status at " +
+      `${LICENSE_API_URL}/health`
+    );
+  }
+  return "Already have a key? Set ASC_LICENSE_KEY in your MCP server config.";
 }
