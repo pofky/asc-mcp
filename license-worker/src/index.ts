@@ -216,7 +216,14 @@ async function handleValidate(
   env: Env,
   headers: Record<string, string>,
 ): Promise<Response> {
-  const body = (await request.json()) as ValidateRequest;
+  let body: ValidateRequest;
+  try {
+    body = (await request.json()) as ValidateRequest;
+  } catch {
+    // Otherwise this falls to the catch-all as a 500, which reads as "our
+    // licence server is down" to anyone debugging their setup.
+    return json({ valid: false, tier: "free", error: "bad_request" }, headers, 400);
+  }
 
   if (!body.key || typeof body.key !== "string") {
     return json({ valid: false, tier: "free" }, headers, 400);
@@ -543,12 +550,43 @@ async function handleTrial(
   // The key itself is not returned: this endpoint takes an unauthenticated
   // email, so it must never become a way to read someone else's licence.
   const paid = await env.DB.prepare(
-    "SELECT id FROM licenses WHERE email = ? AND source = 'polar' AND active = 1",
+    "SELECT key, expires_at FROM licenses WHERE email = ? AND source = 'polar' AND active = 1",
   )
     .bind(email)
-    .first<{ id: number }>();
+    .first<{ key: string; expires_at: string | null }>();
 
   if (paid) {
+    // They subscribed. If this machine is the one that started a trial on this
+    // same address, hand back the subscription key so it replaces the trial key
+    // sitting in their config.
+    //
+    // Without this, converting is a trap: the config still holds the trial key,
+    // it keeps working until day 8, and then a paying customer's agent breaks
+    // with a message telling them to buy what they already bought.
+    //
+    // The bar to get a key here is possession of the Apple developer account
+    // AND the email, which is strictly higher than the /key page has always
+    // asked (an email address alone), so this discloses nothing new.
+    const ownTrial = await env.DB.prepare(
+      "SELECT id FROM licenses WHERE trial_fingerprint = ? AND email = ?",
+    )
+      .bind(fingerprint, email)
+      .first<{ id: number }>();
+
+    if (ownTrial) {
+      return json(
+        {
+          ok: true,
+          key: paid.key,
+          expires: paid.expires_at,
+          days_remaining: daysRemaining(paid.expires_at, now),
+          already_started: true,
+          subscription: true,
+        },
+        headers,
+      );
+    }
+
     return json(trialRefused(email), headers, 409);
   }
 

@@ -112,9 +112,16 @@ export function injectLicenseKey(
     let touched = false;
     for (const block of Object.values(servers)) {
       if (!block || typeof block !== "object") continue;
+      // Match the command exactly, or as the final path segment. A substring
+      // test wrote the licence key into any unrelated server whose binary path
+      // merely contained "asc-mcp" (a wrapper, a proxy, a local checkout),
+      // handing a paid key to a process that has no business holding it.
+      const command = String(block.command ?? "");
+      const binary = command.split(/[\\/]/).pop() ?? "";
       const launches =
         JSON.stringify(block.args ?? "").includes("@pofky/asc-mcp") ||
-        String(block.command ?? "").includes("asc-mcp");
+        binary === "asc-mcp" ||
+        binary === "appstore-connect-mcp";
       if (!launches) continue;
       block.env = { ...(block.env ?? {}), ASC_LICENSE_KEY: key };
       touched = true;

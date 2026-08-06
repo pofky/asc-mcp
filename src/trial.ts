@@ -27,6 +27,8 @@ export interface TrialSuccess {
   expires: string | null;
   days_remaining: number;
   already_started: boolean;
+  /** True when this is the caller's paid subscription key, not a trial key. */
+  subscription?: boolean;
   checkout_url?: string;
 }
 
@@ -86,6 +88,7 @@ export async function requestTrial(
       expires: (body.expires as string | null) ?? null,
       days_remaining: Number(body.days_remaining ?? 0),
       already_started: Boolean(body.already_started),
+      subscription: Boolean(body.subscription),
       checkout_url: typeof body.checkout_url === "string" ? body.checkout_url : undefined,
     };
   }
