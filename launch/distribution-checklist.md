@@ -17,15 +17,73 @@ several of these. Listicles ("best MCP servers for X") are the single most cited
       WebSite + SoftwareApplication + FAQPage JSON-LD, robots.txt with an AI-crawler
       allowlist, sitemap.xml, llms.txt. GitHub Pages duplicate retired.
 
+## Listicles, resolved 6 August 2026
+
+The three awesome-lists turned out to be three different mechanisms, only one of which is a
+pull request. Recording that here so nobody spends the afternoon again.
+
+- [x] `punkpeye/awesome-mcp-servers` PR
+      [#11198](https://github.com/punkpeye/awesome-mcp-servers/pull/11198) open since 30 July,
+      entry refreshed on 6 August from "40 job-shaped tools ... Free tier, no account" to 41
+      tools and "six tools are free with no account". Largest list at 91.6k stars.
+- [x] `wong2/awesome-mcp-servers` **does not accept pull requests.** The README says so at the
+      top: submissions go through <https://mcpservers.org/submit>, which is wong2's own
+      directory and the source the list is generated from. Paste-ready text:
+      `launch/mcpservers-org-submit.txt`. Needs a browser, so it is on the operator.
+      A branch with the README edit exists on the fork in case they ever reopen PRs.
+- [x] `appcypher/awesome-mcp-servers` **is archived** (5.7k stars, read-only, no PRs possible).
+      It still ranks and still gets cited, but it can no longer be changed by anyone. Dead end,
+      do not retry.
+
+## Directories, state as of 6 August 2026
+
+- [ ] **PulseMCP: listed at <https://www.pulsemcp.com/servers/pofky-app-store-connect>, and the
+      listing is wrong.** It carries the April 2026 description, "Check app review status, read
+      customer reviews, and download sales reports", which sells the read-only tier of what is
+      now a 41-tool control plane. Worse than being absent, because it is the string other
+      surfaces mirror. PulseMCP does not take submissions for existing servers: it pipes
+      `server.json` straight from the official MCP registry, so **the fix is to publish a better
+      description to the registry and wait for the resync**, not to fill in a form. Manual
+      fallback if it does not resync: hello@pulsemcp.com, text ready in
+      `launch/pulsemcp-listing-update.txt`.
+- [x] **Glama: listed at <https://glama.ai/mcp/servers/pofky/asc-mcp>, marked Unclaimed**, which
+      Glama's own notice says means "limited discoverability". `glama.json` added to the repo
+      root on 6 August, declaring `pofky` as maintainer, which is the half that can be done from
+      a terminal.
+- [ ] Claim the Glama listing at <https://glama.ai/mcp/servers/pofky/asc-mcp> (button on the
+      page, GitHub ownership verification). Operator, browser, two minutes.
+- [ ] **MCP.so: presence unconfirmed**, the site returns 403 to everything that is not a browser.
+      Submit at <https://mcp.so/submit?type=server> if absent. Fields: name, one-sentence
+      description, tool count, transport (stdio), repo URL, homepage, icon.
+- [x] **Smithery: not listed.** `smithery.yaml` added to the repo root on 6 August with the stdio
+      start command and the config schema for the three required env vars.
+- [ ] Publish to Smithery: needs a one-time account at <https://smithery.ai>, after which
+      `smithery mcp build` and `smithery mcp publish` are terminal commands.
+- [ ] Re-submit to <https://mcpservers.org/submit> so wong2's list picks up the current server.
+      We are already there as `mcpservers.org/servers/pofky/appstore-connect-mcp`, a slug from
+      the retired package name, describing the old server. There is no edit route, so resubmit.
+      Fields: name, short description, link, category (Development), contact email. Paste-ready
+      text in `launch/mcpservers-org-submit.txt`.
+- [x] Official MCP registry is healthy: `io.github.pofky/asc-mcp` 1.9.0 is `isLatest: true`,
+      published 6 August 2026, with every version back to 1.8.1 active. The official
+      `modelcontextprotocol/servers` repo no longer maintains a server list and now points
+      everyone at this registry, which makes the registry entry the highest-leverage string
+      we own.
+- [ ] **Registry description is doing no work.** It currently reads "Drive App Store Connect end
+      to end: metadata, screenshots, builds, TestFlight, submit, release." Directories mirror
+      this string verbatim. The nearest competitor on the registry, `io.github.erayendes/asc-mcp`,
+      advertises "982 tools from Apple's OpenAPI spec", so curation is the differentiator and
+      the description should say a number and say the trial. Change `server.json` at the next
+      release rather than bumping a version for it alone.
+
+## Competitive reality, measured not guessed
+
+Glama alone indexes twenty App Store Connect MCP servers. Zero stars is therefore not the
+problem to solve; being absent from the surfaces that rank is. Two of them share our short
+name `asc-mcp`, including the registry entry above, so the package name `@pofky/asc-mcp` and
+the site are the only unambiguous identifiers. Use both everywhere.
 ## Next, one-time, no account friction
 
-- [ ] `punkpeye/awesome-mcp-servers` pull request. Largest MCP listicle, and listicles are
-      the most cited format in AI answers. Add under the Apple or developer-tools section
-      with one factual line.
-- [ ] `wong2/awesome-mcp-servers` and `appcypher/awesome-mcp-servers` pull requests.
-- [ ] PulseMCP, Glama and MCP.so profiles. Several index the official registry
-      automatically, so check whether the 1.8.1 entry appeared before submitting by hand.
-- [ ] Smithery listing.
 - [ ] Crunchbase or an equivalent entity record, plus a Wikidata item. Wikidata has no
       notability bar for software and feeds knowledge graphs; being on four or more
       platforms materially raises the odds of being named in ChatGPT answers.

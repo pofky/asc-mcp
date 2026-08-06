@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>License server bugs that cut off paying customers | asc-mcp</title>
+<meta name="description" content="Seven real billing failures from running Polar subscriptions on Cloudflare Workers and D1. Each one silently took access away from someone who had paid.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://asc-mcp.pages.dev/writing/license-server/">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://asc-mcp.pages.dev/writing/license-server/">
+<meta property="og:title" content="Seven ways a license server quietly cuts off paying customers">
+<meta property="og:description" content="Seven failures from running billing for a paid MCP server on Polar, Cloudflare Workers and D1. Each one silently revoked access from a customer who had paid.">
+<meta property="og:image" content="https://asc-mcp.pages.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Seven ways a license server quietly cuts off paying customers">
+<meta name="twitter:description" content="Cancel is not revoke. Every rule in our license worker exists because it once cost a paying customer their access.">
+<meta name="twitter:image" content="https://asc-mcp.pages.dev/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230E1116'/%3E%3Cpath d='M8 21l4.6-11h1.9L19 21h-2.2l-1-2.6h-4.6L10.2 21H8zm4-4.4h3.2l-1.6-4.3-1.6 4.3z' fill='%23F0A828'/%3E%3Ccircle cx='24' cy='11' r='2.5' fill='%233DC48F'/%3E%3C/svg%3E">
+<style>
+:root{
+  --ink:#0e1116; --panel:#161b22; --panel-2:#1b2129; --line:#232a33;
+  /* --dim is lightened from the homepage value #6d7986, which measures 4.26:1
+     on --ink and fails WCAG AA for the small text it is used on. */
+  --text:#e7ecf2; --muted:#95a1b0; --dim:#7d8b9a;
+  --amber:#f0a828; --green:#3dc48f; --flag:#e0705a;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --measure:66ch;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--ink);color:var(--text);font-family:var(--sans);
+  font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(240,168,40,.28)}
+a{color:var(--text);text-decoration:none;border-bottom:1px solid var(--line)}
+a:hover{border-bottom-color:var(--amber)}
+a:focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:3px}
+h1,h2,h3{font-weight:700;letter-spacing:-.022em;line-height:1.14;margin:0}
+h1{font-size:clamp(1.95rem,6.4vw,3rem)}
+h2{font-size:clamp(1.3rem,4vw,1.75rem);letter-spacing:-.018em;margin:0 0 6px}
+h3{font-size:1.02rem;letter-spacing:-.008em;margin:0 0 6px}
+p{margin:0 0 1.05rem}
+.wrap{width:100%;max-width:960px;margin:0 auto;padding:0 20px}
+.narrow{max-width:var(--measure)}
+.eyebrow{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 14px;display:block;
+}
+.top{padding:4px 0;font-family:var(--mono);font-size:.78rem;color:var(--muted);
+  display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.top a{border:0;color:var(--muted);display:inline-flex;align-items:center;min-height:44px}
+.top a:hover{color:var(--text)}
+.mark{color:var(--text);font-weight:600;letter-spacing:.02em}
+.mark b{color:var(--amber);font-weight:600}
+.ver{margin-left:auto;color:var(--dim)}
+
+header.hero{padding:22px 0 8px}
+.meta{font-family:var(--mono);font-size:.76rem;color:var(--dim);margin:16px 0 0}
+.standfirst{font-size:1.12rem;color:var(--muted);margin:20px 0 0}
+
+article{padding:44px 0 0}
+.case{border-top:1px solid var(--line);padding:38px 0 4px}
+.case .n{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--amber);display:block;margin:0 0 10px;
+}
+.cost{
+  border-left:2px solid var(--flag);padding:2px 0 2px 14px;margin:0 0 1.05rem;
+  color:var(--muted);font-size:.95rem;
+}
+.cost b{color:var(--text);font-weight:600}
+pre{
+  font-family:var(--mono);font-size:.79rem;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:13px 14px;overflow-x:auto;margin:0 0 1.05rem;color:#c9d3de;line-height:1.55;
+}
+code{font-family:var(--mono);font-size:.88em;color:var(--text)}
+p code,li code{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+ul{margin:0 0 1.05rem;padding-left:1.1rem}
+li{margin:0 0 .5rem}
+.rule{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;margin:0 0 1.05rem;
+}
+.rule .lbl{
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--green);display:block;margin:0 0 6px;
+}
+.rule p{margin:0}
+section.q{border-top:1px solid var(--line);padding:52px 0 0}
+.qa{margin:0 0 26px}
+.qa p{margin:0}
+.cta{
+  border:1px solid var(--line);background:var(--panel-2);border-radius:12px;
+  padding:22px 22px 8px;margin:46px 0 0;
+}
+footer{border-top:1px solid var(--line);padding:34px 0 54px;color:var(--dim);font-size:.86rem;margin-top:54px}
+footer a{color:var(--muted)}
+.foot-links{display:flex;flex-wrap:wrap;gap:0 18px;font-family:var(--mono);font-size:.78rem;margin-bottom:10px}
+.foot-links a{display:inline-flex;align-items:center;min-height:44px}
+@media(max-width:560px){
+  .top{gap:0 14px}
+  .ver{display:none}
+  body{font-size:16.5px}
+}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+{"@type":"BreadcrumbList","itemListElement":[
+ {"@type":"ListItem","position":1,"name":"App Store Connect MCP","item":"https://asc-mcp.pages.dev/"},
+ {"@type":"ListItem","position":2,"name":"Seven ways a license server quietly cuts off paying customers","item":"https://asc-mcp.pages.dev/writing/license-server/"}]},
+{"@type":"BlogPosting",
+ "headline":"Seven ways a license server quietly cuts off paying customers",
+ "description":"Seven failures from running subscription licensing for a paid MCP server on Polar, Cloudflare Workers and D1. Each one silently took access away from a customer who had paid.",
+ "url":"https://asc-mcp.pages.dev/writing/license-server/",
+ "datePublished":"2026-08-06","dateModified":"2026-08-06",
+ "inLanguage":"en",
+ "author":{"@type":"Person","name":"Povilas Konopackas"},
+ "publisher":{"@type":"Organization","name":"asc-mcp","url":"https://asc-mcp.pages.dev/"},
+ "mainEntityOfPage":{"@type":"WebPage","@id":"https://asc-mcp.pages.dev/writing/license-server/"},
+ "keywords":"Polar webhooks, subscription licensing, license server, MCP server monetization, Cloudflare Workers, D1"},
+{"@type":"FAQPage","mainEntity":[
+ {"@type":"Question","name":"Does subscription.canceled mean access ends immediately in Polar?",
+  "acceptedAnswer":{"@type":"Answer","text":"No. It means the subscription will not renew. The customer keeps access until the period they already paid for ends. Only subscription.revoked ends access immediately. Treating canceled as revocation takes away time the customer has already paid for, which is the one thing a license server must not do."}},
+ {"@type":"Question","name":"Why is my Polar webhook signature always invalid?",
+  "acceptedAnswer":{"@type":"Answer","text":"Because the HMAC key depends on where the secret came from. A dashboard secret is polar_whs_... and the key is the raw UTF-8 of the whole string. An API-minted secret is whsec_(base64) and the key is the base64-decoded remainder. Verify against both candidates and the failure mode disappears for two extra HMAC operations."}},
+ {"@type":"Question","name":"Why does my Polar webhook fire for products I do not sell?",
+  "acceptedAnswer":{"@type":"Answer","text":"Polar delivers every event to every endpoint registered in the organization. Without a product id guard, another product's purchase provisions a license in your app and emails a key to its buyer. Read the product id from all the shapes it arrives in, because a guard that finds nothing usually falls through to provisioning."}},
+ {"@type":"Question","name":"Should a license server give a grace period after expiry?",
+  "acceptedAnswer":{"@type":"Answer","text":"Yes for paid subscriptions, so a late or dropped renewal webhook cannot demote someone mid-session. No for trials and no for already-cancelled subscriptions, where no renewal message is coming at all. Without those exclusions a four-day grace silently extends every trial and gives every cancellation four free days."}}]}]}</script>
+</head>
+<body>
+
+<div class="wrap">
+  <nav class="top">
+    <a href="/" class="mark" style="border:0">asc<b>-</b>mcp</a>
+    <a href="/#pipeline">Pipeline</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/#faq">Limits</a>
+    <a href="https://github.com/pofky/asc-mcp">GitHub</a>
+    <span class="ver">v1.9.0</span>
+  </nav>
+</div>
+
+<main>
+<header class="hero">
+  <div class="wrap narrow">
+    <span class="eyebrow">Field notes</span>
+    <h1>Seven ways a license server quietly cuts off paying customers</h1>
+    <p class="standfirst">A license server fails in one direction that nobody notices and one that costs you the customer. The dangerous direction is the quiet one: access is taken away from someone who paid, their agent tells them to go buy the thing they already bought, and you find out weeks later or never. Every rule below exists because it happened.</p>
+    <p class="meta">6 August 2026 &middot; Povilas Konopackas &middot; billing for <a href="/">asc-mcp</a>, on Polar, Cloudflare Workers and D1</p>
+  </div>
+</header>
+
+<article>
+<div class="wrap narrow">
+
+<p>I sell an MCP server. It is $9 a month, it has a seven-day trial you start from inside your coding agent, and the licensing runs on a Cloudflare Worker with a D1 table of about eight rows. That is the entire system. It is as small as a billing integration gets, and it has still found seven distinct ways to revoke access from people who were paying.</p>
+
+<p>The decision logic now lives in one file, <a href="https://github.com/pofky/asc-mcp/blob/master/license-worker/src/logic.ts">license-worker/src/logic.ts</a>, and every branch in it carries a comment saying which incident put it there. What follows is that file in prose. If you are about to charge for a piece of software, you will meet most of these.</p>
+
+<section class="case">
+<span class="n">One</span>
+<h2>Cancel is not revoke</h2>
+<div class="cost"><b>Cost:</b> customers lost time they had already paid for, the moment they turned off renewal.</div>
+<p>Polar emits <code>subscription.canceled</code> when a customer switches off auto-renewal. It does not mean their access ends. They have paid through the end of the current period and they are entitled to every day of it. Only <code>subscription.revoked</code> means access ends now.</p>
+<p>The naive handler treats both as "deactivate this license", because both read as bad news. So the customer cancels on day 3 of a 30-day period, and the software stops working on day 3. They did not ask for that, they paid for 30 days, and the message they see tells them to subscribe.</p>
+<pre>// Both are "cancel-shaped" events. Only one ends access.
+CANCEL_EVENTS         = { subscription.canceled, subscription.revoked }
+IMMEDIATE_REVOKE      = { subscription.revoked }
+// canceled: stamp canceled_at, leave the license usable until expires_at.</pre>
+<div class="rule"><span class="lbl">Rule</span><p>Model the two separately from the start. One marks intent not to renew, the other ends entitlement. Natural expiry does the rest.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Two</span>
+<h2>The same bug walks back in through a different door</h2>
+<div class="cost"><b>Cost:</b> fixed once in v1.8.2, reintroduced through status handling, caught by reproducing a real cancellation in sandbox against the live worker.</div>
+<p>Having fixed the event path, there is a second path to the same row. A <code>subscription.updated</code> event carries a <code>status</code> field, and the handler decides activation from it. The obvious dead-status list reads <code>revoked</code>, <code>unpaid</code>, <code>incomplete_expired</code>, and it is very tempting to add <code>canceled</code>.</p>
+<p>Adding it recreates incident one exactly. Polar sets <code>status: canceled</code> the moment renewal is switched off, while <code>current_period_end</code> is still in the future and the customer is still entitled. So the fix on the event path was undone by the status path, for the same customers, with the same symptom.</p>
+<div class="rule"><span class="lbl">Rule</span><p>When you fix a rule about entitlement, find every code path that writes the same column. A bug fixed on one path is not fixed.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Three</span>
+<h2>Two secrets that look alike and hash differently</h2>
+<div class="cost"><b>Cost:</b> zero license rows were ever created. The first paying customer got no key at all.</div>
+<p>Polar signs webhooks with the <a href="https://www.standardwebhooks.com">Standard Webhooks</a> scheme: HMAC-SHA256 over <code>id.timestamp.body</code>. The trap is the key.</p>
+<ul>
+<li>A secret copied from the Polar dashboard looks like <code>polar_whs_...</code>, and the HMAC key is the raw UTF-8 bytes of the whole string, prefix included. Polar's own validator base64-encodes the secret before handing it to the Standard Webhooks library, which decodes it straight back.</li>
+<li>A secret minted through <code>POST /v1/webhooks/endpoints</code> comes back as <code>whsec_&lt;base64&gt;</code>, the canonical shape, where the key is the base64-decoded remainder.</li>
+</ul>
+<p>Both are valid. Both are handed to you by the same vendor. Pick the wrong one and every signature fails, every webhook is rejected with a 401 that only your logs see, and the first sale produces nothing. Polar retries, the retries also fail, and the customer emails you.</p>
+<pre>// Two extra HMACs on a request you were going to reject anyway.
+candidateKeys(secret) =
+  [ utf8(secret) ]                       // dashboard shape
+  + [ base64decode(after first "_") ]    // API shape, when it decodes</pre>
+<div class="rule"><span class="lbl">Rule</span><p>Where a credential has two encodings in the wild, verify against both. The cost is microseconds; the cost of choosing wrong is your first customer.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Four</span>
+<h2>Every event goes to every endpoint</h2>
+<div class="cost"><b>Cost:</b> one test purchase in a sibling project minted three stray licenses and emailed welcome messages, with keys, to people who had bought something else.</div>
+<p>Polar delivers each event to every webhook endpoint registered in the organization. If you sell two products from one org, your license server sees the other product's sales and, unguarded, provisions for them. That is not a theoretical leak. It is a stranger receiving an email containing a working license key for software they never heard of.</p>
+<p>The guard is a product id allowlist. The subtlety is reading the id: it has arrived as <code>product_id</code>, as <code>productId</code>, and nested under <code>product.id</code>. A guard that checks one shape returns null on the others, and a null id falls through to "provision it", which is exactly the behaviour you were guarding against.</p>
+<pre>resolveProductId(data) =
+  data.product_id ?? data.productId ?? data.product?.id ?? null</pre>
+<p>There is a deliberate hole in ours: an event with no product id at all is treated as ours. Legacy subscriptions still arrive in a payload shape that omits it, and a false negative here costs a paying customer their key. That asymmetry is the whole design principle of the file.</p>
+<div class="rule"><span class="lbl">Rule</span><p>Give the paid product its own organization if the processor scopes webhooks by org. Then keep the guard anyway.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Five</span>
+<h2>Grace for renewals, never for trials</h2>
+<div class="cost"><b>Cost:</b> a four-day grace applied to everything turned every seven-day trial into an eleven-day one, and gave every cancelling customer four free days.</div>
+<p>Renewals reach you as a webhook that pushes <code>expires_at</code> forward. If that delivery is late or dropped, the old expiry is already in the past, and a customer who paid this morning is demoted to the free tier this afternoon. A few days of grace after expiry costs nothing and prevents a support ticket, or a cancellation, caused entirely by your own plumbing.</p>
+<p>Then two exclusions, both learned after the fact:</p>
+<ul>
+<li><b>Trials get no grace.</b> A trial has no renewal, so there is no webhook that can be late. Grace here is just a longer trial that you did not decide to offer.</li>
+<li><b>Cancelled subscriptions get no grace.</b> Renewal is switched off, so again there is no webhook coming. The customer keeps exactly the time they paid for, which is the correct answer in both directions.</li>
+</ul>
+<pre>if (!active)                 -> unusable
+if (expiry >= now)           -> usable
+if (source === "trial")      -> unusable   // nothing to be late
+if (canceled_at)             -> unusable   // no renewal coming
+if (now &lt;= expiry + 4 days)  -> usable, in grace
+                             -> expired</pre>
+<div class="rule"><span class="lbl">Rule</span><p>Grace compensates for a specific missing message. Apply it only where that message exists.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Six</span>
+<h2>Retries arrive out of order and resurrect the dead</h2>
+<div class="cost"><b>Cost:</b> found by an audit that ran the billing lifecycle rather than the trial path. Revoked, non-paying users got a working key back.</div>
+<p>Cancelling in Polar emits <code>canceled</code> and <code>revoked</code> back to back. Webhook delivery is at-least-once and not ordered, so an ordinary retry of the earlier <code>subscription.updated</code>, still carrying the pre-cancellation state, lands after <code>revoked</code> has switched the row off and writes <code>active = 1</code> straight back. No attacker involved. Just a retry.</p>
+<p>Status alone cannot fix this, because the retried event's status is genuinely live: it was live when the event was generated. Two things do fix it.</p>
+<ul>
+<li>Stamp <code>revoked_at</code> when revocation happens and guard the upsert with <code>WHERE revoked_at IS NULL</code>. Revocation is terminal.</li>
+<li>Refuse to activate when the paid period has already ended, whatever the status says. That also stops a <code>cycled</code> or <code>updated</code> replayed long after a subscription lapsed.</li>
+</ul>
+<pre>shouldBeActive(status, currentPeriodEnd, now):
+  if (deadStatus(status))        return 0
+  if (!currentPeriodEnd)         return 1
+  return currentPeriodEnd &gt; now ? 1 : 0</pre>
+<div class="rule"><span class="lbl">Rule</span><p>Treat webhooks as unordered. Any state a later event can undo needs a terminal marker, not a status check.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Seven</span>
+<h2>The trial key that outlives the trial</h2>
+<div class="cost"><b>Cost:</b> the exact shape of "I paid and it does not work", arriving on day 8, from someone who paid on day 3.</div>
+<p>Anyone who converts mid-trial holds two rows: the trial they started and the subscription they bought. Every lookup that returns "their key" now has to choose, and newest-first is wrong. It hands a paying customer their dead trial key, which validates as free tier and looks exactly like a broken product.</p>
+<p>Worse, the trial key is already sitting in their config file. It keeps working until day 8, so conversion is a trap with a delayed trigger: they pay, nothing changes, everything looks fine, and a week later their agent tells them to subscribe.</p>
+<pre>pickLookupRow(rows, now):
+  usable = rows.filter(isUsable)
+  return usable.find(r =&gt; r.source !== "trial") ?? usable[0] ?? null
+</pre>
+<p>The fix is two-sided. Lookups prefer the paid row, and the trial endpoint checks for a paid row <em>first</em> and hands back the subscription key so it replaces the trial key in place. Matched on the machine fingerprint alone, deliberately: requiring the same email on both rows stranded everyone who trialled with a personal address and checked out with a work one.</p>
+<div class="rule"><span class="lbl">Rule</span><p>One customer, two entitlement rows, is the normal case, not the edge case. Decide which one wins before you ship the trial.</p></div>
+</section>
+
+<section class="case">
+<h2>What this adds up to</h2>
+<p>None of these are hard problems. Every one of them is a two-line fix. What makes them expensive is that they all fail silently in the direction of the customer, and none of them show up in a test you would think to write, because the input that triggers them is a webhook from a vendor behaving exactly as documented.</p>
+<p>The version of this you write on day one is the naive version, and the naive version quietly takes access away from people who paid. You will not find out for weeks. That is the actual lesson, and it is why the file is 428 lines: 224 of code, and 164 of comments explaining which incident put each branch there.</p>
+<p>There are now 180 unit tests, 39 HTTP checks against a database migrated from the live table shape, 21 checks driving the built server over stdio, and 16 lifecycle checks pushing real signed webhooks through a local worker. Almost all of them were written after an incident, not before one.</p>
+</section>
+
+<section class="q">
+<span class="eyebrow">Questions people actually type</span>
+
+<div class="qa">
+<h3>Does subscription.canceled mean access ends immediately in Polar?</h3>
+<p>No. It means the subscription will not renew. The customer keeps access until the period they already paid for ends. Only <code>subscription.revoked</code> ends access immediately. Treating <code>canceled</code> as revocation takes away time the customer has already paid for, which is the one thing a license server must not do.</p>
+</div>
+
+<div class="qa">
+<h3>Why is my Polar webhook signature always invalid?</h3>
+<p>Because the HMAC key depends on where the secret came from. A dashboard secret is <code>polar_whs_...</code> and the key is the raw UTF-8 of the whole string. An API-minted secret is <code>whsec_&lt;base64&gt;</code> and the key is the base64-decoded remainder. Verify against both candidates and the failure mode disappears for two extra HMAC operations.</p>
+</div>
+
+<div class="qa">
+<h3>Why does my Polar webhook fire for products I do not sell?</h3>
+<p>Polar delivers every event to every endpoint registered in the organization. Without a product id guard, another product's purchase provisions a license in your app and emails a key to its buyer. Read the product id from all the shapes it arrives in, because a guard that finds nothing usually falls through to provisioning.</p>
+</div>
+
+<div class="qa">
+<h3>Should a license server give a grace period after expiry?</h3>
+<p>Yes for paid subscriptions, so a late or dropped renewal webhook cannot demote someone mid-session. No for trials and no for already-cancelled subscriptions, where no renewal message is coming at all. Without those exclusions a four-day grace silently extends every trial and gives every cancellation four free days.</p>
+</div>
+
+</section>
+
+<div class="cta">
+<h3>Two things, if this was useful</h3>
+<p>The product this paid for is <a href="/#pricing">asc-mcp</a>: 41 tools that drive App Store Connect from your coding agent, with a seven-day trial you start from inside the agent with no card. Six tools work without a license, three of those without any Apple credentials at all.</p>
+<p>And if you sell an MCP server yourself: the parts above that are not App Store specific are the license lifecycle, and I have been asked whether they should be a package. If you want that, <a href="https://github.com/pofky/asc-mcp/issues/new?title=MCP%20licensing%20package&amp;body=I%20sell%20(or%20want%20to%20sell)%20an%20MCP%20server.%20Here%20is%20what%20I%20would%20need%3A">say so on the repo</a>. I would rather build it for someone specific than guess.</p>
+</div>
+
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-links">
+      <a href="/">Home</a>
+      <a href="https://www.npmjs.com/package/@pofky/asc-mcp">npm</a>
+      <a href="https://github.com/pofky/asc-mcp">GitHub</a>
+      <a href="https://github.com/pofky/asc-mcp/blob/master/license-worker/src/logic.ts">logic.ts</a>
+      <a href="https://asc-mcp-license.remewdy.workers.dev/terms">Terms</a>
+      <a href="https://asc-mcp-license.remewdy.workers.dev/privacy">Privacy</a>
+      <a href="/llms.txt">llms.txt</a>
+    </div>
+    <p style="margin:0">asc-mcp v1.9.0, MIT licensed. Built and maintained by Povilas Konopackas, sole trader,
+      Lithuania. Not affiliated with Apple Inc. App Store and App Store Connect are trademarks of Apple Inc.
+      Polar is a trademark of its respective owner.</p>
+    <p style="margin:8px 0 0">Last updated 6 August 2026.</p>
+  </div>
+</footer>
+
+</body>
+</html>

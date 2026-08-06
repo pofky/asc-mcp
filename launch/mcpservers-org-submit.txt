@@ -1,0 +1,9 @@
+App Store Connect
+
+https://github.com/pofky/asc-mcp
+
+41 tools for App Store Connect: read reviews and sales, then edit version metadata with Apple's character limits validated, upload screenshots, build and sign locally, drive TestFlight, create in-app purchases and subscriptions with territory availability, run a release preflight, submit and release. Names the steps Apple only allows on its website instead of failing on them.
+
+npx -y @pofky/asc-mcp
+
+https://asc-mcp.pages.dev
