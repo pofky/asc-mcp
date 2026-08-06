@@ -31,6 +31,7 @@ async function handshake(env: Record<string, string | undefined>) {
     },
     { jsonrpc: "2.0", method: "notifications/initialized" },
     { jsonrpc: "2.0", id: 2, method: "tools/list" },
+    { jsonrpc: "2.0", id: 3, method: "prompts/list" },
   ];
   child.stdin.write(requests.map((r) => JSON.stringify(r)).join("\n") + "\n");
   child.stdin.end();
@@ -79,6 +80,49 @@ describe("setup mode (no credentials)", () => {
       // The reason has to reach the user, who only ever sees the client's log.
       expect(err).toContain("setup mode");
       expect(err).toContain("asc-mcp init");
+    },
+    30_000,
+  );
+
+  /**
+   * Setup mode declared a `prompts` capability it never registered a handler
+   * for, so a client that lists prompts on connect (Claude Desktop does) got
+   * `-32601 Method not found` from the one mode whose entire job is to look
+   * healthy enough to explain the fix. Capabilities have to match reality.
+   */
+  it.skipIf(!existsSync(ENTRY))(
+    "does not advertise a capability it cannot serve",
+    async () => {
+      const { messages } = await handshake({
+        ASC_KEY_ID: undefined,
+        ASC_ISSUER_ID: undefined,
+        ASC_PRIVATE_KEY_PATH: undefined,
+      });
+
+      const init = messages.find((m) => m.id === 1);
+      expect(init.result.capabilities.tools).toBeDefined();
+      expect(init.result.capabilities.prompts).toBeUndefined();
+    },
+    30_000,
+  );
+
+  /**
+   * The instructions promised "all 41 tools" after a restart, which is not what
+   * happens: credentials get you the full list, and the write and control tools
+   * are still gated until a trial or a subscription. Overpromising here means
+   * the first Pro gate reads as a bug.
+   */
+  it.skipIf(!existsSync(ENTRY))(
+    "describes what actually happens after credentials are added",
+    async () => {
+      const { messages } = await handshake({
+        ASC_KEY_ID: undefined,
+        ASC_ISSUER_ID: undefined,
+        ASC_PRIVATE_KEY_PATH: undefined,
+      });
+      const instructions = messages.find((m) => m.id === 1).result.instructions as string;
+      expect(instructions).toContain("asc_start_trial");
+      expect(instructions).not.toContain("get all 41 tools");
     },
     30_000,
   );

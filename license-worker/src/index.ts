@@ -872,7 +872,7 @@ async function handleAdminAnnounce(
     },
     body: JSON.stringify({
       sender: {
-        name: env.BREVO_SENDER_NAME || "App Store Connect MCP",
+        name: env.BREVO_SENDER_NAME || "asc-mcp",
         email: env.BREVO_SENDER_EMAIL || "license@brewist.app",
       },
       to: [{ email: body.email }],
@@ -920,12 +920,12 @@ async function sendLicenseEmail(
   if (!env.BREVO_API_KEY) return false;
 
   const senderEmail = env.BREVO_SENDER_EMAIL || "license@brewist.app";
-  const senderName = env.BREVO_SENDER_NAME || "App Store Connect MCP";
+  const senderName = env.BREVO_SENDER_NAME || "asc-mcp";
   const safeKey = escapeHtml(key);
 
   const htmlContent = `
     <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
-      <h1 style="font-size:20px">Your App Store Connect MCP Pro license</h1>
+      <h1 style="font-size:20px">Your asc-mcp Pro license</h1>
       <p>Thanks for subscribing. Here is your license key:</p>
       <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
       <p>If your <code>.p8</code> is in <code>~/.appstoreconnect/private_keys/</code>, this block is complete once you fill in your Issuer ID. If the key lives somewhere else, add <code>ASC_PRIVATE_KEY_PATH</code> to the same env block.</p>
@@ -947,7 +947,7 @@ async function sendLicenseEmail(
       body: JSON.stringify({
         sender: { name: senderName, email: senderEmail },
         to: [{ email }],
-        subject: "Your App Store Connect MCP Pro license key",
+        subject: "Your asc-mcp Pro license key",
         htmlContent,
       }),
     });
@@ -980,7 +980,7 @@ async function sendTrialEmail(
 
   const htmlContent = `
     <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
-      <h1 style="font-size:20px">Your ${TRIAL_DAYS}-day App Store Connect MCP Pro trial</h1>
+      <h1 style="font-size:20px">Your ${TRIAL_DAYS}-day asc-mcp Pro trial</h1>
       <p>All 41 tools are unlocked on this key until <strong>${escapeHtml(ends)}</strong>. No card, nothing to cancel.</p>
       <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
       <p>Your agent has already written this into your MCP config. If you need it on another machine, paste it in yourself:</p>
@@ -1000,11 +1000,11 @@ async function sendTrialEmail(
       },
       body: JSON.stringify({
         sender: {
-          name: env.BREVO_SENDER_NAME || "App Store Connect MCP",
+          name: env.BREVO_SENDER_NAME || "asc-mcp",
           email: env.BREVO_SENDER_EMAIL || "license@brewist.app",
         },
         to: [{ email }],
-        subject: `Your ${TRIAL_DAYS}-day App Store Connect MCP Pro trial key`,
+        subject: `Your ${TRIAL_DAYS}-day asc-mcp Pro trial key`,
         htmlContent,
       }),
     });
@@ -1063,7 +1063,8 @@ function handleSuccess(headers: Record<string, string>): Response {
     ${EMAIL_FIELD("The email you used at checkout", "Get my license key")}
 
     <h2>Then what</h2>
-    <p>Put the key in your MCP config as <code>ASC_LICENSE_KEY</code> and restart your agent, or run <code>npx @pofky/asc-mcp init --write</code> and it will do it for you. The next page gives you a complete config block to paste.</p>
+    <p>On Claude for macOS or Windows there is no config file to edit: <a href="https://github.com/pofky/asc-mcp/releases/latest">download the .mcpb bundle</a>, open it, and paste the key into the extension's own License key field.</p>
+    <p>Every other client: put the key in your MCP config as <code>ASC_LICENSE_KEY</code> and restart your agent, or run <code>npx @pofky/asc-mcp init --write</code> and it will do it for you. The next page gives you a complete config block to paste.</p>
 
     <p class="muted">Nothing showing after a minute? That is on us, not you. Email <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a> with the address you checked out with and you will get a key back the same day.</p>
   `, headers, 200, { title: "Subscription confirmed", noindex: true });
@@ -1121,7 +1122,8 @@ async function handleKeyLookup(
     <div style="background:#1a1a2e;padding:20px;border-radius:8px;border:1px solid #333;margin:20px 0;font-family:monospace;font-size:20px;letter-spacing:2px;text-align:center">
       ${escapeHtml(row.key)}
     </div>
-    <p>Add this to your MCP server configuration:</p>
+    <p><strong>Claude for macOS or Windows:</strong> there is no config file. <a href="https://github.com/pofky/asc-mcp/releases/latest">Download the .mcpb bundle</a>, open it, then paste this key into Settings &rsaquo; Extensions &rsaquo; asc-mcp &rsaquo; Configure &rsaquo; License key and Save.</p>
+    <p><strong>Every other client</strong>, add this to your MCP server configuration:</p>
     <pre style="background:#1a1a2e;padding:15px;border-radius:8px;overflow-x:auto">${CONFIG_SNIPPET(escapeHtml(row.key))}</pre>
     <p>Not set up yet? Drop your <code>.p8</code> into <code>~/.appstoreconnect/private_keys/</code> and run <code>npx @pofky/asc-mcp init --write</code>, which asks for your Issuer ID and this key and writes the config for you.</p>
     <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.) so it reloads with the key. Then ask it to "list my App Store Connect apps" to confirm Pro is active.</p>
@@ -1190,7 +1192,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
   `, headers, 200, {
     title: "Privacy Policy",
     canonical: "https://asc-mcp-license.remewdy.workers.dev/privacy",
-    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"App Store Connect MCP","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Privacy Policy"}]},{"@type":"WebPage","name":"Privacy Policy","url":"https://asc-mcp-license.remewdy.workers.dev/privacy","dateModified":"2026-08-06","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
+    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"asc-mcp","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Privacy Policy"}]},{"@type":"WebPage","name":"Privacy Policy","url":"https://asc-mcp-license.remewdy.workers.dev/privacy","dateModified":"2026-08-06","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
   });
 }
 
@@ -1200,7 +1202,7 @@ function handleTerms(headers: Record<string, string>): Response {
     <p><em>Last updated: August 6, 2026</em></p>
 
     <h2>What this is</h2>
-    <p>App Store Connect MCP Server is a developer tool that connects AI coding agents to Apple's App Store Connect API. It runs locally on your machine.</p>
+    <p>asc-mcp is an independent developer tool that connects AI coding agents to Apple's App Store Connect API. It runs locally on your machine. It is not affiliated with, endorsed by, or sponsored by Apple Inc.</p>
 
     <h2>Requirements</h2>
     <ul>
@@ -1242,7 +1244,7 @@ function handleTerms(headers: Record<string, string>): Response {
   `, headers, 200, {
     title: "Terms of Service",
     canonical: "https://asc-mcp-license.remewdy.workers.dev/terms",
-    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"App Store Connect MCP","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Terms of Service"}]},{"@type":"WebPage","name":"Terms of Service","url":"https://asc-mcp-license.remewdy.workers.dev/terms","dateModified":"2026-08-06","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
+    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"asc-mcp","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Terms of Service"}]},{"@type":"WebPage","name":"Terms of Service","url":"https://asc-mcp-license.remewdy.workers.dev/terms","dateModified":"2026-08-06","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
   });
 }
 
@@ -1345,15 +1347,15 @@ async function handleDeleteRequest(
     },
     body: JSON.stringify({
       sender: {
-        name: env.BREVO_SENDER_NAME || "App Store Connect MCP",
+        name: env.BREVO_SENDER_NAME || "asc-mcp",
         email: env.BREVO_SENDER_EMAIL || "license@brewist.app",
       },
       to: [{ email }],
-      subject: "Confirm deleting your App Store Connect MCP data",
+      subject: "Confirm deleting your asc-mcp data",
       htmlContent: `
         <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
           <h1 style="font-size:20px">Confirm deletion</h1>
-          <p>Someone asked to delete the App Store Connect MCP licence data for this address. If that was you, confirm here:</p>
+          <p>Someone asked to delete the asc-mcp licence data for this address. If that was you, confirm here:</p>
           <p><a href="${link}">Delete my data</a></p>
           <p>The link expires in one hour. Your licence key stops working the moment you confirm, and if you have an active subscription you should cancel it separately at polar.sh.</p>
           <p style="color:#666;font-size:14px">If this was not you, ignore this email. Nothing has been deleted, and nobody can delete your data without this link.</p>
@@ -1415,8 +1417,8 @@ function html(
   opts: PageOptions = {},
 ): Response {
   const title = opts.title
-    ? `${opts.title} | App Store Connect MCP`
-    : "App Store Connect MCP";
+    ? `${opts.title} | asc-mcp`
+    : "asc-mcp";
   const page = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
 <meta name="robots" content="${opts.noindex ? "noindex,nofollow" : "index,follow"}">${
@@ -1426,7 +1428,7 @@ function html(
 a{color:#818cf8}h1{color:#fff}h2{color:#fff;font-size:1.05rem;margin-top:28px}pre{color:#a5b4fc}
 label{display:block;margin-bottom:6px;color:#c0c0c0;font-size:14px}
 .muted{color:#888;font-size:14px}</style></head><body>${body}
-<p class="muted" style="margin-top:40px">&larr; <a href="https://asc-mcp.pages.dev/">App Store Connect MCP</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="mailto:povkonop@gmail.com">povkonop@gmail.com</a></p>
+<p class="muted" style="margin-top:40px">&larr; <a href="https://asc-mcp.pages.dev/">asc-mcp</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="mailto:povkonop@gmail.com">povkonop@gmail.com</a></p>
 </body></html>`;
   return new Response(page, {
     status,

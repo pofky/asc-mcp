@@ -6,11 +6,13 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create asc-mcp-licenses",
-    "db:migrate": "wrangler d1 execute asc-mcp-licenses --file=schema.sql"
+    "db:migrate": "wrangler d1 execute asc-mcp-licenses --file=schema.sql",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "wrangler": "^4.10.0",
     "@cloudflare/workers-types": "^4.20250410.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.7",
+    "wrangler": "^4.10.0"
   }
 }

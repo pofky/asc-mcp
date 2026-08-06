@@ -104,9 +104,14 @@ async function runSetupMode() {
   const server = new McpServer(
     { name: "asc-mcp", version: SERVER_VERSION },
     {
-      capabilities: { tools: {}, prompts: {} },
+      // Tools only. Declaring `prompts` here advertised a capability this mode
+      // never registers a handler for, so a client that lists prompts on
+      // connect (Claude Desktop does) got `-32601 Method not found` on a server
+      // whose entire job in this mode is to look healthy enough to explain the
+      // fix. Setup mode has no prompts, so it must not claim any.
+      capabilities: { tools: {} },
       instructions:
-        "App Store Connect MCP, running in SETUP MODE: no credentials found, so only asc_setup_check and asc_guide are available. Call asc_setup_check first and relay the fix it prints, then the user restarts this server to get all 41 tools.",
+        "asc-mcp, running in SETUP MODE: no App Store Connect credentials were found, so only asc_setup_check and asc_guide are available. Call asc_setup_check first and relay the fix it prints. Once credentials are in place and the user restarts this server, the full tool set appears; the write and control tools then need Pro, which asc_start_trial unlocks free for 7 days.",
     },
   );
 
@@ -159,7 +164,7 @@ async function main() {
         prompts: {},
       },
       instructions:
-        "App Store Connect MCP. Tools query the ASC API. Slash-command Prompts seed multi-tool workflows. triage_reviews and draft_review_response use MCP Sampling (your own client's model, zero extra cost). draft_review_response never auto-posts: it returns a draft only.",
+        "asc-mcp, an MCP server for Apple's App Store Connect API. Tools query that API. Slash-command Prompts seed multi-tool workflows. triage_reviews and draft_review_response use MCP Sampling (your own client's model, zero extra cost). draft_review_response never auto-posts: it returns a draft only.",
     },
   );
 
@@ -276,8 +281,12 @@ async function main() {
       return text(
         [
           result.subscription
-            ? "You already subscribed, so this is your paid license key, not a trial. " +
-              "It replaces the trial key that was in your config, which would have stopped working when the trial ran out."
+            ? // Deliberately says nothing about replacing a trial key. Most
+              // subscribers never trialled at all (every live subscription has
+              // a null trial_fingerprint), and telling those people their trial
+              // key was swapped out describes a key they never had.
+              "You already subscribed, so this is your paid license key, not a trial. " +
+              "It is now in your config, replacing whatever key was there."
             : result.already_started
               ? `Trial already running: ${result.days_remaining} day(s) left.`
               : `Pro trial started. ${result.days_remaining} day(s), no card, nothing to cancel.`,

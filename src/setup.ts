@@ -224,7 +224,7 @@ function prompt(question: string): Promise<string> {
  * Writes nothing to disk; the user pastes the block into their client config.
  */
 export async function runInit(write = false): Promise<number> {
-  process.stdout.write("\nApp Store Connect MCP setup\n");
+  process.stdout.write("\nasc-mcp setup\n");
   process.stdout.write("─".repeat(40) + "\n\n");
 
   const discovered = discoverPrivateKey();
