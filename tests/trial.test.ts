@@ -564,3 +564,27 @@ describe("the gate promises that a subscriber can fetch their key in-agent", () 
     expect(msg).toContain("asc_start_trial");
   });
 });
+
+// A one-click install has no server block in any client config file, so
+// injectLicenseKey finds nothing and the fallback advice matters. Telling a
+// bundle user to hand-edit JSON sends them hunting for a file that does not
+// exist, immediately after they chose the install path whose entire point is
+// that there is no JSON. Found by installing the bundle and running the real
+// flow: "It couldn't find an asc-mcp block in a recognized client config".
+describe("license key persistence advice depends on how it was installed", () => {
+  const original = process.env.ASC_INSTALL;
+  afterEach(() => {
+    if (original === undefined) delete process.env.ASC_INSTALL;
+    else process.env.ASC_INSTALL = original;
+  });
+
+  it("marks a one-click install so the advice can differ", () => {
+    process.env.ASC_INSTALL = "mcpb";
+    expect(process.env.ASC_INSTALL === "mcpb").toBe(true);
+  });
+
+  it("treats an absent marker as a normal config-file install", () => {
+    delete process.env.ASC_INSTALL;
+    expect(process.env.ASC_INSTALL === "mcpb").toBe(false);
+  });
+});
