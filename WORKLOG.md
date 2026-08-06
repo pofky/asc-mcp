@@ -1,6 +1,49 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**v1.9.3, and the paying-customer bug that only a real install could find (2026-08-06).**
+
+All four surfaces on 1.9.3: npm, the MCP registry, the GitHub release with the bundle, and the
+licence worker. 5/5 active subscriptions re-validated as pro afterwards. `npx -y @pofky/asc-mcp`
+from a clean directory returns 41 tools and reports 1.9.3.
+
+**The bug.** Installing the `.mcpb` and running the documented flow as a paying customer produced
+"No new trial is available for that address", which is the refusal meant for someone whose free
+trial is spent, shown to someone who is actively paying. `/trial` only returned a paid key when the
+same machine also held a trial row, which covers the convert-mid-trial case and nothing else.
+Everyone who subscribed without trialling, or who set up a second machine, was refused, and every
+one of the five live subscriptions has a null `trial_fingerprint`, so it was failing for all of
+them. `requirePro` tells them to do exactly this: "call asc_start_trial with the same email and it
+will fetch your paid key."
+
+The fingerprint check was also worthless as security: `/key` renders a licence key on screen for an
+email address alone, no second factor, so the guard demanded strictly more than the front door.
+Removing it disclosed nothing new. **Mailing the key from `/key` instead of displaying it is the
+real fix and is still open.**
+
+Verified on a local worker with a seeded D1 before deploying, across five paths: paid-with-no-trial
+now returns the subscription key, repeat calls idempotent, a new user still gets a real 7-day trial,
+a spent trial still refused, and personal-trial-then-work-email still returns the paid key.
+
+**The second bug the same install found.** A one-click install has no server block in any client
+config, so key persistence failed and the tool told the user to hand-edit JSON that does not exist,
+immediately after they chose the path whose point is that there is no JSON. The manifest now sets
+`ASC_INSTALL=mcpb` and the message points at the extension's own License key field.
+
+**Three bugs in the release script itself, all found by using it.** It launched `mcp-publisher
+login` inline and hung forever on a device approval that never came, holding a dirty tree with the
+version already bumped. It selected the workflow run with `--limit 1` and picked up the previous
+release's run, waited on that run's old failure, re-ran the wrong workflow and got the real one
+cancelled as collateral. And it shipped 1.9.2 with `--generate-notes`, whose body was a bare compare
+link on what is now the primary download page. All three fixed: it fails with instructions rather
+than blocking, matches the run by tag, and reads hand-written RELEASE_NOTES.md.
+
+**GitHub Actions failed or stalled four times today** on this account, twice with "Failed to resolve
+action download info, Service Unavailable" before reaching any of our code, and once leaving a run
+queued for over twenty minutes. The registry is published locally with `mcp-publisher`; the workflow
+is a fallback the script will wait on, never the plan. The token lasts about five minutes, so run
+`mcp-publisher login github` immediately before `npm run release`.
+
 **v1.9.1 shipped: one-click install, and releases no longer depend on GitHub Actions (2026-08-06).**
 
 Verified live on all three surfaces: npm 1.9.1, the GitHub release with the `.mcpb` attached (the
