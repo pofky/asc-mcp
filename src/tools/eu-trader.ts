@@ -12,7 +12,7 @@ export interface EUTraderArgs {
  * 2026-06-26), so this returns the exact steps plus a deep link.
  */
 export async function setEUTraderStatus(args: EUTraderArgs, tier: Tier): Promise<string> {
-  const gate = requirePro(tier, "Declaring EU trader status");
+  const gate = requirePro(tier, "Declaring EU trader status", "set_eu_trader_status");
   if (gate) return gate;
 
   const url = `https://appstoreconnect.apple.com/apps/${args.app_id}/distribution/info`;

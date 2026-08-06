@@ -76,7 +76,7 @@ export async function createSubscription(
   args: CreateSubscriptionArgs,
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Creating a subscription");
+  const gate = requirePro(tier, "Creating a subscription", "create_subscription");
   if (gate) return gate;
 
   if (args.display_name.length > NAME_LIMIT) return `display_name too long: ${args.display_name.length}/${NAME_LIMIT}.`;
@@ -320,7 +320,7 @@ export async function createIAP(
   args: CreateIAPArgs,
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Creating an in-app purchase");
+  const gate = requirePro(tier, "Creating an in-app purchase", "create_iap");
   if (gate) return gate;
 
   const missing = ["product_id", "display_name", "description", "type"].filter(

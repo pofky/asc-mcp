@@ -68,7 +68,7 @@ export async function setIapReviewScreenshot(
   args: ReviewScreenshotArgs,
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Uploading an IAP review screenshot");
+  const gate = requirePro(tier, "Uploading an IAP review screenshot", "set_iap_review_screenshot");
   if (gate) return gate;
 
   if (!existsSync(args.file)) return `File not found: ${args.file}`;

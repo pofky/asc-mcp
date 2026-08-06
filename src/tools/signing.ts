@@ -53,7 +53,7 @@ export async function setupAppStoreSigning(
   args: SetupSigningArgs,
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Preparing App Store signing");
+  const gate = requirePro(tier, "Preparing App Store signing", "setup_app_store_signing");
   if (gate) return gate;
 
   // The app's bundle id is the prefix every profile we want must match.

@@ -1,6 +1,6 @@
 import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
-import { UPGRADE_URL } from "../gate.js";
+import { requirePro } from "../gate.js";
 
 interface VersionAttributes {
   versionString: string;
@@ -77,13 +77,8 @@ export async function metadataDiff(
   args: { app_id: string },
   tier: Tier,
 ): Promise<string> {
-  if (tier !== "pro") {
-    return (
-      "Metadata diff requires a Pro license ($9/mo).\n" +
-      "Get your license at: " + UPGRADE_URL + "\n\n" +
-      "Set ASC_LICENSE_KEY in your MCP server config to unlock."
-    );
-  }
+  const gate = requirePro(tier, "Metadata diff", "metadata_diff");
+  if (gate) return gate;
 
   // Get all versions
   const versionsResp = await client.get<VersionAttributes>(

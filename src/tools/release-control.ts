@@ -16,7 +16,7 @@ export async function releaseVersion(
   args: { app_id: string; confirm?: boolean },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Releasing a version");
+  const gate = requirePro(tier, "Releasing a version", "release_version");
   if (gate) return gate;
   if (!args.confirm) {
     return "This releases your approved app to the public App Store. Re-run with confirm: true.";
@@ -63,7 +63,7 @@ export async function managePhasedRelease(
   args: { app_id: string; action: PhasedAction },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Managing phased release");
+  const gate = requirePro(tier, "Managing phased release", "manage_phased_release");
   if (gate) return gate;
 
   const versionsRes = await client.get<VersionAttrs>(

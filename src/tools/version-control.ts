@@ -37,7 +37,7 @@ export async function createVersion(
   args: { app_id: string; version_string: string; platform?: Platform; copyright?: string },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Creating a new version");
+  const gate = requirePro(tier, "Creating a new version", "create_version");
   if (gate) return gate;
 
   const attributes: Record<string, string> = {
@@ -98,7 +98,7 @@ export async function submitForReview(
   args: { app_id: string; platform?: Platform; confirm?: boolean },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Submitting for review");
+  const gate = requirePro(tier, "Submitting for review", "submit_for_review");
   if (gate) return gate;
 
   if (!args.confirm) {

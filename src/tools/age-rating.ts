@@ -70,7 +70,7 @@ export async function setAgeRating(
   args: AgeRatingArgs,
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Setting the age rating");
+  const gate = requirePro(tier, "Setting the age rating", "set_age_rating");
   if (gate) return gate;
 
   // Validate keys + values before any write.

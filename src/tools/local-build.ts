@@ -42,7 +42,7 @@ export async function buildAndArchive(
   },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Building and archiving");
+  const gate = requirePro(tier, "Building and archiving", "build_and_archive");
   if (gate) return gate;
 
   const xcodebuild = await run("xcrun", ["-f", "xcodebuild"]);
@@ -99,7 +99,7 @@ export async function uploadBinary(
   args: { ipa_path: string; platform?: string; confirm?: boolean },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Uploading a binary");
+  const gate = requirePro(tier, "Uploading a binary", "upload_binary");
   if (gate) return gate;
   if (!args.confirm) {
     return "This uploads a binary to App Store Connect (outward-facing). Re-run with confirm: true.";

@@ -1,6 +1,6 @@
 import type { LicenseStatus, Tier } from "./types.js";
 
-const LICENSE_API_URL =
+export const LICENSE_API_URL =
   process.env.ASC_LICENSE_API_URL || "https://asc-mcp-license.remewdy.workers.dev";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -42,6 +42,18 @@ export async function validateLicense(licenseKey?: string): Promise<Tier> {
     console.error("License validation network error:", err);
     return "free";
   }
+}
+
+/**
+ * The cached validation result, or null if nothing has been validated yet.
+ *
+ * Tier alone cannot answer "is this person paying?", because a live trial also
+ * reports pro. `asc_start_trial` needs the difference: a subscriber must be told
+ * there is nothing to trial, while a trial user asking again just wants to know
+ * how many days are left.
+ */
+export function lastLicenseStatus(): LicenseStatus | null {
+  return cachedStatus;
 }
 
 /** Clear the cached license status (for tests). */

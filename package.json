@@ -1,7 +1,7 @@
 {
   "name": "@pofky/asc-mcp",
-  "version": "1.8.8",
-  "description": "Full control of your App Store Connect from your coding agent. 40 tools incl. asc_setup_check (self-diagnosing setup) and asc_guide (the in-agent playbook that flags every manual website step), read intelligence (reviews, sales, preflight), and Pro write/control (metadata, screenshots, builds, IAP/subscriptions, TestFlight, submit + release, local build/upload). 6 slash-command Prompts and a bundled Claude Skill. Works with Claude Code, Claude Desktop, Cursor, Windsurf, or any MCP client. Free read tier included.",
+  "version": "1.9.0",
+  "description": "Full control of your App Store Connect from your coding agent. 41 tools incl. asc_setup_check (self-diagnosing setup) and asc_guide (the in-agent playbook that flags every manual website step), read intelligence (reviews, sales, preflight), and Pro write/control (metadata, screenshots, builds, IAP/subscriptions, TestFlight, submit + release, local build/upload). 6 slash-command Prompts and a bundled Claude Skill. Works with Claude Code, Claude Desktop, Cursor, Windsurf, or any MCP client. Free read tier included.",
   "homepage": "https://asc-mcp.pages.dev",
   "repository": {
     "type": "git",

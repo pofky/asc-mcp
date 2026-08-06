@@ -1,6 +1,6 @@
 import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
-import { UPGRADE_URL } from "../gate.js";
+import { requirePro } from "../gate.js";
 
 interface LocalizationAttributes {
   locale: string;
@@ -66,13 +66,8 @@ export async function keywordInsights(
   args: { app_id: string; extra_keywords?: string },
   tier: Tier,
 ): Promise<string> {
-  if (tier !== "pro") {
-    return (
-      "Keyword insights require a Pro license ($9/mo).\n" +
-      "Get your license at: " + UPGRADE_URL + "\n\n" +
-      "Set ASC_LICENSE_KEY in your MCP server config to unlock."
-    );
-  }
+  const gate = requirePro(tier, "Keyword insights", "keyword_insights");
+  if (gate) return gate;
 
   // 1. Get current keywords from ASC
   const versionsResp = await client.get<{ versionString: string; appStoreState: string }>(
