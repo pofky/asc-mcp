@@ -60,11 +60,32 @@ const PHASED_STATE: Record<PhasedAction, string> = {
  */
 export async function managePhasedRelease(
   client: ASCClient,
-  args: { app_id: string; action: PhasedAction },
+  args: { app_id: string; action: PhasedAction; confirm?: boolean },
   tier: Tier,
 ): Promise<string> {
   const gate = requirePro(tier, "Managing phased release", "manage_phased_release");
   if (gate) return gate;
+
+  // Every action here changes how a LIVE version reaches the public, and two of
+  // them cannot be walked back. `complete` ends the staged rollout immediately
+  // and pushes the version to 100% of users, which is the exact thing a phased
+  // release exists to avoid; `start` begins the rollout clock on an approved
+  // version. release_version and create_version both ask before far less, so an
+  // agent tidying up a checklist must not be able to finish someone's careful
+  // 7-day rollout on day two by itself.
+  const EFFECT: Record<PhasedAction, string> = {
+    start: "starts the staged rollout: Apple begins releasing this version to a growing share of users over 7 days",
+    pause: "pauses the staged rollout, so no further users receive this version until it is resumed",
+    resume: "resumes the staged rollout from where it was paused",
+    complete:
+      "ends the staged rollout NOW and releases this version to 100% of users immediately. This cannot be undone",
+  };
+  if (!args.confirm) {
+    return (
+      `This ${EFFECT[args.action]}.\n\n` +
+      `App ${args.app_id}, action "${args.action}". Re-run with confirm: true to proceed.`
+    );
+  }
 
   const versionsRes = await client.get<VersionAttrs>(
     `/v1/apps/${args.app_id}/appStoreVersions`,

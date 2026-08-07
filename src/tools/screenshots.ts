@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
+import { resolveLocalization } from "../locale.js";
 
 interface VersionAttrs {
   appStoreState: string;
@@ -68,8 +69,9 @@ export async function uploadScreenshots(
     { "fields[appStoreVersionLocalizations]": "locale", limit: "50" },
   );
   const locs = Array.isArray(locsRes.data) ? locsRes.data : [locsRes.data];
-  const loc = args.locale ? locs.find((l) => l.attributes.locale === args.locale) : locs[0];
-  if (!loc) return `Locale "${args.locale}" not found on the editable version.`;
+  const picked = await resolveLocalization(client, args.app_id, locs, args.locale, "the editable version");
+  if ("error" in picked) return picked.error;
+  const loc = picked.loc;
 
   // 2. Get or create the screenshot set for this display type.
   const setsRes = await client.get<SetAttrs>(

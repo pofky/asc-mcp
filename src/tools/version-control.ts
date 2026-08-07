@@ -198,25 +198,57 @@ export async function submitForReview(
   const submission = subRes && !Array.isArray(subRes.data) ? subRes.data : null;
   if (!submission) return "Failed to open a review submission.";
 
+  // Steps 2 and 3 used to run bare. A failure in either left an open
+  // reviewSubmission on the account with no items and nobody told about it,
+  // which Apple's UI shows as a pending submission and which blocks the next
+  // attempt. Clean it up, and if the cleanup itself fails, hand back the id so
+  // it can be cancelled in the website rather than hunted for.
+  const abandon = async (why: string): Promise<string> => {
+    try {
+      await client.del(`/v1/reviewSubmissions/${submission.id}`);
+      return `${why}\n\nThe empty review submission that was opened has been cleaned up. Nothing was submitted.`;
+    } catch {
+      return (
+        `${why}\n\nAn empty review submission was left open and could not be removed automatically. ` +
+        `Cancel submission ${submission.id} in App Store Connect > your app > the pending submission, ` +
+        `then try again.`
+      );
+    }
+  };
+
   // 2. Add the version as a submission item.
-  await client.post("/v1/reviewSubmissionItems", {
-    data: {
-      type: "reviewSubmissionItems",
-      relationships: {
-        reviewSubmission: { data: { type: "reviewSubmissions", id: submission.id } },
-        appStoreVersion: { data: { type: "appStoreVersions", id: target.id } },
+  try {
+    await client.post("/v1/reviewSubmissionItems", {
+      data: {
+        type: "reviewSubmissionItems",
+        relationships: {
+          reviewSubmission: { data: { type: "reviewSubmissions", id: submission.id } },
+          appStoreVersion: { data: { type: "appStoreVersions", id: target.id } },
+        },
       },
-    },
-  });
+    });
+  } catch (err) {
+    return abandon(
+      `Could not add version ${target.attributes.versionString} to the review submission: ` +
+        `${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 
   // 3. Mark it submitted.
-  await client.patch(`/v1/reviewSubmissions/${submission.id}`, {
-    data: {
-      type: "reviewSubmissions",
-      id: submission.id,
-      attributes: { submitted: true },
-    },
-  });
+  try {
+    await client.patch(`/v1/reviewSubmissions/${submission.id}`, {
+      data: {
+        type: "reviewSubmissions",
+        id: submission.id,
+        attributes: { submitted: true },
+      },
+    });
+  } catch (err) {
+    return abandon(
+      `The version was attached but the submission could not be sent: ` +
+        `${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 
   return (
     `Submitted version ${target.attributes.versionString} to App Review.\n` +

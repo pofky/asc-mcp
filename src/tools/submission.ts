@@ -85,8 +85,13 @@ export async function setAppMetadata(
 
   // Export compliance lives on the build (newest).
   if (args.uses_non_exempt_encryption !== undefined) {
+    // VALID only. Without the state filter the newest build by upload date wins,
+    // which during an upload is the one still PROCESSING: compliance lands on a
+    // build that cannot be submitted while the ready one behind it keeps none,
+    // and the version then fails submission for missing export compliance.
     const buildRes = await client.get<Record<string, never>>("/v1/builds", {
       "filter[app]": args.app_id,
+      "filter[processingState]": "VALID",
       "fields[builds]": "version",
       sort: "-uploadedDate",
       limit: "1",
@@ -183,6 +188,12 @@ export interface ReviewContactArgs {
   notes?: string;
   demo_account_name?: string;
   demo_account_password?: string;
+  /**
+   * Explicitly declare that no demo account is needed. Only way to clear the
+   * flag, so that a call updating an unrelated field cannot silently strip a
+   * demo account the app already had.
+   */
+  demo_account_required?: boolean;
 }
 
 /**
@@ -206,8 +217,16 @@ export async function setReviewContact(
     contactLastName: args.last_name,
     contactPhone: args.phone,
     contactEmail: args.email,
-    demoAccountRequired: Boolean(args.demo_account_name),
   };
+  // demoAccountRequired used to be sent on EVERY call, computed from whether a
+  // demo account was passed this time. Updating only a phone number therefore
+  // shipped `demoAccountRequired: false` and cleared a demo account the app
+  // already had, while the name and password fields (correctly guarded below)
+  // stayed put. The next reviewer opens an app that needs a login and finds no
+  // credentials, which is a straightforward rejection. Only touch the flag when
+  // the caller actually says something about the demo account.
+  if (args.demo_account_name) attributes.demoAccountRequired = true;
+  else if (args.demo_account_required === false) attributes.demoAccountRequired = false;
   if (args.notes) attributes.notes = args.notes;
   if (args.demo_account_name) attributes.demoAccountName = args.demo_account_name;
   if (args.demo_account_password) attributes.demoAccountPassword = args.demo_account_password;
