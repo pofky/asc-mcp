@@ -11,6 +11,11 @@ export interface AppAvailabilityArgs {
    * required first step before removing an app record.
    */
   territories?: string[];
+  /**
+   * Explicit opt-in to "everywhere". Required when `territories` is omitted, so
+   * that an app_id on its own can never widen where an app is sold.
+   */
+  all_territories?: boolean;
   /** Auto-include future new territories. Defaults to true. */
   available_in_new_territories?: boolean;
 }
@@ -32,6 +37,23 @@ export async function setAppAvailability(
 ): Promise<string> {
   const gate = requirePro(tier, "Setting app availability", "set_app_availability");
   if (gate) return gate;
+
+  // Omitting `territories` used to mean "put it on sale in all 175 territories",
+  // which made an app_id on its own a mutation of where the app is sold. An
+  // agent poking at the tool to see what it does would silently widen the
+  // distribution of an app that was deliberately limited, and this is not a
+  // reversible read. Where an app sells is outward-facing, so intent has to be
+  // explicit: name the territories, or say all_territories, or say nowhere.
+  if (args.territories === undefined && args.all_territories !== true) {
+    return (
+      "Refusing to change where this app is sold without an explicit instruction.\n\n" +
+      "Pick one:\n" +
+      '  territories: ["USA", "GBR", ...]   only these, everywhere else off\n' +
+      "  all_territories: true               on sale in every App Store territory\n" +
+      "  territories: []                     off sale worldwide (the first step in removing an app)\n\n" +
+      "Read the current state first with app_details if you are not sure."
+    );
+  }
 
   const newTerr = args.available_in_new_territories ?? true;
 

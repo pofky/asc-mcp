@@ -243,7 +243,7 @@ describe("write-path failure messages", () => {
       stub(async () => {
         throw new ASCAPIError(409, "/v1/appStoreVersions", body);
       }),
-      { app_id: "1", version_string: "1.0" },
+      { app_id: "1", version_string: "1.0", confirm: true },
       "pro",
     );
     expect(out).toContain("already used");
@@ -258,7 +258,7 @@ describe("write-path failure messages", () => {
       stub(async () => {
         throw new ASCAPIError(409, "/v1/appStoreVersions", body);
       }),
-      { app_id: "1", version_string: "2.0" },
+      { app_id: "1", version_string: "2.0", confirm: true },
       "pro",
     );
     expect(out).toContain("still open or in review");
@@ -331,9 +331,22 @@ describe("set_app_availability territory semantics", () => {
     expect(out).toContain("Remove App");
   });
 
-  it("still means all territories when the argument is omitted", async () => {
+  /**
+   * An app_id on its own used to mean "on sale in all 175 territories". Calling
+   * the tool to see what it does then quietly widened where a deliberately
+   * limited app was sold, and that is not a reversible read.
+   */
+  it("refuses to touch availability without an explicit instruction", async () => {
     const { client, patched } = stubClient(true);
     const out = await setAppAvailability(client, { app_id: "1" }, "pro");
+    expect(patched).toHaveLength(0);
+    expect(out).toContain("Refusing");
+    expect(out).toContain("all_territories");
+  });
+
+  it("means all territories when all_territories is passed explicitly", async () => {
+    const { client, patched } = stubClient(true);
+    const out = await setAppAvailability(client, { app_id: "1", all_territories: true }, "pro");
     expect(patched).toHaveLength(0); // already all on, nothing to change
     expect(out).toContain("3 of 3");
   });
@@ -343,5 +356,43 @@ describe("set_app_availability territory semantics", () => {
     await setAppAvailability(client, { app_id: "1", territories: ["USA"] }, "pro");
     expect(patched.length).toBeGreaterThan(0);
     expect(patched.every((p) => p.path.startsWith("/v1/territoryAvailabilities/"))).toBe(true);
+  });
+});
+
+/**
+ * Creating a version writes to a real App Store Connect record and cannot be
+ * undone: Apple answers 409 "Only the first version of any platform can be
+ * deleted". A sweep that called every tool on a live app left a permanent
+ * 99.9.9 on a shipping app, which is what added this gate.
+ */
+describe("create_version will not write without confirmation", () => {
+  const neverCalled = {
+    post: async () => {
+      throw new Error("create_version wrote to the API without confirm");
+    },
+    get: async () => ({ data: [] }),
+    patch: async () => ({}),
+  } as never;
+
+  it("explains the irreversibility and writes nothing", async () => {
+    const out = await createVersion(neverCalled, { app_id: "6761487030", version_string: "9.9.9" }, "pro");
+    expect(out).toContain("cannot be undone");
+    expect(out).toContain("confirm: true");
+    expect(out).toContain("9.9.9");
+  });
+
+  it("proceeds once confirmed", async () => {
+    let posted = false;
+    const client = {
+      post: async () => {
+        posted = true;
+        return { data: { id: "v1", attributes: { versionString: "9.9.9", appStoreState: "PREPARE_FOR_SUBMISSION", platform: "IOS" } } };
+      },
+      get: async () => ({ data: [] }),
+      patch: async () => ({}),
+    } as never;
+    const out = await createVersion(client, { app_id: "1", version_string: "9.9.9", confirm: true }, "pro");
+    expect(posted).toBe(true);
+    expect(out).toContain("Created version 9.9.9");
   });
 });
