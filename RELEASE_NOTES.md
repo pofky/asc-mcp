@@ -1,25 +1,35 @@
-v1.9.4: an outage can no longer demote a subscriber, and your key stops being readable from your email address
+v1.9.5: the tools that touch your live app now ask first
 
-Download **asc-mcp-1.9.4.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Every other client: `npx @pofky/asc-mcp init --write`.
+Download **asc-mcp-1.9.5.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Every other client: `npx @pofky/asc-mcp init --write`.
 
-**If you subscribe, two things here matter.**
+**Why this release exists**
 
-A licence-server hiccup used to drop you to the free tier. Validation treated any error, including our own 500s and a dropped connection, as a verdict of "not Pro", and the only cache was in memory, so every new session during an outage demoted you again and told you to buy what you had already bought. A key confirmed as Pro is now remembered on your machine and honoured for up to 14 days when the server cannot answer. Only a Pro verdict is ever remembered, so this can never hand Pro to a key the server has not approved.
+An agent calls these tools on your real Apple account, on its own, from whatever it inferred from the conversation. So the question worth asking is not "does this work" but "what happens when the model calls it with the minimum arguments the schema accepts, on a shipping app". Calling all 41 tools against a live account, then auditing the write paths, answered that. The answers were not good, and this release is the fix.
 
-And asking your agent for your key no longer discloses it to anyone who knows your email address. The first machine to claim a subscription keeps getting the key in the agent, exactly as now. A claim from any other machine gets the key emailed to the address on the subscription instead of returned in the response. You always end up with your key; someone who guessed your email gets a response with nothing in it, and you get an email telling you it happened.
+**Tools that now require confirm: true**
 
-Also fixed on the licence server, live already: a customer who cancelled and later resubscribed could be handed their old, dead key, which then failed to validate right after they had paid again. And the key lookup page now matches your email whatever case you type it in.
+`manage_phased_release` changed how a live version reaches the public with no confirmation at all. Its `complete` action ends a staged rollout immediately and pushes the version to 100% of users, which is the exact thing a phased release exists to prevent, and it cannot be undone. An agent tidying up a checklist could finish your careful 7-day rollout on day two.
 
-**If you use the Claude Desktop bundle**
+`assign_build_to_group` pushed a build to every tester in a group, and Apple notifies them instantly with no recall. Without a `build_id` it silently picked the newest processed build, which may be a throwaway you uploaded to test something.
 
-The Pro upgrade message told you to set `ASC_LICENSE_KEY` in your MCP server config. A one-click install has no such file, so it was sending you to look for JSON that does not exist. It now points at the extension's own License key field.
+`invite_beta_tester` sent a real email from your developer account to whatever address it was handed. An address read out of conversation context is exactly the kind of thing an agent gets subtly wrong.
 
-Starting the server with no credentials also advertised a prompts capability it could not serve, so clients that list prompts on connect saw an error from the one mode whose job is to explain how to fix your setup.
+`create_version` created a version on your live app record. Apple then refuses to delete it ("Only the first version of any platform can be deleted"), so a mistake there is permanent, and the stray version occupies the single editable slot until someone notices.
 
-**Smaller things**
+**Tools that no longer act on an app_id alone**
 
-`list_apps` now returns the SKU it was already fetching and quietly discarding. The setup check no longer describes the intelligence tools as free, because they are not. The setup guide points at real config paths instead of one Claude Code does not read. The product is called asc-mcp everywhere, including in the emails the licence server sends.
+`set_app_availability` treated an omitted territories list as "on sale in all 175 territories". Calling it to see what it does would have widened the distribution of an app you deliberately limited. It now needs an explicit choice: a territories list, `all_territories: true`, or `[]` for off sale worldwide.
+
+`set_review_contact` sent `demoAccountRequired` on every call, computed from whether you passed a demo account that time. Updating only a phone number therefore cleared a demo account your app already had, and the next reviewer opens an app that needs a login and finds no credentials. The flag is now only touched when you say something about it.
+
+**Writing to the right place**
+
+`upload_screenshots` and `update_version_metadata` fell back to whichever localization Apple happened to return first when no locale was given. Apple does not promise an order. On an app with more than one language that is a coin flip, and these write your public App Store listing: the description, keywords, name and subtitle. They now use the app's own primary locale, and refuse with the list of available locales rather than guess.
+
+`set_app_metadata` set export compliance on the newest build by upload date, with no state filter, so during an upload it landed on the build still processing while the submittable one behind it got none. It now targets the newest VALID build.
+
+`submit_for_review` left an open, empty review submission on your account if any step after the first failed, with nobody told. It now cleans up, and if cleanup fails it hands you the submission id to cancel.
 
 **Upgrading**
 
-Worth it for every subscriber. The licence-server half is already live, so the key-lookup and resubscribe fixes apply to you whatever version you run; the outage grace and the bundle fixes need this release.
+Recommended for anyone whose agent has write access to a live app. No configuration changes. Four tools now need `confirm: true`, so a script or prompt that called them without it will get an explanation instead of an action.

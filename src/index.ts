@@ -575,6 +575,7 @@ async function main() {
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       action: z.enum(["start", "pause", "resume", "complete"]).describe("Phased release action"),
+      confirm: z.boolean().optional().describe("Required. These change how a live version reaches the public; complete is irreversible."),
     },
     safe((args) => managePhasedRelease(client, args, tier)),
   );
@@ -588,23 +589,25 @@ async function main() {
 
   server.tool(
     "assign_build_to_group",
-    "Assign a build to a TestFlight beta group so testers can install it (defaults to newest processed build). Pro feature.",
+    "Assign a build to a TestFlight beta group so testers can install it (defaults to newest processed build). Needs confirm:true: Apple notifies every tester immediately and the notification cannot be recalled. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       group_id: z.string().describe("Beta group ID (from list_beta_groups)"),
       build_id: z.string().optional().describe("Specific build ID. Omit for newest VALID build."),
+      confirm: z.boolean().optional().describe("Required. Every tester in the group is notified immediately."),
     },
     safe((args) => assignBuildToGroup(client, args, tier)),
   );
 
   server.tool(
     "invite_beta_tester",
-    "Invite an external tester by email and add them to a beta group. Apple sends the TestFlight invite. Pro feature.",
+    "Invite an external tester by email and add them to a beta group. Needs confirm:true: Apple emails a real person from your account and it cannot be recalled. Pro feature.",
     {
       group_id: z.string().describe("Beta group ID (from list_beta_groups)"),
       email: z.string().describe("Tester email address"),
       first_name: z.string().optional().describe("Tester first name"),
       last_name: z.string().optional().describe("Tester last name"),
+      confirm: z.boolean().optional().describe("Required. Sends a real email to this address, immediately."),
     },
     safe((args) => inviteBetaTester(client, args, tier)),
   );
@@ -761,6 +764,10 @@ async function main() {
       notes: z.string().optional().describe("Notes for App Review (how to test, etc.)"),
       demo_account_name: z.string().optional().describe("Demo account username, if the app needs a login"),
       demo_account_password: z.string().optional().describe("Demo account password"),
+      demo_account_required: z
+        .boolean()
+        .optional()
+        .describe("Pass false to declare that no demo account is needed. Omit to leave the existing setting alone; passing demo_account_name sets it to true."),
     },
     safe((args) => setReviewContact(client, args, tier)),
   );

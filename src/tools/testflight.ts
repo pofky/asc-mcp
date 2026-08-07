@@ -38,11 +38,26 @@ export async function listBetaGroups(
 /** Assign a build to a TestFlight beta group so testers can install it. */
 export async function assignBuildToGroup(
   client: ASCClient,
-  args: { app_id: string; group_id: string; build_id?: string },
+  args: { app_id: string; group_id: string; build_id?: string; confirm?: boolean },
   tier: Tier,
 ): Promise<string> {
   const gate = requirePro(tier, "Assigning a build to TestFlight", "assign_build_to_group");
   if (gate) return gate;
+
+  // Real people get a push notification the moment this lands, and it cannot be
+  // recalled. Worse without build_id: the tool picks the newest VALID build,
+  // which may be a throwaway the developer uploaded to test something, and
+  // ships it to every tester in the group.
+  if (!args.confirm) {
+    return (
+      `This makes ${args.build_id ? `build ${args.build_id}` : "the newest processed build"} available to every ` +
+      `tester in group ${args.group_id}. Apple notifies them immediately and the notification cannot be recalled.\n\n` +
+      (args.build_id
+        ? ""
+        : "No build_id was given, so the newest VALID build would be used. Check it with list_builds first if you are not sure which that is.\n\n") +
+      "Re-run with confirm: true to proceed."
+    );
+  }
 
   let buildId = args.build_id;
   let buildVersion = buildId ?? "";
@@ -70,14 +85,27 @@ export async function assignBuildToGroup(
 /** Invite an external tester by email and add them to a beta group. */
 export async function inviteBetaTester(
   client: ASCClient,
-  args: { group_id: string; email: string; first_name?: string; last_name?: string },
+  args: { group_id: string; email: string; first_name?: string; last_name?: string; confirm?: boolean },
   tier: Tier,
 ): Promise<string> {
   const gate = requirePro(tier, "Inviting a beta tester", "invite_beta_tester");
   if (gate) return gate;
 
+  // Validate before asking to confirm. Prompting someone to approve sending to
+  // "not-an-email" wastes the one question this tool gets to ask, and the whole
+  // point of the prompt is to put a real address in front of a human.
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(args.email)) {
     return `"${args.email}" is not a valid email.`;
+  }
+
+  // Apple emails a real human the instant this succeeds, from the developer's
+  // own account, and there is no recall. An address read out of conversation
+  // context is exactly the kind of thing an agent gets subtly wrong.
+  if (!args.confirm) {
+    return (
+      `This sends a TestFlight invitation email from your developer account to ${args.email}, immediately ` +
+      `and irrevocably.\n\nCheck the address is right, then re-run with confirm: true.`
+    );
   }
 
   await client.post("/v1/betaTesters", {

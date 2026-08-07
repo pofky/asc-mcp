@@ -1,6 +1,7 @@
 import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
+import { resolveLocalization } from "../locale.js";
 import { EDITABLE_VERSION_STATES as EDITABLE } from "../editable.js";
 import { fetchAppInfos, pickEditableAppInfo, noEditableAppInfoMessage } from "../app-info.js";
 
@@ -145,9 +146,15 @@ export async function updateVersionMetadata(
       { "fields[appStoreVersionLocalizations]": "locale", limit: "50" },
     );
     const locs = Array.isArray(locsRes.data) ? locsRes.data : [locsRes.data];
-    const loc = targetLocale
-      ? locs.find((l) => l.attributes.locale === targetLocale)
-      : locs[0];
+    const pickedVersionLoc = await resolveLocalization(
+      client,
+      args.app_id,
+      locs,
+      targetLocale,
+      `version ${editable.attributes.versionString}`,
+    );
+    if ("error" in pickedVersionLoc) return pickedVersionLoc.error;
+    const loc = pickedVersionLoc.loc;
     if (!loc) {
       return `Locale "${targetLocale}" not found on version ${editable.attributes.versionString}.`;
     }
@@ -187,9 +194,17 @@ export async function updateVersionMetadata(
         { "fields[appInfoLocalizations]": "locale,name,subtitle", limit: "50" },
       );
       const infoLocs = Array.isArray(infoLocsRes.data) ? infoLocsRes.data : [infoLocsRes.data];
-      const iloc = targetLocale
-        ? infoLocs.find((l) => l.attributes.locale === targetLocale)
-        : infoLocs[0];
+      // Same reasoning as the version localization above: the app name and
+      // subtitle are the most public strings this product writes.
+      const pickedInfoLoc = await resolveLocalization(
+        client,
+        args.app_id,
+        infoLocs,
+        targetLocale,
+        "the app's information record",
+      );
+      if ("error" in pickedInfoLoc) return pickedInfoLoc.error;
+      const iloc = pickedInfoLoc.loc;
       if (iloc) {
         const attrs: Record<string, string> = {};
         if (args.name !== undefined) attrs.name = args.name;
