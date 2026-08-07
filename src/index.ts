@@ -494,12 +494,13 @@ async function main() {
 
   server.tool(
     "create_version",
-    "Create a new editable App Store version to prepare your next release. Pro feature.",
+    "Create a new editable App Store version to prepare your next release. Needs confirm:true, because Apple only allows deleting an app's very first version, so this cannot be undone. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       version_string: z.string().describe("Version number, e.g. 2.5.0"),
       platform: z.enum(["IOS", "MAC_OS", "TV_OS", "VISION_OS"]).optional().describe("Platform (default IOS)"),
       copyright: z.string().optional().describe("Copyright line, e.g. 2026 Your Company"),
+      confirm: z.boolean().optional().describe("Required. Creating a version on a live app record cannot be undone."),
     },
     safe((args) => createVersion(client, args, tier)),
   );
@@ -766,13 +767,17 @@ async function main() {
 
   server.tool(
     "set_app_availability",
-    "Set the app's country/region availability. By default makes it available in ALL App Store territories and auto-includes future ones; pass a territories subset to restrict, or an empty array to take it off sale everywhere. Pro feature.",
+    "Set the app's country/region availability. Requires an explicit choice: a territories list, or all_territories:true, or [] to take the app off sale worldwide. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       territories: z
         .array(z.string())
         .optional()
-        .describe('Territory ids to enable, e.g. ["USA","GBR"]. Omit for all territories. Pass [] to turn every territory off, i.e. take the app off sale worldwide.'),
+        .describe('Territory ids to enable, e.g. ["USA","GBR"]; everywhere else is turned off. Pass [] to take the app off sale worldwide. Omit only if you pass all_territories.'),
+      all_territories: z
+        .boolean()
+        .optional()
+        .describe("Put the app on sale in every App Store territory. Required when territories is omitted, so an app_id alone can never widen where an app is sold."),
       available_in_new_territories: z
         .boolean()
         .optional()

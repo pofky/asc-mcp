@@ -34,11 +34,29 @@ function firstIapGuidance(appId: string, products: string[]): string {
 /** Create a new editable App Store version (the "next version" you edit + submit). */
 export async function createVersion(
   client: ASCClient,
-  args: { app_id: string; version_string: string; platform?: Platform; copyright?: string },
+  args: { app_id: string; version_string: string; platform?: Platform; copyright?: string; confirm?: boolean },
   tier: Tier,
 ): Promise<string> {
   const gate = requirePro(tier, "Creating a new version", "create_version");
   if (gate) return gate;
+
+  // Creating a version is not undoable. Apple only allows deleting the FIRST
+  // version of a platform ("Only the first version of any platform can be
+  // deleted", 409 STATE_ERROR), so a version created by mistake on a live app
+  // is permanent: the best anyone can do is rename it. It also occupies the one
+  // editable slot an app gets, so a stray one blocks the next real release
+  // until someone notices. Found by calling every tool on a live app to see
+  // what happens, which created a 99.9.9 on a shipping app that could not then
+  // be removed.
+  if (!args.confirm) {
+    return (
+      `This creates version ${args.version_string} on app ${args.app_id}, on the real App Store Connect record.\n\n` +
+      "Apple only allows deleting the first version an app ever had, so this cannot be undone: a version " +
+      "created here can be renamed but not removed, and it takes the single editable slot until it ships " +
+      "or is replaced.\n\n" +
+      "Check the intended number with app_details, then re-run with confirm: true."
+    );
+  }
 
   const attributes: Record<string, string> = {
     platform: args.platform ?? "IOS",
