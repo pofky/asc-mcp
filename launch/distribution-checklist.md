@@ -59,11 +59,20 @@ pull request. Recording that here so nobody spends the afternoon again.
       start command and the config schema for the three required env vars.
 - [ ] Publish to Smithery: needs a one-time account at <https://smithery.ai>, after which
       `smithery mcp build` and `smithery mcp publish` are terminal commands.
-- [ ] Re-submit to <https://mcpservers.org/submit> so wong2's list picks up the current server.
-      We are already there as `mcpservers.org/servers/pofky/appstore-connect-mcp`, a slug from
-      the retired package name, describing the old server. There is no edit route, so resubmit.
-      Fields: name, short description, link, category (Development), contact email. Paste-ready
-      text in `launch/mcpservers-org-submit.txt`.
+- [x] **Re-submit to <https://mcpservers.org/submit>. Approved 7 August 2026**, live at
+      <https://mcpservers.org/servers/pofky/asc-mcp> with accurate copy: 41 tools, the one-click
+      bundle, the in-agent trial and the $9 price.
+- [ ] **Ask mcpservers.org to remove the duplicate.** The pre-rename listing is still up at
+      `mcpservers.org/servers/pofky/appstore-connect-mcp`, pointing at the same repo under the old
+      "App Store Connect MCP Server" name and describing a read-only tool from several releases ago.
+      Two entries for one repo split the listing between an accurate page and a stale one, and the
+      stale one carries exactly the name the rename existed to retire. Email is written and
+      paste-ready: `launch/mcpservers-org-remove-duplicate.txt`, to contact@mcpservers.org.
+- [ ] Not in the `wong2/awesome-mcp-servers` README itself (checked 7 August, no match for pofky).
+      The site listing and the repo README are separate surfaces; the email above offers a redirect,
+      and the README is the repo's own PR flow, which had PRs disabled when last tried.
+- [ ] Declined for now: the sponsorship offer in the approval email buys placement on the site and
+      the 4k-star repo. Paid, so it waits until directory traffic is proven to convert.
 - [x] Official MCP registry is healthy: `io.github.pofky/asc-mcp` 1.9.0 is `isLatest: true`,
       published 6 August 2026, with every version back to 1.8.1 active. The official
       `modelcontextprotocol/servers` repo no longer maintains a server list and now points

@@ -1,0 +1,21 @@
+Hi,
+
+Thanks for approving asc-mcp yesterday. There is now a duplicate on the site and I would like to ask you to remove the older one.
+
+Both of these point at the same GitHub repository, github.com/pofky/asc-mcp:
+
+https://mcpservers.org/servers/pofky/asc-mcp
+https://mcpservers.org/servers/pofky/appstore-connect-mcp
+
+The one to keep is asc-mcp. It is the one you approved, and its description matches the current server.
+
+The one to remove is appstore-connect-mcp. It was submitted before I renamed the project, so it is listed under the old name and its description is several releases out of date: it describes a read-only tool, and the server now has 41 tools including the write and release path. I renamed the project to asc-mcp specifically to stop presenting "App Store Connect" as a product name, since that is Apple's trademark and the project is not affiliated with Apple.
+
+Leaving both up splits the listing between an accurate page and a stale one under a name I am retiring, so I would rather have just the asc-mcp entry.
+
+If a redirect from the old slug to the new one is easier on your side than a deletion, that works just as well for me.
+
+Thanks for running the directory.
+
+Povilas Konopackas
+povkonop@gmail.com
