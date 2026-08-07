@@ -62,12 +62,16 @@ pull request. Recording that here so nobody spends the afternoon again.
 - [x] **Re-submit to <https://mcpservers.org/submit>. Approved 7 August 2026**, live at
       <https://mcpservers.org/servers/pofky/asc-mcp> with accurate copy: 41 tools, the one-click
       bundle, the in-agent trial and the $9 price.
-- [ ] **Ask mcpservers.org to remove the duplicate.** The pre-rename listing is still up at
+- [x] **Asked mcpservers.org to remove the duplicate. Email sent 7 August 2026.** The pre-rename listing is still up at
       `mcpservers.org/servers/pofky/appstore-connect-mcp`, pointing at the same repo under the old
       "App Store Connect MCP Server" name and describing a read-only tool from several releases ago.
       Two entries for one repo split the listing between an accurate page and a stale one, and the
       stale one carries exactly the name the rename existed to retire. Email is written and
-      paste-ready: `launch/mcpservers-org-remove-duplicate.txt`, to contact@mcpservers.org.
+      Text sent: `launch/mcpservers-org-remove-duplicate.txt`, to contact@mcpservers.org. It offered a
+      redirect as an alternative to deletion. **Check the old slug around 14 August**: if
+      `mcpservers.org/servers/pofky/appstore-connect-mcp` still returns 200 and has not become a
+      redirect, follow up once, then let it go. A stale duplicate is worth one email and one nudge,
+      not a campaign.
 - [ ] Not in the `wong2/awesome-mcp-servers` README itself (checked 7 August, no match for pofky).
       The site listing and the repo README are separate surfaces; the email above offers a redirect,
       and the README is the repo's own PR flow, which had PRs disabled when last tried.
