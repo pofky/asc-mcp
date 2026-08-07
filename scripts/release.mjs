@@ -257,7 +257,29 @@ if (dry) {
 }
 
 const checks = [];
-const npmVersion = execFileSync("npm", ["view", "@pofky/asc-mcp", "version"], { encoding: "utf8" }).trim();
+
+/**
+ * npm, with a retry.
+ *
+ * `npm view` reads through a cache and a CDN, and right after a publish it can
+ * still answer with the previous version. Cutting 1.9.5 it reported 1.9.4
+ * seconds after a successful publish, and the registry had 1.9.5 the moment it
+ * was asked directly. A verification step that reports a false failure is worse
+ * than none, because the next real half-landed release gets waved through.
+ */
+const npmVersion = (() => {
+  for (let i = 0; i < 6; i++) {
+    const direct = execSync(`curl -s https://registry.npmjs.org/@pofky/asc-mcp`, { encoding: "utf8" });
+    try {
+      const latest = JSON.parse(direct)["dist-tags"].latest;
+      if (latest === version) return latest;
+    } catch {
+      // fall through to the retry
+    }
+    if (i < 5) execSync("sleep 10");
+  }
+  return execFileSync("npm", ["view", "@pofky/asc-mcp", "version"], { encoding: "utf8" }).trim();
+})();
 checks.push(["npm", npmVersion === version, npmVersion]);
 
 const assets = JSON.parse(
