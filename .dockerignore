@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+.git
+.github
+.wrangler
+site
+launch
+license-worker
+docs
+tests
+scripts
+*.p8
+.env
+.dev.vars
+.mcpregistry_*
+.DS_Store
