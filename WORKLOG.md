@@ -19,11 +19,16 @@ container: credential-less start reaches setup mode and answers `initialize` + `
 `asc_setup_check` and `asc_guide`; started with Glama's exact placeholder values, including a
 `/app/private_key.p8` that does not exist, it still starts and lists all 41 tools. 210 tests pass.
 
-**Open.** Three clicks on Build on the admin page produced no new entry under Recent Tests, and
-manual Sync reports `Last synced 2026-08-10 09:30` while still showing `4332ed4` as last commit,
-two commits behind `origin/master`. Glama-side queueing, or a silent submit failure. Worth
-retrying later, and worth considering switching their build steps to `npm ci` / `npm run build`
-with CMD `node dist/index.js`, since this repo ships `package-lock.json` and no pnpm lockfile.
+**Resolved, and the spec now matches what we actually test.** Their build steps ran `pnpm install`
+against a repo that ships `package-lock.json` and no pnpm lockfile, so the listing config is now
+`["npm ci","npm run build"]` with CMD `["mcp-proxy","--","node","dist/index.js"]`. Verified before
+saving by rebuilding their generated Dockerfile locally with those two changes: image builds clean,
+and the container comes up through `mcp-proxy` with a successful `initialize` reporting asc-mcp
+1.9.5. Glama's own build then passed, `019fea65-3609-7899-965e-f8bbb5995bc8`, success in 18.2s
+against the 15-minute timeout that preceded it.
+
+**The lesson for next time.** A Glama build failure is not evidence of a bug here. Read the test log
+before touching the repo: the build spec lives on their admin page, not in this tree.
 
 **v1.9.3, and the paying-customer bug that only a real install could find (2026-08-06).**
 
