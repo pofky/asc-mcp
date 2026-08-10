@@ -1,6 +1,30 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**Glama's "Build failed for asc-mcp" was Glama's infrastructure, not ours (2026-08-10).**
+
+The 8 August failure email points at a build spec test. Read with the maintainer login, the log says
+`DockerBuildError: aborted`, `ECONNRESET`, after 15 minutes, with three log lines total, dying at
+`[internal] load metadata for docker.io/library/debian:trixie-slim`. It never reached `pnpm install`.
+Nothing in this repo was involved.
+
+**Glama does not use a Dockerfile from the repo.** It generates one from the per-server config at
+`/admin/dockerfile`: base image, Node version, build steps `["pnpm install","pnpm run build"]`, CMD
+`["mcp-proxy","--","pnpm","run","start"]`, plus placeholder env values. A `Dockerfile` committed here
+is therefore invisible to Glama. Ours was still added and verified, because Smithery, self-hosters
+and any other sandbox do read it.
+
+**The server itself is healthy on every path that build would have exercised.** Verified in a
+container: credential-less start reaches setup mode and answers `initialize` + `tools/list` with
+`asc_setup_check` and `asc_guide`; started with Glama's exact placeholder values, including a
+`/app/private_key.p8` that does not exist, it still starts and lists all 41 tools. 210 tests pass.
+
+**Open.** Three clicks on Build on the admin page produced no new entry under Recent Tests, and
+manual Sync reports `Last synced 2026-08-10 09:30` while still showing `4332ed4` as last commit,
+two commits behind `origin/master`. Glama-side queueing, or a silent submit failure. Worth
+retrying later, and worth considering switching their build steps to `npm ci` / `npm run build`
+with CMD `node dist/index.js`, since this repo ships `package-lock.json` and no pnpm lockfile.
+
 **v1.9.3, and the paying-customer bug that only a real install could find (2026-08-06).**
 
 All four surfaces on 1.9.3: npm, the MCP registry, the GitHub release with the bundle, and the
