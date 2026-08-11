@@ -1,6 +1,57 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**Full-journey verification, no money spent (2026-08-11).**
+
+Drove the whole thing end to end: fresh `npx` install, live Apple API, the licence worker running
+locally against a local D1, and one real write to a real app. 23 of 24 licence-server assertions
+pass, every free and Pro tool answers live, and the write was confirmed by reading Apple's API
+directly rather than by trusting the tool that made it.
+
+**Verified working.** `npx -y @pofky/asc-mcp@latest` on a clean directory with only `ASC_ISSUER_ID`
+set auto-discovers the `.p8` and reports 1.9.5 with 41 tools and 6 prompts. Live auth against
+App Store Connect, 8 apps listed. Free/Pro gating: `list_reviews` and `update_version_metadata`
+refuse on free with the trial + checkout copy, and unlock the moment `asc_start_trial` returns, with
+no restart. Pro intelligence tools all answer live (`release_preflight`, `daily_briefing`,
+`keyword_insights`, `metadata_diff`, `triage_reviews`). `sales_report` correctly asks for the vendor
+number instead of failing. Outward-facing guards hold: `submit_for_review` and `release_version`
+both refuse without `confirm: true`. `init` in a real terminal prints the full paste-ready config.
+`npm run mcpb` builds a 3.3MB bundle. Every public URL is up, and `/go` still redirects to the live
+checkout with the tool name attributed.
+
+**The real write.** `update_version_metadata` set `promotionalText` on Adaptale's unreleased 1.0
+draft, and an independent JWT-signed read straight from `api.appstoreconnect.apple.com` confirmed the
+value. Restored to `null` afterwards, confirmed the same way. Nothing was submitted or released.
+
+**Licence server, 23/24.** Trial mints, validates, is idempotent, and is anchored to the Apple
+account rather than the email, so a second address does not buy a second week. Last week's
+regression stays fixed: a paid customer who never trialled gets their subscription key back from
+`/trial`. Cancellation is not revocation, revocation is terminal and no later activate resurrects
+it, renewal restores a lapsed row. On the security side, forged signatures, replayed timestamps and
+another product's subscription all mint nothing, and an unknown key returns free rather than an
+error. Prod secrets confirmed correct: `BREVO_API_KEY` set, and `POLAR_WEBHOOK_SECRET_SANDBOX`
+deleted after the last sandbox run, so a sandbox signature cannot mint a real licence.
+
+**Finding: the 4-day grace window is unreachable through the webhook path.** `shouldBeActive`
+returns 0 whenever an active-type event carries a `current_period_end` already in the past, and
+`isLicenseUsable` checks `active` and returns `inactive` before it ever reaches the grace branch. So
+the grace only ever applies when NO event arrives. `DEAD_STATUSES` deliberately excludes `past_due`
+so a customer in card-retry keeps access, and this silently overrides that. Reproduced: a
+`subscription.created` two days past its period end lands `active=0`, and both `/validate` and
+`/key` treat that customer as having nothing. Not fixed here: it is payment semantics on a worker
+with paying customers, so it wants a decision and a deploy, not a drive-by edit.
+
+**Two smaller ones.** `POST /key` with a JSON body throws out of `formData()` into the catch-all and
+returns 500 `Internal error` where it should return 400; the browser form is unaffected, but
+anything watching error rates reads it as the licence server falling over. And `init` in a
+non-interactive shell prints only a hint, never the config block, even when the `.p8` was found and
+`ASC_ISSUER_ID` is already in the environment, which is exactly the case where it could print it.
+
+**Not covered, deliberately.** Nobody typed a card number, so Polar's hosted checkout page itself is
+unexercised; everything downstream of it is verified by signed webhook replay against the real
+payload shape and product id. No submission, release, binary upload or TestFlight distribution was
+run against a live app.
+
 **Glama's "Build failed for asc-mcp" was Glama's infrastructure, not ours (2026-08-10).**
 
 The 8 August failure email points at a build spec test. Read with the maintainer login, the log says
