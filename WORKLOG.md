@@ -47,10 +47,25 @@ anything watching error rates reads it as the licence server falling over. And `
 non-interactive shell prints only a hint, never the config block, even when the `.p8` was found and
 `ASC_ISSUER_ID` is already in the environment, which is exactly the case where it could print it.
 
-**Not covered, deliberately.** Nobody typed a card number, so Polar's hosted checkout page itself is
-unexercised; everything downstream of it is verified by signed webhook replay against the real
-payload shape and product id. No submission, release, binary upload or TestFlight distribution was
-run against a live app.
+**The checkout gap, closed the same day, with a real Polar sandbox purchase.** No card was typed and
+none was needed: a 100%-off sandbox discount takes the checkout to `total_amount: 0` and
+`is_payment_form_required: false`, so `POST /v1/checkouts/client/{secret}/confirm`, the same call the
+hosted page makes, completes a genuine subscription. A quick Cloudflare tunnel put the local worker
+on a public URL, a sandbox webhook endpoint was pointed at it with a known secret, and
+`POLAR_WEBHOOK_SECRET_SANDBOX` + `POLAR_EXTRA_PRODUCT_IDS` were set locally only, never in prod.
+
+Polar delivered `subscription.created`, `.active` and `.updated`; all three verified and provisioned
+a `pro` row against the real subscription id. `/key` returned that key to the browser form,
+`asc_setup_check` reported "Pro: all tools unlocked" against live Apple auth, and `asc_start_trial`
+on the purchaser's address returned the paid key rather than a refusal, which is the first-customer
+bug reproduced fixed against a real Polar row instead of a synthetic one. Cancel-at-period-end via
+the Polar API produced a real `subscription.canceled` and the key stayed `pro` through
+2026-09-11, and revoking produced `subscription.revoked` and dropped it to free immediately, with the
+MCP re-gating Pro tools on the next start. Sandbox webhook endpoint and discount both deleted
+afterwards; the tunnel and the local worker are down and `.dev.vars` is gone.
+
+**Still not covered.** Polar's card form itself, since nothing was ever charged. No submission,
+release, binary upload or TestFlight distribution against a live app.
 
 **Glama's "Build failed for asc-mcp" was Glama's infrastructure, not ours (2026-08-10).**
 
