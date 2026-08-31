@@ -10,7 +10,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { homedir } from "node:os";
 import { getToken, clearTokenCache } from "./auth.js";
-import { validateLicense, LICENSE_API_URL } from "./license.js";
+import { validateLicense, lastLicenseStatus, LICENSE_API_URL } from "./license.js";
 import { discoverPrivateKey } from "./setup.js";
 import { UPGRADE_URL } from "./gate.js";
 
@@ -176,14 +176,37 @@ export async function runDoctor(): Promise<DoctorReport> {
     if (tier === "pro") {
       checks.push({ name: "License", status: "ok", detail: "Pro: all tools unlocked." });
     } else {
+      // The licence server says WHY, and the reasons want different answers. A
+      // finished trial is not a broken key, and sending that person to look up
+      // a key that is working exactly as designed both wastes their time and
+      // hides the one thing they need at that moment, which is the price and
+      // the link. Reproduced with an expired trial key against production.
+      const reason = lastLicenseStatus()?.reason;
+      const ended: Record<string, { detail: string; fix: string }> = {
+        trial_expired: {
+          detail: "Your 7-day trial has ended, so the write, control and intelligence tools are locked.",
+          fix: `Pro is $9/month, cancel any time: ${UPGRADE_URL}. Already subscribed? Run \`asc_start_trial\` with the same email and it fetches your paid key.`,
+        },
+        canceled: {
+          detail: "This subscription was cancelled and the paid period has ended.",
+          fix: `Resubscribe at ${UPGRADE_URL}, or retrieve a different key at ${LICENSE_API_URL}/key.`,
+        },
+        expired: {
+          detail: "This licence has expired.",
+          fix: `Renew at ${UPGRADE_URL}, or retrieve your current key at ${LICENSE_API_URL}/key.`,
+        },
+      };
+
+      const known = reason ? ended[reason] : undefined;
       checks.push({
         name: "License",
         status: "fail",
-        detail: "A license key is set but did not validate as Pro.",
+        detail: known?.detail ?? "A license key is set but did not validate as Pro.",
         fix:
+          known?.fix ??
           `Check the key (retrieve it at ${LICENSE_API_URL}/key). ` +
-          "If the key is right, the license server may be unreachable: validation falls back to " +
-          "the free tier on a network error, so retry once you are online.",
+            "If the key is right, the license server may be unreachable: validation falls back to " +
+            "the free tier on a network error, so retry once you are online.",
       });
     }
   }
