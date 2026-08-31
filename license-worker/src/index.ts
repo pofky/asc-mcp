@@ -235,6 +235,7 @@ async function handleValidate(
     active: number;
     source: string | null;
     canceled_at: string | null;
+    revoked_at: string | null;
   };
 
   // `source` and `canceled_at` are post-launch columns. If this build ever reaches production
@@ -246,7 +247,7 @@ async function handleValidate(
   let row: ValidateRow | null;
   try {
     row = await env.DB.prepare(
-      "SELECT tier, expires_at, active, source, canceled_at FROM licenses WHERE key = ?",
+      "SELECT tier, expires_at, active, source, canceled_at, revoked_at FROM licenses WHERE key = ?",
     )
       .bind(body.key)
       .first<ValidateRow>();
@@ -256,8 +257,8 @@ async function handleValidate(
       "SELECT tier, expires_at, active FROM licenses WHERE key = ?",
     )
       .bind(body.key)
-      .first<Omit<ValidateRow, "source" | "canceled_at">>();
-    row = legacy ? { ...legacy, source: null, canceled_at: null } : null;
+      .first<Omit<ValidateRow, "source" | "canceled_at" | "revoked_at">>();
+    row = legacy ? { ...legacy, source: null, canceled_at: null, revoked_at: null } : null;
   }
 
   if (!row) {
@@ -587,8 +588,8 @@ async function handleTrial(
   // it validates as `canceled` and the person who has just paid again is told
   // their key is not valid.
   const paidRows = await env.DB.prepare(
-    "SELECT key, tier, active, expires_at, source, claim_fingerprint FROM licenses " +
-      "WHERE email = ? AND source = 'polar' AND active = 1 ORDER BY created_at DESC, id DESC",
+    "SELECT key, tier, active, expires_at, source, canceled_at, revoked_at, claim_fingerprint " +
+      "FROM licenses WHERE email = ? AND source = 'polar' ORDER BY created_at DESC, id DESC",
   )
     .bind(email)
     .all<LookupRow & { claim_fingerprint: string | null }>();
@@ -1140,7 +1141,19 @@ async function handleKeyLookup(
     );
   }
 
-  const formData = await request.formData();
+  // `formData()` throws on a JSON body, which fell through to the catch-all and
+  // returned 500 "Internal error". The browser form is unaffected, but anything
+  // watching error rates reads it as the licence server being down.
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return html(
+      "<h1>Bad request</h1><p>This endpoint takes the form on <a href='/key'>/key</a>.</p>",
+      headers,
+      400,
+    );
+  }
   // Normalised the same way /trial and the webhook path store it. SQLite
   // compares TEXT case-sensitively, so "Alice@Example.com" typed into this form
   // found nothing for a row Polar had stored as "alice@example.com", and the
@@ -1152,7 +1165,12 @@ async function handleKeyLookup(
   }
 
   const candidates = await env.DB.prepare(
-    "SELECT key, tier, active, expires_at, source FROM licenses WHERE email = ? AND active = 1 ORDER BY created_at DESC",
+    // Deliberately not filtered on `active = 1`. A subscription whose renewal
+    // webhook is late is written inactive, and this page is exactly where that
+    // customer looks for their key. `pickLookupRow` applies `isLicenseUsable`,
+    // which is the single place that decides what counts, grace included.
+    "SELECT key, tier, active, expires_at, source, canceled_at, revoked_at FROM licenses " +
+      "WHERE email = ? ORDER BY created_at DESC",
   )
     .bind(email)
     .all<LookupRow>();

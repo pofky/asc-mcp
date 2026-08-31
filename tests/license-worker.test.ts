@@ -114,11 +114,22 @@ describe("isLicenseUsable", () => {
     });
   });
 
+  // active = 0 stopped being proof of revocation on 2026-08-31. The webhook
+  // path writes it for any lapsed period, including a renewal that is merely
+  // late, so revocation is now identified by `revoked_at`, which only the
+  // revoke path stamps and nothing clears.
   it("never validates a revoked licence, even inside the grace window", () => {
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    expect(
+      isLicenseUsable({ expires_at: yesterday, active: 0, revoked_at: "2026-08-01" }, now),
+    ).toEqual({ usable: false, reason: "inactive" });
+  });
+
+  it("does validate a lapsed subscription that was only deactivated by a late renewal", () => {
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
     expect(isLicenseUsable({ expires_at: yesterday, active: 0 }, now)).toEqual({
-      usable: false,
-      reason: "inactive",
+      usable: true,
+      grace: true,
     });
   });
 

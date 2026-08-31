@@ -89,6 +89,57 @@ describe("isLicenseUsable", () => {
     expect(isLicenseUsable(paid({ active: 0 }), NOW)).toEqual({ usable: false, reason: "inactive" });
   });
 
+  // The bug this covers: `shouldBeActive` writes active = 0 the moment
+  // `current_period_end` is in the past, and `isLicenseUsable` used to return
+  // "inactive" before it ever reached the grace branch. The four days were
+  // therefore unreachable through the webhook path, which is the only path a
+  // real customer arrives on. The customer it locked out is the one in card
+  // retry, whose access `DEAD_STATUSES` deliberately preserves by leaving
+  // `past_due` off the list. Reproduced against the live worker on 2026-08-31.
+  it("keeps a lapsed subscription inside the grace window even when a webhook deactivated it", () => {
+    expect(isLicenseUsable(paid({ active: 0, expires_at: days(-2) }), NOW)).toEqual({
+      usable: true,
+      grace: true,
+    });
+  });
+
+  it("stops at the edge of the window, deactivated or not", () => {
+    expect(isLicenseUsable(paid({ active: 0, expires_at: days(-5) }), NOW)).toEqual({
+      usable: false,
+      reason: "inactive",
+    });
+  });
+
+  it("gives no grace to a deactivated row whose paid period has not even ended", () => {
+    // Switched off for some other reason: `unpaid`, `incomplete_expired`. Not a
+    // late renewal, so not this window's business.
+    expect(isLicenseUsable(paid({ active: 0, expires_at: days(3) }), NOW)).toEqual({
+      usable: false,
+      reason: "inactive",
+    });
+  });
+
+  it("never resurrects a revoked row, however recently it lapsed", () => {
+    expect(
+      isLicenseUsable(paid({ active: 0, expires_at: days(-1), revoked_at: "2026-08-01" }), NOW),
+    ).toEqual({ usable: false, reason: "inactive" });
+    expect(
+      isLicenseUsable(paid({ active: 1, expires_at: days(-1), revoked_at: "2026-08-01" }), NOW),
+    ).toEqual({ usable: false, reason: "revoked" });
+  });
+
+  it("gives a lapsed trial no grace, deactivated or not", () => {
+    expect(
+      isLicenseUsable({ ...paid({ active: 0, expires_at: days(-1) }), source: "trial" }, NOW),
+    ).toEqual({ usable: false, reason: "inactive" });
+  });
+
+  it("gives a cancelled subscription no grace once its period ends", () => {
+    expect(
+      isLicenseUsable(paid({ active: 0, expires_at: days(-1), canceled_at: "2026-08-20" }), NOW),
+    ).toEqual({ usable: false, reason: "inactive" });
+  });
+
   // The grace window exists so a late renewal webhook cannot demote someone who
   // has paid. Its edges are the part that matters.
   it("grants a paid row exactly GRACE_DAYS past expiry, then stops", () => {

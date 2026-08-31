@@ -83,16 +83,65 @@ export function buildCheckoutUrl(tool?: string, email?: string): string {
  */
 export const GRACE_DAYS = 4;
 
+/**
+ * Whether an inactive row is a paid subscription whose period has only just
+ * lapsed, rather than one that was revoked, cancelled, or never paid.
+ *
+ * Kept separate from `isLicenseUsable` because the two questions are different:
+ * this one is "is this the late-renewal case", and it must stay conservative.
+ * A trial, a cancellation, a revocation and a row with no expiry at all are all
+ * excluded, so the only thing this can rescue is a subscription that was active
+ * within the last `GRACE_DAYS`.
+ */
+function isWithinRenewalGrace(
+  row: {
+    expires_at: string | null;
+    source?: string | null;
+    canceled_at?: string | null;
+    revoked_at?: string | null;
+  },
+  now: Date,
+): boolean {
+  if (row.source === "trial") return false;
+  if (row.canceled_at || row.revoked_at) return false;
+  if (!row.expires_at) return false;
+  const expiry = new Date(row.expires_at);
+  if (Number.isNaN(expiry.getTime())) return false;
+
+  // Only the lapsed-period case, and only inside the window. An inactive row
+  // whose period has NOT ended was switched off for some other reason (a dead
+  // status such as `unpaid` or `incomplete_expired`), and that is not what
+  // grace is for. The row does not record why it was deactivated, so this stays
+  // deliberately narrow: it can only ever extend access by GRACE_DAYS past an
+  // expiry the customer had already paid to reach.
+  if (expiry >= now) return false;
+  return now.getTime() - expiry.getTime() <= GRACE_DAYS * 24 * 60 * 60 * 1000;
+}
+
 export function isLicenseUsable(
   row: {
     expires_at: string | null;
     active: number;
     source?: string | null;
     canceled_at?: string | null;
+    revoked_at?: string | null;
   },
   now: Date,
 ): { usable: boolean; reason?: string; grace?: boolean } {
-  if (!row.active) return { usable: false, reason: "inactive" };
+  // A row that is inactive because its paid period lapsed is exactly the case
+  // the grace window was written for, and until 2026-08-31 it could never reach
+  // it: `shouldBeActive` writes active = 0 the moment `current_period_end` is in
+  // the past, and this function returned "inactive" before the grace branch. So
+  // the four days only ever applied when NO webhook arrived at all, which is
+  // the one situation where the customer is least likely to be mid-renewal.
+  // The customer this hurts is the one in card retry, whose access
+  // `DEAD_STATUSES` deliberately preserves by leaving `past_due` off the list.
+  //
+  // Revocation stays terminal: `revoked_at` is stamped by the revoke path and no
+  // amount of grace brings that row back.
+  if (!row.active && !isWithinRenewalGrace(row, now)) {
+    return { usable: false, reason: "inactive" };
+  }
   if (!row.expires_at) return { usable: true };
 
   const expiry = new Date(row.expires_at);
@@ -111,6 +160,10 @@ export function isLicenseUsable(
   // webhook coming, and the customer keeps exactly the time they paid for.
   // Applied to every cancellation it was quietly giving away four extra days.
   if (row.canceled_at) return { usable: false, reason: "canceled" };
+
+  // Terminal, and checked here too: a revoked row can carry active = 1 only
+  // through a stale write, and it must never be handed grace.
+  if (row.revoked_at) return { usable: false, reason: "revoked" };
 
   const graceEnds = new Date(expiry.getTime() + GRACE_DAYS * 24 * 60 * 60 * 1000);
   if (now <= graceEnds) return { usable: true, grace: true };
@@ -295,6 +348,9 @@ export interface LookupRow {
   active: number;
   expires_at: string | null;
   source: string | null;
+  /** Both are read by `isLicenseUsable`; absent on pre-migration rows. */
+  canceled_at?: string | null;
+  revoked_at?: string | null;
 }
 
 /**
