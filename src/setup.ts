@@ -218,12 +218,141 @@ function prompt(question: string): Promise<string> {
   });
 }
 
+/** Options for `asc-mcp init`, parsed from the command line. */
+export interface InitOptions {
+  write?: boolean;
+  issuerId?: string;
+  keyId?: string;
+  keyPath?: string;
+  licenseKey?: string;
+  configPath?: string;
+}
+
 /**
- * Interactive `asc-mcp init`: auto-detect the .p8, ask for the Issuer ID
- * (and optional license key), then print a paste-ready MCP server config.
- * Writes nothing to disk; the user pastes the block into their client config.
+ * Parse the flags `init` accepts. Every value it would otherwise have to ask a
+ * human for can be passed on the command line, because the documented install
+ * path runs through a coding agent, and an agent has no terminal to type into.
  */
-export async function runInit(write = false): Promise<number> {
+export function parseInitArgs(argv: string[]): InitOptions {
+  const opts: InitOptions = { write: argv.includes("--write") };
+  const value = (flag: string): string | undefined => {
+    const i = argv.indexOf(flag);
+    if (i < 0) return undefined;
+    const next = argv[i + 1];
+    return next && !next.startsWith("--") ? next : undefined;
+  };
+  opts.issuerId = value("--issuer");
+  opts.keyId = value("--key-id");
+  opts.keyPath = value("--key-path");
+  opts.licenseKey = value("--license");
+  opts.configPath = value("--config");
+  return opts;
+}
+
+/** The paste-ready client config block for a set of environment variables. */
+function configBlock(env: Record<string, string>) {
+  return { mcpServers: { "appstore-connect": { ...SERVER_LAUNCH, env } } };
+}
+
+/**
+ * `asc-mcp init` without a terminal, which is how most people actually run it:
+ * they ask their coding agent to install this server, and the agent runs the
+ * command in a pipe.
+ *
+ * This used to print one line of advice and exit, writing nothing and printing
+ * no config, even when the `.p8` had been found and `ASC_ISSUER_ID` was already
+ * set, which is precisely the case where everything needed is known. The user
+ * ended up with no server block, and the failure looked like the package.
+ *
+ * Nothing here is guessed. The Issuer ID comes from `--issuer` or the
+ * environment, never from a placeholder, and a `--write` with more than one
+ * existing client config prints the block and asks which, rather than picking
+ * one for the user.
+ */
+function runInitNonInteractive(
+  opts: InitOptions,
+  discovered: DiscoveredKey | null,
+): number {
+  const keyPath = opts.keyPath || process.env.ASC_PRIVATE_KEY_PATH || discovered?.path;
+  const keyId =
+    opts.keyId ||
+    process.env.ASC_KEY_ID ||
+    (keyPath ? keyIdFromPath(keyPath) : null) ||
+    discovered?.keyId;
+  const issuerId = opts.issuerId || process.env.ASC_ISSUER_ID;
+  const licenseKey = opts.licenseKey || process.env.ASC_LICENSE_KEY;
+
+  const missing: string[] = [];
+  if (!keyPath) missing.push("the .p8 path (--key-path, or ASC_PRIVATE_KEY_PATH)");
+  if (!keyId) missing.push("the Key ID (--key-id, or ASC_KEY_ID)");
+  if (!issuerId) missing.push("the Issuer ID (--issuer, or ASC_ISSUER_ID)");
+
+  if (missing.length) {
+    process.stdout.write(
+      "Non-interactive shell, so nothing can be asked. Still needed: " +
+        missing.join(", ") +
+        ".\nRe-run with the values, for example:\n" +
+        "  npx @pofky/asc-mcp init --write --issuer <uuid>\n",
+    );
+    return 1;
+  }
+
+  const env: Record<string, string> = {
+    ASC_KEY_ID: keyId!,
+    ASC_ISSUER_ID: issuerId!,
+    ASC_PRIVATE_KEY_PATH: keyPath!,
+  };
+  if (licenseKey) env.ASC_LICENSE_KEY = licenseKey;
+
+  let wrote = false;
+  if (opts.write) {
+    const candidates = clientConfigCandidates();
+    const target =
+      opts.configPath ||
+      (candidates.filter((c) => existsSync(c.path)).length === 1
+        ? candidates.find((c) => existsSync(c.path))!.path
+        : null);
+
+    if (target) {
+      process.stdout.write(`\n${writeServerBlock(target, env)}\n`);
+      wrote = true;
+    } else {
+      const existing = candidates.filter((c) => existsSync(c.path));
+      process.stdout.write(
+        existing.length
+          ? "\nMore than one client config exists, so none was chosen for you. Re-run with one of:\n" +
+              existing.map((c) => `  --config ${c.path}\n`).join("")
+          : "\nNo client config exists yet, so none was written. Re-run with --config <path>, or paste the block below.\n",
+      );
+    }
+  }
+
+  process.stdout.write(
+    (wrote
+      ? "\nThe same block, in case you want it elsewhere:\n\n"
+      : "\nPaste this into your client's MCP config:\n\n") +
+      JSON.stringify(configBlock(env), null, 2) +
+      "\n\n",
+  );
+  process.stdout.write(
+    (licenseKey
+      ? "Pro license set, all control tools unlocked.\n"
+      : "Free tier. Ask your agent to run `asc_start_trial` for 7 days of everything, no card.\n") +
+      (wrote ? "Restart your MCP client, then run `asc_setup_check`.\n" : ""),
+  );
+  return 0;
+}
+
+/**
+ * `asc-mcp init`: auto-detect the .p8, collect the Issuer ID (and optional
+ * license key), then write or print a paste-ready MCP server config.
+ *
+ * Interactive when there is a terminal to ask questions in, and fully
+ * non-interactive otherwise, driven by flags and the environment.
+ */
+export async function runInit(options: InitOptions | boolean = {}): Promise<number> {
+  const opts: InitOptions = typeof options === "boolean" ? { write: options } : options;
+  const write = Boolean(opts.write);
   process.stdout.write("\nasc-mcp setup\n");
   process.stdout.write("─".repeat(40) + "\n\n");
 
@@ -241,23 +370,19 @@ export async function runInit(write = false): Promise<number> {
   }
 
   if (!process.stdin.isTTY) {
-    process.stdout.write(
-      discovered
-        ? "Non-interactive shell. The .p8 above was found automatically, so ASC_ISSUER_ID is the only variable you need to set.\n"
-        : "Non-interactive shell. Set ASC_KEY_ID, ASC_ISSUER_ID and ASC_PRIVATE_KEY_PATH manually.\n",
-    );
-    return discovered ? 0 : 1;
+    return runInitNonInteractive(opts, discovered);
   }
 
-  const keyId = discovered?.keyId || (await prompt("Key ID (10 chars): "));
+  const keyId =
+    opts.keyId || discovered?.keyId || (await prompt("Key ID (10 chars): "));
   const privateKeyPath =
-    discovered?.path || (await prompt("Path to .p8 file: "));
-  const issuerId = await prompt(
-    "Issuer ID (UUID at the top of the Integrations page): ",
-  );
-  const licenseKey = await prompt(
-    "Pro license key (optional, press Enter to skip): ",
-  );
+    opts.keyPath || discovered?.path || (await prompt("Path to .p8 file: "));
+  const issuerId =
+    opts.issuerId ||
+    (await prompt("Issuer ID (UUID at the top of the Integrations page): "));
+  const licenseKey =
+    opts.licenseKey ||
+    (await prompt("Pro license key (optional, press Enter to skip): "));
 
   const env: Record<string, string> = {
     ASC_KEY_ID: keyId,
@@ -266,17 +391,13 @@ export async function runInit(write = false): Promise<number> {
   };
   if (licenseKey) env.ASC_LICENSE_KEY = licenseKey;
 
-  const config = {
-    mcpServers: {
-      "appstore-connect": {
-        ...SERVER_LAUNCH,
-        env,
-      },
-    },
-  };
+  const config = configBlock(env);
 
   let wrote = false;
-  if (write) {
+  if (write && opts.configPath) {
+    process.stdout.write(`\n${writeServerBlock(opts.configPath, env)}\n`);
+    wrote = true;
+  } else if (write) {
     const candidates = clientConfigCandidates();
     process.stdout.write("\nWhich client config should I write to?\n");
     candidates.forEach((c, i) => {

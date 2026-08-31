@@ -58,6 +58,14 @@ npx @pofky/asc-mcp init --write     # auto-detects the key, asks for your Issuer
 
 `init --write` finds your Claude Desktop / Claude Code config, backs it up, and merges in the server block, so there's no JSON editing. The server also auto-discovers the `.p8` path at runtime, so you only ever need `ASC_ISSUER_ID` (and `ASC_LICENSE_KEY` for Pro).
 
+**Running it from an agent, or any pipe.** There is no terminal to answer questions in, so pass what would have been asked:
+
+```bash
+npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>   # add --config <path> if you keep several client configs
+```
+
+It prints the paste-ready block either way, and it never invents a value: if the Issuer ID is missing it says so instead of writing a config that fails at Apple's auth. `--key-path`, `--key-id` and `--license` are there for the same reason, and every one of them also reads from the matching `ASC_*` environment variable.
+
 **Stuck?** Run `npx @pofky/asc-mcp doctor` (or ask your agent to call `asc_setup_check`). It checks your key, Issuer ID, a live connection to App Store Connect, and your license, and prints the exact fix for anything wrong. In your agent, the `/asc-start` command walks a first-time user through all of this.
 
 **Manual setup.** Add to your agent's MCP config (Claude Desktop config, or `~/.claude.json` for Claude Code). Use `npx` for zero-install, or `asc-mcp` if you installed globally:

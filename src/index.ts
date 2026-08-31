@@ -40,7 +40,7 @@ import { setAppAvailability } from "./tools/availability.js";
 import { setupAppStoreSigning } from "./tools/signing.js";
 import { ascGuide } from "./tools/guide.js";
 import { runDoctor, formatDoctor } from "./doctor.js";
-import { discoverPrivateKey, keyIdFromPath, runInit, injectLicenseKey } from "./setup.js";
+import { discoverPrivateKey, keyIdFromPath, runInit, parseInitArgs, injectLicenseKey } from "./setup.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { UPGRADE_URL } from "./gate.js";
@@ -831,6 +831,9 @@ Usage:
   asc-mcp                  Run as an MCP server on stdio (for Claude Desktop/Code).
   asc-mcp init             Auto-detect your .p8 and print a paste-ready MCP config.
   asc-mcp init --write     Same, but write the config into your client file directly.
+                           Non-interactive (an agent, a pipe): pass what cannot be
+                           asked for, e.g. --issuer <uuid> [--config <path>]
+                           [--key-path <p8>] [--key-id <id>] [--license <key>].
   asc-mcp doctor           Diagnose setup: key, Issuer ID, live connection, license.
   asc-mcp install-skill    Install the asc-review-triage Claude Skill.
   asc-mcp uninstall-skill  Remove the asc-review-triage Claude Skill.
@@ -842,7 +845,7 @@ Usage:
 }
 
 if (process.argv[2] === "init") {
-  runInit(process.argv.includes("--write"))
+  runInit(parseInitArgs(process.argv))
     .then((code) => process.exit(code))
     .catch((err) => {
       console.error("init failed:", err);
