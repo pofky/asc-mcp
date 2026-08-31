@@ -45,11 +45,20 @@ jobs:
       # The pre-1.0 entry points at @pofky/appstore-connect-mcp 0.2.1, a package
       # that has not moved since April. Anyone installing from it gets a fraction
       # of the tools, so retire it in favour of the entry above.
+      # Already-deprecated is the normal case after the first run, and the CLI
+      # reports it as a 400 with exit 1. `continue-on-error` kept the job green
+      # but the log still showed a red error on every release, which trains
+      # everyone to ignore the one time it matters.
       - name: Deprecate the superseded registry entry
         continue-on-error: true
         run: |
           # The command prompts for confirmation, so answer it.
-          yes | ./mcp-publisher status \
+          out=$(yes | ./mcp-publisher status \
             --status deprecated \
             --message "Superseded by io.github.pofky/asc-mcp (npm @pofky/asc-mcp). Same maintainer, 40 tools." \
-            --all-versions io.github.pofky/appstore-connect-mcp
+            --all-versions io.github.pofky/appstore-connect-mcp 2>&1) || true
+          echo "$out"
+          case "$out" in
+            *"No changes to apply"*) echo "Already deprecated, nothing to do." ;;
+            *"Error"*) echo "::warning::deprecation call failed, see output above" ;;
+          esac
