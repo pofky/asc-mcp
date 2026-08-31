@@ -1,0 +1,21 @@
+- generic [active] [ref=f14e1]:
+  - heading "Retrieve your license key" [level=1] [ref=f14e2]
+  - paragraph [ref=f14e3]: Enter the email you subscribed with, or the one you started a trial with.
+  - generic [ref=f14e4]:
+    - generic [ref=f14e5]: Your email address
+    - textbox "Your email address" [ref=f14e6]:
+      - /placeholder: you@example.com
+    - button "Look up my key" [ref=f14e7] [cursor=pointer]
+  - paragraph [ref=f14e8]:
+    - text: ←
+    - link "asc-mcp" [ref=f14e9] [cursor=pointer]:
+      - /url: https://asc-mcp.pages.dev/
+    - text: ·
+    - link "Privacy" [ref=f14e10] [cursor=pointer]:
+      - /url: /privacy
+    - text: ·
+    - link "Terms" [ref=f14e11] [cursor=pointer]:
+      - /url: /terms
+    - text: ·
+    - link "povkonop@gmail.com" [ref=f14e12] [cursor=pointer]:
+      - /url: mailto:povkonop@gmail.com

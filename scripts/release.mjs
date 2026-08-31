@@ -33,6 +33,8 @@ if (!version) {
   process.exit(1);
 }
 
+const pkgName = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).name;
+
 const run = (cmd, cmdArgs, opts = {}) => {
   console.log(`\n> ${cmd} ${cmdArgs.join(" ")}`);
   if (dry && opts.mutating) {
@@ -179,16 +181,76 @@ run("git", ["push", "origin", "master"], { mutating: true });
  * exists, which is the cheaper failure: a tag that points at an unpublished
  * version has to be deleted by hand.
  */
-run("npm", ["publish", "--access", "public"], { mutating: true });
+/**
+ * Publish, then wait until npm actually serves the version.
+ *
+ * `npm publish` here regularly uploads the tarball and then loses the
+ * connection before npm acknowledges it, leaving the version in npm's "staged"
+ * state: the CLI reports a failure (or exits without publishing), a retry gets
+ * `E409 Cannot publish over previously staged version`, and the version appears
+ * on its own a few minutes later. That is not a failed release, it is a slow
+ * one, and both 1.9.6 and 1.9.7 hit it.
+ *
+ * So a staged conflict is treated as "in flight", and the release does not move
+ * on until the registry itself lists the version. Everything downstream depends
+ * on npm having it: the MCP registry refuses to register a version npm cannot
+ * confirm, and it is the tag push that starts that workflow.
+ */
+async function publishToNpm() {
+  if (dry) {
+    console.log("\n> npm publish --access public\n  (dry run, skipped)");
+    return;
+  }
 
-// npm's CDN can answer with the previous version for a few seconds after a
-// publish, and the registry's check reads through it. Give it a moment before
-// the tag starts the workflow.
-if (!dry) {
-  const settle = 20_000;
-  console.log(`\nWaiting ${settle / 1000}s for npm to serve ${version} before tagging.`);
-  await new Promise((r) => setTimeout(r, settle));
+  try {
+    // Captured, not inherited: the staged-upload case is only distinguishable
+    // from a real failure by reading npm's message, and `run` inherits stdio.
+    console.log("\n> npm publish --access public");
+    const out = execFileSync("npm", ["publish", "--access", "public"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    console.log(out.trim());
+  } catch (err) {
+    const output = `${err.stdout ?? ""}${err.stderr ?? ""}${err.message ?? ""}`;
+    console.log(output.trim().split("\n").slice(-6).join("\n"));
+    const staged = /previously staged version/i.test(output);
+    const already = /cannot publish over the previously published versions/i.test(output);
+    if (!staged && !already) throw err;
+    console.log(
+      staged
+        ? "\nnpm has the upload staged; waiting for it to finish landing."
+        : "\nnpm already has this version; continuing to verification.",
+    );
+  }
+
+  const deadline = Date.now() + 10 * 60 * 1000;
+  process.stdout.write(`\nWaiting for npm to serve ${version}`);
+  while (Date.now() < deadline) {
+    try {
+      const meta = await fetch(`https://registry.npmjs.org/${pkgName}`, {
+        headers: { accept: "application/json" },
+        cache: "no-store",
+      }).then((r) => r.json());
+      if (meta?.versions?.[version]) {
+        console.log(`\nnpm is serving ${version}.`);
+        return;
+      }
+    } catch {
+      // A transient registry read is not a reason to abandon a landed publish.
+    }
+    process.stdout.write(".");
+    await new Promise((r) => setTimeout(r, 15_000));
+  }
+  fail(
+    `npm never served ${version} within ten minutes. Check https://www.npmjs.com/package/${pkgName} ` +
+      "before pushing the tag: the tag is what starts the registry workflow, and the registry " +
+      "refuses a version npm does not have.",
+  );
 }
+
+await publishToNpm();
 
 run("git", ["push", "origin", `v${version}`], { mutating: true });
 
