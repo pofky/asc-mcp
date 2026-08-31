@@ -1,0 +1,508 @@
+- generic [active] [ref=f3e1]:
+  - navigation [ref=f3e2]:
+    - generic [ref=f3e4]:
+      - link [ref=f3e6] [cursor=pointer]:
+        - /url: /
+        - img "Pulse logo" [ref=f3e7]
+        - text: pulse
+      - button [ref=f3e9]
+  - main [ref=f3e12]:
+    - generic [ref=f3e14]:
+      - generic [ref=f3e15]:
+        - generic [ref=f3e16]:
+          - generic [ref=f3e17]:
+            - link [ref=f3e18] [cursor=pointer]:
+              - /url: /
+              - img "Home icon" [ref=f3e19]
+            - img "Chevron right icon" [ref=f3e20]
+            - link "MCP Servers" [ref=f3e21] [cursor=pointer]:
+              - /url: /servers
+            - img "Chevron right icon" [ref=f3e22]
+            - link "App Store Connect" [ref=f3e23] [cursor=pointer]:
+              - /url: /servers/pofky-app-store-connect
+          - heading "App Store Connect" [level=1] [ref=f3e24]
+          - generic [ref=f3e25]:
+            - generic [ref=f3e26]:
+              - paragraph [ref=f3e27]: Provider
+              - link "pofky" [ref=f3e28] [cursor=pointer]:
+                - /url: https://github.com/pofky
+            - generic [ref=f3e29]:
+              - paragraph [ref=f3e30]: Classification
+              - generic [ref=f3e31]:
+                - img "Community classification icon" [ref=f3e32]
+                - generic [ref=f3e33]: community
+            - generic [ref=f3e34]:
+              - generic [ref=f3e35]:
+                - paragraph [ref=f3e36]: Est. Visitors
+                - generic [ref=f3e38] [cursor=pointer]:
+                  - img "Info icon" [ref=f3e39]
+                  - generic: An estimate of visitors or package downloads that occurred for this server across the MCP ecosystem (not specific to any single platform). We use a mix of publicly available data, social signals, and more to feed an algorithm that drives this estimation.
+              - text: 3.6k (110 this week)
+            - generic [ref=f3e40]:
+              - paragraph [ref=f3e41]: Released On
+              - text: Apr 13, 2026
+            - generic [ref=f3e42]:
+              - generic [ref=f3e43]:
+                - paragraph [ref=f3e44]: Popularity Ranking
+                - generic [ref=f3e46] [cursor=pointer]:
+                  - img "Info icon" [ref=f3e47]
+                  - generic: Our estimate as to where this MCP server implementation ranks on the global leaderboard of usage.
+              - text: "#4,871 (#3,184 this week)"
+          - paragraph [ref=f3e48]: Check app review status, read customer reviews, and download sales reports from App Store Connect.
+        - generic [ref=f3e49]:
+          - link "Learn More" [ref=f3e51] [cursor=pointer]:
+            - /url: https://github.com/pofky/appstore-connect-mcp
+          - link "GitHub icon GitHub Repo (0 stars)" [ref=f3e53] [cursor=pointer]:
+            - /url: https://github.com/pofky/asc-mcp
+            - generic [ref=f3e54]:
+              - img "GitHub icon" [ref=f3e55]
+              - generic [ref=f3e56]: GitHub Repo (0 stars)
+      - generic [ref=f3e58]:
+        - generic [ref=f3e59]:
+          - generic [ref=f3e60]:
+            - heading "server.json file available" [level=3] [ref=f3e61]
+            - paragraph [ref=f3e62]:
+              - text: A
+              - link "standardized, official file format" [ref=f3e63] [cursor=pointer]:
+                - /url: https://github.com/modelcontextprotocol/registry/tree/main/docs/reference/server-json
+              - text: that defines how to use this MCP server. View the file to see installation instructions, configuration options, and usage guidelines.
+          - link "View server.json file" [ref=f3e65] [cursor=pointer]:
+            - /url: /servers/pofky-app-store-connect/serverjson
+        - generic [ref=f3e68]:
+          - generic [ref=f3e69]:
+            - paragraph [ref=f3e70]: NAME
+            - paragraph [ref=f3e71]: io.github.pofky/appstore-connect-mcp
+          - generic [ref=f3e72]:
+            - paragraph [ref=f3e73]: MAINTAINER
+            - paragraph [ref=f3e74]:
+              - text: GitHub user/organization
+              - link "pofky" [ref=f3e75] [cursor=pointer]:
+                - /url: https://github.com/pofky
+              - text: manages this server.json file and keeps it up-to-date
+    - generic [ref=f3e78]:
+      - heading "Related Servers" [level=2] [ref=f3e79]
+      - generic [ref=f3e80]:
+        - link [ref=f3e82] [cursor=pointer]:
+          - /url: /servers/joshuarileydev-app-store-connect
+          - generic [ref=f3e84]:
+            - generic [ref=f3e85]:
+              - heading "App Store Connect" [level=3] [ref=f3e87]
+              - paragraph [ref=f3e88]: Joshua Riley
+              - paragraph [ref=f3e89]: Manage iOS app distribution and testing workflows.
+            - generic [ref=f3e91]:
+              - generic [ref=f3e92]:
+                - paragraph [ref=f3e93]: Classification
+                - generic [ref=f3e94]:
+                  - img "Community icon" [ref=f3e96]
+                  - paragraph [ref=f3e97]: community
+              - generic [ref=f3e98]:
+                - paragraph [ref=f3e99]: Est Visitors (All Time)
+                - paragraph [ref=f3e100]: 78.2k
+              - generic [ref=f3e101]:
+                - paragraph [ref=f3e102]: Release Date
+                - paragraph [ref=f3e103]: Dec 13, 2024
+        - link [ref=f3e105] [cursor=pointer]:
+          - /url: /servers/jiantaofu-appinsight
+          - generic [ref=f3e107]:
+            - generic [ref=f3e108]:
+              - heading "AppInsight (App Store / Play Store)" [level=3] [ref=f3e110]
+              - paragraph [ref=f3e111]: Jiantao Fu
+              - paragraph [ref=f3e112]: Analyze data from both the Apple App Store and Google Play Store
+            - generic [ref=f3e114]:
+              - generic [ref=f3e115]:
+                - paragraph [ref=f3e116]: Classification
+                - generic [ref=f3e117]:
+                  - img "Community icon" [ref=f3e119]
+                  - paragraph [ref=f3e120]: community
+              - generic [ref=f3e121]:
+                - paragraph [ref=f3e122]: Est Visitors (All Time)
+                - paragraph [ref=f3e123]: 5.8k
+              - generic [ref=f3e124]:
+                - paragraph [ref=f3e125]: Release Date
+                - paragraph [ref=f3e126]: Mar 8, 2025
+        - link [ref=f3e128] [cursor=pointer]:
+          - /url: /servers/appstore
+          - generic [ref=f3e130]:
+            - generic [ref=f3e131]:
+              - heading "App Store Scraper" [level=3] [ref=f3e133]
+              - paragraph [ref=f3e134]: appreply-co
+              - paragraph [ref=f3e135]: Integrates with App Store and Google Play Store APIs to extract app metadata, reviews, rankings, and developer...
+            - generic [ref=f3e137]:
+              - generic [ref=f3e138]:
+                - paragraph [ref=f3e139]: Classification
+                - generic [ref=f3e140]:
+                  - img "Community icon" [ref=f3e142]
+                  - paragraph [ref=f3e143]: community
+              - generic [ref=f3e144]:
+                - paragraph [ref=f3e145]: Est Visitors (All Time)
+                - paragraph [ref=f3e146]: 14k
+              - generic [ref=f3e147]:
+                - paragraph [ref=f3e148]: Release Date
+                - paragraph [ref=f3e149]: Aug 20, 2025
+        - link [ref=f3e151] [cursor=pointer]:
+          - /url: /servers/appstore-connect
+          - generic [ref=f3e153]:
+            - generic [ref=f3e154]:
+              - heading "App Store Connect" [level=3] [ref=f3e156]
+              - paragraph [ref=f3e157]: Trial and Error Inc
+              - paragraph [ref=f3e158]: Integrates with Apple's App Store Connect API to provide direct access to iOS app sales reports, user analytics, app...
+            - generic [ref=f3e160]:
+              - generic [ref=f3e161]:
+                - paragraph [ref=f3e162]: Classification
+                - generic [ref=f3e163]:
+                  - img "Community icon" [ref=f3e165]
+                  - paragraph [ref=f3e166]: community
+              - generic [ref=f3e167]:
+                - paragraph [ref=f3e168]: Est Visitors (All Time)
+                - paragraph [ref=f3e169]: "246"
+              - generic [ref=f3e170]:
+                - paragraph [ref=f3e171]: Release Date
+                - paragraph [ref=f3e172]: Aug 22, 2025
+        - link [ref=f3e174] [cursor=pointer]:
+          - /url: /servers/pabal
+          - generic [ref=f3e176]:
+            - generic [ref=f3e177]:
+              - heading "Pabal" [level=3] [ref=f3e179]
+              - paragraph [ref=f3e180]: Quartz Labs
+              - paragraph [ref=f3e181]: Manages App Store Connect and Google Play Console workflows for app store optimization
+            - generic [ref=f3e183]:
+              - generic [ref=f3e184]:
+                - paragraph [ref=f3e185]: Classification
+                - generic [ref=f3e186]:
+                  - img "Community icon" [ref=f3e188]
+                  - paragraph [ref=f3e189]: community
+              - generic [ref=f3e190]:
+                - paragraph [ref=f3e191]: Est Visitors (All Time)
+                - paragraph [ref=f3e192]: 3.9k
+              - generic [ref=f3e193]:
+                - paragraph [ref=f3e194]: Release Date
+                - paragraph [ref=f3e195]: Dec 6, 2025
+        - link [ref=f3e197] [cursor=pointer]:
+          - /url: /servers/ryaker-appstore-connect
+          - generic [ref=f3e199]:
+            - generic [ref=f3e200]:
+              - heading "App Store Connect" [level=3] [ref=f3e202]
+              - paragraph [ref=f3e203]: Richard Yaker
+              - paragraph [ref=f3e204]: Manage iOS and macOS apps, TestFlight, and app metadata through Apple Store Connect API
+            - generic [ref=f3e206]:
+              - generic [ref=f3e207]:
+                - paragraph [ref=f3e208]: Classification
+                - generic [ref=f3e209]:
+                  - img "Community icon" [ref=f3e211]
+                  - paragraph [ref=f3e212]: community
+              - generic [ref=f3e213]:
+                - paragraph [ref=f3e214]: Est Visitors (All Time)
+                - paragraph [ref=f3e215]: "467"
+              - generic [ref=f3e216]:
+                - paragraph [ref=f3e217]: Release Date
+                - paragraph [ref=f3e218]: Sep 7, 2025
+        - link [ref=f3e220] [cursor=pointer]:
+          - /url: /servers/gjeltep-app-store-connect
+          - generic [ref=f3e222]:
+            - generic [ref=f3e223]:
+              - heading "App Store Connect" [level=3] [ref=f3e225]
+              - paragraph [ref=f3e226]: gjeltep
+              - paragraph [ref=f3e227]: Interact with Apple's App Store Connect API
+            - generic [ref=f3e229]:
+              - generic [ref=f3e230]:
+                - paragraph [ref=f3e231]: Classification
+                - generic [ref=f3e232]:
+                  - img "Community icon" [ref=f3e234]
+                  - paragraph [ref=f3e235]: community
+              - generic [ref=f3e236]:
+                - paragraph [ref=f3e237]: Est Visitors (All Time)
+                - paragraph [ref=f3e238]: "232"
+              - generic [ref=f3e239]:
+                - paragraph [ref=f3e240]: Release Date
+                - paragraph [ref=f3e241]: Sep 16, 2025
+        - link [ref=f3e243] [cursor=pointer]:
+          - /url: /servers/stig-johnny-appstore-connect
+          - generic [ref=f3e245]:
+            - generic [ref=f3e246]:
+              - heading "App Store Connect" [level=3] [ref=f3e248]
+              - paragraph [ref=f3e249]: Stig-Johnny Stoebakk
+              - paragraph [ref=f3e250]: Retrieves Xcode Cloud build information from Apple's App Store Connect API.
+            - generic [ref=f3e252]:
+              - generic [ref=f3e253]:
+                - paragraph [ref=f3e254]: Classification
+                - generic [ref=f3e255]:
+                  - img "Community icon" [ref=f3e257]
+                  - paragraph [ref=f3e258]: community
+              - generic [ref=f3e259]:
+                - paragraph [ref=f3e260]: Est Visitors (All Time)
+                - paragraph [ref=f3e261]: "324"
+              - generic [ref=f3e262]:
+                - paragraph [ref=f3e263]: Release Date
+                - paragraph [ref=f3e264]: Dec 20, 2025
+        - link [ref=f3e266] [cursor=pointer]:
+          - /url: /servers/sardorbekr-appstore-connect
+          - generic [ref=f3e268]:
+            - generic [ref=f3e269]:
+              - heading "App Store Connect" [level=3] [ref=f3e271]
+              - paragraph [ref=f3e272]: SardorbekR
+              - paragraph [ref=f3e273]: Integrates with Apple's App Store Connect API to manage iOS, macOS, tvOS, and visionOS apps including listing apps...
+            - generic [ref=f3e275]:
+              - generic [ref=f3e276]:
+                - paragraph [ref=f3e277]: Classification
+                - generic [ref=f3e278]:
+                  - img "Community icon" [ref=f3e280]
+                  - paragraph [ref=f3e281]: community
+              - generic [ref=f3e282]:
+                - paragraph [ref=f3e283]: Est Visitors (All Time)
+                - paragraph [ref=f3e284]: "976"
+              - generic [ref=f3e285]:
+                - paragraph [ref=f3e286]: Release Date
+                - paragraph [ref=f3e287]: Jan 26, 2026
+        - link [ref=f3e289] [cursor=pointer]:
+          - /url: /servers/beautyfree-appstore-connect
+          - generic [ref=f3e291]:
+            - generic [ref=f3e292]:
+              - heading "App Store Connect" [level=3] [ref=f3e294]
+              - paragraph [ref=f3e295]: Customer.io
+              - paragraph [ref=f3e296]: Integrates with Apple's App Store Connect API for managing iOS/macOS apps, TestFlight beta testing, reviews,...
+            - generic [ref=f3e298]:
+              - generic [ref=f3e299]:
+                - paragraph [ref=f3e300]: Classification
+                - generic [ref=f3e301]:
+                  - img "Community icon" [ref=f3e303]
+                  - paragraph [ref=f3e304]: community
+              - generic [ref=f3e305]:
+                - paragraph [ref=f3e306]: Est Visitors (All Time)
+                - paragraph [ref=f3e307]: "169"
+              - generic [ref=f3e308]:
+                - paragraph [ref=f3e309]: Release Date
+                - paragraph [ref=f3e310]: Mar 7, 2026
+        - link [ref=f3e312] [cursor=pointer]:
+          - /url: /servers/jmdurant-app-store-connect
+          - generic [ref=f3e314]:
+            - generic [ref=f3e315]:
+              - heading "App Store Connect" [level=3] [ref=f3e317]
+              - paragraph [ref=f3e318]: jmdurant
+              - paragraph [ref=f3e319]: Manages apps, builds, TestFlight, devices, and provisioning profiles through the App Store Connect API.
+            - generic [ref=f3e321]:
+              - generic [ref=f3e322]:
+                - paragraph [ref=f3e323]: Classification
+                - generic [ref=f3e324]:
+                  - img "Community icon" [ref=f3e326]
+                  - paragraph [ref=f3e327]: community
+              - generic [ref=f3e328]:
+                - paragraph [ref=f3e329]: Est Visitors (All Time)
+                - paragraph [ref=f3e330]: —
+              - generic [ref=f3e331]:
+                - paragraph [ref=f3e332]: Release Date
+                - paragraph [ref=f3e333]: Mar 14, 2026
+        - link "AppDataLayer MCP AppDataLayer App store analytics MCP server with 22 tools for analyzing 1B+ app reviews across Google Play and Apple App Store. Classification Est Visitors (All Time) 368 Release Date Mar 19, 2026" [ref=f3e335] [cursor=pointer]:
+          - /url: /servers/appdatalayer-mcp
+          - generic [ref=f3e337]:
+            - generic [ref=f3e338]:
+              - heading "AppDataLayer MCP" [level=3] [ref=f3e340]
+              - paragraph [ref=f3e341]: AppDataLayer
+              - paragraph [ref=f3e342]: App store analytics MCP server with 22 tools for analyzing 1B+ app reviews across Google Play and Apple App Store.
+            - generic [ref=f3e344]:
+              - generic [ref=f3e345]:
+                - paragraph [ref=f3e346]: Classification
+                - generic [ref=f3e347]:
+                  - paragraph
+              - generic [ref=f3e349]:
+                - paragraph [ref=f3e350]: Est Visitors (All Time)
+                - paragraph [ref=f3e351]: "368"
+              - generic [ref=f3e352]:
+                - paragraph [ref=f3e353]: Release Date
+                - paragraph [ref=f3e354]: Mar 19, 2026
+        - link [ref=f3e356] [cursor=pointer]:
+          - /url: /servers/mikusnuz-app-publish
+          - generic [ref=f3e358]:
+            - generic [ref=f3e359]:
+              - heading "App Store & Google Play" [level=3] [ref=f3e361]
+              - paragraph [ref=f3e362]: gh-mikusnuz
+              - paragraph [ref=f3e363]: Manage iOS and Android app publishing across App Store Connect and Google Play Console.
+            - generic [ref=f3e365]:
+              - generic [ref=f3e366]:
+                - paragraph [ref=f3e367]: Classification
+                - generic [ref=f3e368]:
+                  - img "Community icon" [ref=f3e370]
+                  - paragraph [ref=f3e371]: community
+              - generic [ref=f3e372]:
+                - paragraph [ref=f3e373]: Est Visitors (All Time)
+                - paragraph [ref=f3e374]: 2.5k
+              - generic [ref=f3e375]:
+                - paragraph [ref=f3e376]: Release Date
+                - paragraph [ref=f3e377]: Feb 15, 2026
+        - link [ref=f3e379] [cursor=pointer]:
+          - /url: /servers/ckz-apptweak
+          - generic [ref=f3e381]:
+            - generic [ref=f3e382]:
+              - heading "AppTweak" [level=3] [ref=f3e384]
+              - paragraph [ref=f3e385]: ckz
+              - paragraph [ref=f3e386]: Access AppTweak app store intelligence data including metadata, rankings, reviews, keywords, and ad analytics across...
+            - generic [ref=f3e388]:
+              - generic [ref=f3e389]:
+                - paragraph [ref=f3e390]: Classification
+                - generic [ref=f3e391]:
+                  - img "Community icon" [ref=f3e393]
+                  - paragraph [ref=f3e394]: community
+              - generic [ref=f3e395]:
+                - paragraph [ref=f3e396]: Est Visitors (All Time)
+                - paragraph [ref=f3e397]: —
+              - generic [ref=f3e398]:
+                - paragraph [ref=f3e399]: Release Date
+                - paragraph [ref=f3e400]: Mar 29, 2026
+        - link [ref=f3e402] [cursor=pointer]:
+          - /url: /servers/free-app-store
+          - generic [ref=f3e404]:
+            - generic [ref=f3e405]:
+              - heading "FreeAppStore" [level=3] [ref=f3e407]
+              - paragraph [ref=f3e408]: FreeAppStore
+              - paragraph [ref=f3e409]: Provides AI agent tools for FreeAppStore including deploy status checks, SDK documentation, app information, and...
+            - generic [ref=f3e411]:
+              - generic [ref=f3e412]:
+                - paragraph [ref=f3e413]: Classification
+                - generic [ref=f3e414]:
+                  - img "Official repository icon" [ref=f3e416]
+                  - paragraph [ref=f3e417]: official
+              - generic [ref=f3e418]:
+                - paragraph [ref=f3e419]: Est Visitors (All Time)
+                - paragraph [ref=f3e420]: "416"
+              - generic [ref=f3e421]:
+                - paragraph [ref=f3e422]: Release Date
+                - paragraph [ref=f3e423]: May 22, 2026
+        - link [ref=f3e425] [cursor=pointer]:
+          - /url: /servers/rsalim0-app-store-connect
+          - generic [ref=f3e427]:
+            - generic [ref=f3e428]:
+              - heading "App Store Connect" [level=3] [ref=f3e430]
+              - paragraph [ref=f3e431]: rsalim0
+              - paragraph [ref=f3e432]: Comprehensive MCP server for Apple App Store Connect API with 191 tools covering apps, builds, TestFlight,...
+            - generic [ref=f3e434]:
+              - generic [ref=f3e435]:
+                - paragraph [ref=f3e436]: Classification
+                - generic [ref=f3e437]:
+                  - img "Community icon" [ref=f3e439]
+                  - paragraph [ref=f3e440]: community
+              - generic [ref=f3e441]:
+                - paragraph [ref=f3e442]: Est Visitors (All Time)
+                - paragraph [ref=f3e443]: "537"
+              - generic [ref=f3e444]:
+                - paragraph [ref=f3e445]: Release Date
+                - paragraph [ref=f3e446]: May 25, 2026
+        - link [ref=f3e448] [cursor=pointer]:
+          - /url: /servers/appfigures
+          - generic [ref=f3e450]:
+            - generic [ref=f3e451]:
+              - heading "Appfigures" [level=3] [ref=f3e453]
+              - paragraph [ref=f3e454]: Appfigures
+              - paragraph [ref=f3e455]: App store analytics with ratings, reviews, keyword rankings, and revenue reporting.
+            - generic [ref=f3e457]:
+              - generic [ref=f3e458]:
+                - paragraph [ref=f3e459]: Classification
+                - generic [ref=f3e460]:
+                  - img "Official repository icon" [ref=f3e462]
+                  - paragraph [ref=f3e463]: official
+              - generic [ref=f3e464]:
+                - paragraph [ref=f3e465]: Est Visitors (All Time)
+                - paragraph [ref=f3e466]: 3k
+              - generic [ref=f3e467]:
+                - paragraph [ref=f3e468]: Release Date
+                - paragraph [ref=f3e469]: Apr 15, 2026
+        - link [ref=f3e471] [cursor=pointer]:
+          - /url: /servers/forgeopslabs-app-store-connect
+          - generic [ref=f3e473]:
+            - generic [ref=f3e474]:
+              - heading "App Store Connect" [level=3] [ref=f3e476]
+              - paragraph [ref=f3e477]: forgeopslabs
+              - paragraph [ref=f3e478]: Apple App Store Connect API access for AI agents via MCP.
+            - generic [ref=f3e480]:
+              - generic [ref=f3e481]:
+                - paragraph [ref=f3e482]: Classification
+                - generic [ref=f3e483]:
+                  - img "Community icon" [ref=f3e485]
+                  - paragraph [ref=f3e486]: community
+              - generic [ref=f3e487]:
+                - paragraph [ref=f3e488]: Est Visitors (All Time)
+                - paragraph [ref=f3e489]: —
+              - generic [ref=f3e490]:
+                - paragraph [ref=f3e491]: Release Date
+                - paragraph [ref=f3e492]: Jun 16, 2026
+        - link [ref=f3e494] [cursor=pointer]:
+          - /url: /servers/gh-dkulez-app-store-connect
+          - generic [ref=f3e496]:
+            - generic [ref=f3e497]:
+              - heading "App Store Connect" [level=3] [ref=f3e499]
+              - paragraph [ref=f3e500]: dkulez
+              - paragraph [ref=f3e501]: Manage iOS and macOS apps on App Store Connect including build submission, metadata, and review status.
+            - generic [ref=f3e503]:
+              - generic [ref=f3e504]:
+                - paragraph [ref=f3e505]: Classification
+                - generic [ref=f3e506]:
+                  - img "Community icon" [ref=f3e508]
+                  - paragraph [ref=f3e509]: community
+              - generic [ref=f3e510]:
+                - paragraph [ref=f3e511]: Est Visitors (All Time)
+                - paragraph [ref=f3e512]: —
+              - generic [ref=f3e513]:
+                - paragraph [ref=f3e514]: Release Date
+                - paragraph [ref=f3e515]: Jun 18, 2026
+        - link [ref=f3e517] [cursor=pointer]:
+          - /url: /servers/akoskomuves-appstoreconnect
+          - generic [ref=f3e519]:
+            - generic [ref=f3e520]:
+              - heading "App Store Connect MCP" [level=3] [ref=f3e522]
+              - paragraph [ref=f3e523]: akoskomuves
+              - paragraph [ref=f3e524]: Drives Apple App Store Connect pricing, subscriptions, and app management from MCP clients.
+            - generic [ref=f3e526]:
+              - generic [ref=f3e527]:
+                - paragraph [ref=f3e528]: Classification
+                - generic [ref=f3e529]:
+                  - img "Community icon" [ref=f3e531]
+                  - paragraph [ref=f3e532]: community
+              - generic [ref=f3e533]:
+                - paragraph [ref=f3e534]: Est Visitors (All Time)
+                - paragraph [ref=f3e535]: 4.8k
+              - generic [ref=f3e536]:
+                - paragraph [ref=f3e537]: Release Date
+                - paragraph [ref=f3e538]: May 9, 2026
+  - contentinfo [ref=f3e539]:
+    - generic [ref=f3e540]:
+      - generic [ref=f3e541]:
+        - img "Pulse logo in white" [ref=f3e542]
+        - paragraph [ref=f3e543]: Stay up to date with all things MCP.
+        - paragraph [ref=f3e545]: © Copyright 2026, All Rights Reserved
+      - generic [ref=f3e547]:
+        - generic [ref=f3e548]:
+          - link "Browse use cases" [ref=f3e549] [cursor=pointer]:
+            - /url: /use-cases
+          - link "Submit use case" [ref=f3e550] [cursor=pointer]:
+            - /url: /use-cases/submit
+          - link "Browse servers" [ref=f3e551] [cursor=pointer]:
+            - /url: /servers
+          - link "Browse clients" [ref=f3e552] [cursor=pointer]:
+            - /url: /clients
+          - link "Submit server/client" [ref=f3e553] [cursor=pointer]:
+            - /url: /submit
+          - link "Terms of service" [ref=f3e554] [cursor=pointer]:
+            - /url: /terms-of-service
+          - link "Privacy policy" [ref=f3e555] [cursor=pointer]:
+            - /url: /privacy-policy
+          - link "Editorial Disclosure" [ref=f3e556] [cursor=pointer]:
+            - /url: /editorial-disclosure
+        - generic [ref=f3e557]:
+          - link "About us" [ref=f3e558] [cursor=pointer]:
+            - /url: /#about-us
+          - link "Blog" [ref=f3e559] [cursor=pointer]:
+            - /url: /posts
+          - link "API" [ref=f3e560] [cursor=pointer]:
+            - /url: /api
+          - link "The Agentic Loop" [ref=f3e561] [cursor=pointer]:
+            - /url: /newsletter
+          - link "MCP Statistics" [ref=f3e562] [cursor=pointer]:
+            - /url: /statistics
+          - link "MCP Apps" [ref=f3e563] [cursor=pointer]:
+            - /url: /mcp-apps
+          - link "PulseMCP Discord" [ref=f3e564] [cursor=pointer]:
+            - /url: https://discord.gg/dP2evEyTjS
+          - link "Contact us" [ref=f3e565] [cursor=pointer]:
+            - /url: mailto:hello@pulsemcp.com
+  - iframe [ref=f3e568]:
+    - generic [ref=f6e6]:
+      - text: protected by
+      - strong [ref=f6e7]: reCAPTCHA

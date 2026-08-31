@@ -1,14 +1,15 @@
 Hello,
 
-The listing at pulsemcp.com/servers/pofky-app-store-connect is showing a description from April 2026 that describes a read-only version of the server. It now reads "Check app review status, read customer reviews, and download sales reports from App Store Connect", which covers about three of its forty-one tools.
+The listing at pulsemcp.com/servers/pofky-app-store-connect is mirroring a registry entry that has been deprecated since July. The page shows the name io.github.pofky/appstore-connect-mcp and a description from April 2026, "Check app review status, read customer reviews, and download sales reports from App Store Connect", which covers about three of the server's forty-one tools. Its Learn More button also points at the pre-rename repository URL.
 
-The server is at v1.9.0 and is published on the official MCP registry as io.github.pofky/asc-mcp, with an updated description. I understand PulseMCP pipes server.json straight from the registry, so this may just be a sync that has not run for this entry yet. If it needs a manual nudge, the current description is:
+The current entry on the official MCP registry is io.github.pofky/asc-mcp, version 1.9.5, published 7 August 2026 and marked as the latest version. The old entry io.github.pofky/appstore-connect-mcp is marked deprecated and will not receive further versions, so a sync from it will keep producing the April copy no matter how long it runs.
 
-41 tools to ship an App Store release: metadata, screenshots, builds, TestFlight, IAP, submit.
+Could you repoint this listing at io.github.pofky/asc-mcp, or add that entry and retire the old one? The accurate details are:
 
+Name: io.github.pofky/asc-mcp
+Description: 41 tools to ship an App Store release: metadata, screenshots, builds, TestFlight, IAP, submit.
 Repository: https://github.com/pofky/asc-mcp
-Package: @pofky/asc-mcp on npm, current version 1.9.0
-Registry: io.github.pofky/asc-mcp
+Package: @pofky/asc-mcp on npm
 Website: https://asc-mcp.pages.dev
 
 Thanks,
