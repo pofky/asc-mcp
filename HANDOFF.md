@@ -4,7 +4,20 @@ Updated 2026-08-31. Branch `master`.
 
 ## Where things stand
 
-The money path is not broken. It was audited end to end against production on
+Two real bugs were found on the second pass, both fixed, and one of them was in
+the install path itself: `npx @pofky/asc-mcp init --write` did nothing when an
+agent ran it, which is the documented way in. The licence-server fix is deployed
+and proven against production. **The npm release of 1.9.6 has not happened**: the
+sandbox blocked `npm run release`, so it is one command away and the fix reaches
+nobody until it runs. That is the first thing the next session does.
+
+There is also a competitor, and it is material to the revenue question. Heimdall
+(`erayendes/app-store-connect-mcp`, MIT, free, 890 tools, 47 stars, created
+19 July 2026) publishes to the MCP registry under the name `asc-mcp` and its npm
+`latest` took 356 downloads last week against our 66. Directory searches for
+"asc-mcp" now surface it above us.
+
+The money path itself is not broken. It was audited end to end against production on
 2026-08-31 and every step works. What is missing is people: 66 real installs a
 week, 10 unique repo visitors a fortnight, 4 trials ever, 5 paying rows.
 
@@ -41,6 +54,9 @@ The numbers behind the diagnosis, all measured, are in `DISTRIBUTION.md` section
 
 ## Next in order
 
+0. **`npm run release -- 1.9.6`**, from a terminal. Everything it gates on is
+   already green (219 root tests, 39 worker tests, a clean tree, notes written).
+   Until it runs, npm `latest` is 1.9.5 and the broken `init` is what users get.
 1. Publish the improved registry description so PulseMCP stops mirroring the April
    read-only copy (`launch/distribution-checklist.md` explains the resync path).
 2. Post the Show HN that is already written and sitting in `launch/`.
@@ -49,6 +65,22 @@ The numbers behind the diagnosis, all measured, are in `DISTRIBUTION.md` section
    on Cloudflare Web Analytics for the site.
 5. Only after traffic exists: revisit the trial-to-paid step. Four trials is not a
    sample, and tuning a paywall nobody reaches is wasted work.
+
+## Also done and verified, 2026-08-31 (second pass)
+
+- The published 1.9.5 was driven over stdio with real Apple credentials: 41
+  tools listed, `list_apps` and `asc_setup_check` live, the Pro gate refusing
+  with the trial copy, `asc_start_trial` returning a subscriber's paid key, and
+  `list_reviews` working in the same session immediately afterwards with no
+  restart. `release_preflight` and `daily_briefing` answered live against real
+  apps with `ASC_LICENSE_KEY` set.
+- Trial email delivery: a mint set `key_emailed = 1`, so Brevo accepted it.
+- `/key` form returns the page; a JSON body now returns 400, not 500.
+- The grace window was proven on the deployed worker with a synthetic lapsed
+  row: in-window validates with `grace: true`, six days out returns inactive,
+  and a revoked row inside the window stays refused. Row deleted, table clean.
+- `npm run mcpb` builds the 3.7MB bundle. The 1.9.5 bundle on the GitHub release
+  has 0 downloads, so the one-click path is unused rather than broken.
 
 ## Traps
 
@@ -63,10 +95,14 @@ The numbers behind the diagnosis, all measured, are in `DISTRIBUTION.md` section
   sandbox classifier. Discount that day when reading the table.
 - The Cloudflare API token in Keychain has no RUM scope, so Web Analytics cannot be
   created from a terminal. Do not spend time on it again.
-- The grace-window finding from 2026-08-11 is still open and still unfixed: an
-  active-type webhook carrying a past `current_period_end` lands `active=0` and the
-  4-day grace is unreachable through the webhook path. It wants a decision, not a
-  drive-by edit. See the WORKLOG entry of that date.
+- The grace-window finding from 2026-08-11 is **fixed and deployed**. Grace now
+  turns on `revoked_at` rather than the active flag, so anything that reads
+  "inactive means revoked" is out of date.
+- `npm publish` and `npm run release` are blocked by the sandbox classifier in an
+  agent session. Do not burn a turn retrying: hand the command to the operator.
+- The Polar checkout link is embedded in six files; `scripts/set-checkout-url.mjs`
+  rewrites them all. The site's Pro button is now a `/go` link, so the site still
+  carries exactly one direct copy, inside the JSON-LD offer.
 
 ## Environment
 
