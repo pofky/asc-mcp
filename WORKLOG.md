@@ -1,6 +1,34 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**Third pass: the server did not run on Node 18 (2026-08-31).**
+
+Drove every advertised flow, not just the money path. The headline: `jose` is ESM-only from v6, the
+package is CommonJS, so `require("jose")` threw `ERR_REQUIRE_ESM` before any of our code ran on every
+Node 18 and every Node 20 below 20.19, while `engines`, the README, the site and the .mcpb manifest
+all promised Node 18. Dropped the dependency for Node's own `crypto` (ES256 with
+`dsaEncoding: "ieee-p1363"`, the raw r||s pair Apple wants), verified live on 18.20.8 including the
+bundle, and added a test that walks the dependency tree so an ESM-only package cannot come back
+unnoticed. Nothing caught it because every local and CI run uses a newer Node.
+
+Three smaller flow breaks, all fixed: `list_reviews` never printed the review id that
+`draft_review_response` requires, so the documented reviews flow had no way across that step;
+`draft_review_response` told clients without Sampling to "draft by hand" instead of handing the model
+that called it the review and the rules; and a mistyped command started the MCP server, which then
+sat on stdio looking like a hang.
+
+Everything else was driven and found correct: setup mode, doctor, skill install/uninstall, the .mcpb
+bundle under both Node versions, all 41 tool schemas, thirteen live read tools, the four confirm
+gates, the error paths, a real write to Apple confirmed by an independent signed read and reverted,
+every licence endpoint including rate limiting and the GDPR delete guards, the full webhook path
+against a local worker (mint, forged signature, renewal, foreign product, cancel, revoke, replay),
+offline grace with the licence server unreachable, and the site at 375px with zero console errors.
+The worker's own pages were logging a favicon 404 on every transactional page; fixed and deployed.
+
+Also corrected three distribution claims that had drifted: Smithery is a dead end and the yaml has
+not been in the repo since 6 August, the mcpservers.org duplicate is gone, and PulseMCP is mirroring
+the deprecated registry entry rather than waiting on a sync, so the email now asks for a repoint.
+
 **Second pass: two real bugs, and a competitor (2026-08-31).**
 
 The first pass checked the money path and found it healthy. The second checked the paths it had not
