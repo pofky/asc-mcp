@@ -1,0 +1,244 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e3]:
+    - generic [ref=e4]: asc-mcp
+    - link "Pipeline" [ref=e5] [cursor=pointer]:
+      - /url: "#pipeline"
+    - link "Pricing" [ref=e6] [cursor=pointer]:
+      - /url: "#pricing"
+    - link "Setup" [ref=e7] [cursor=pointer]:
+      - /url: "#setup"
+    - link "Q&A" [ref=e8] [cursor=pointer]:
+      - /url: "#different"
+    - link "Limits" [ref=e9] [cursor=pointer]:
+      - /url: "#faq"
+    - link "GitHub" [ref=e10] [cursor=pointer]:
+      - /url: https://github.com/pofky/asc-mcp
+  - banner [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]: App Store Connect MCP server
+      - heading "Ship an App Store release without leaving your agent." [level=1] [ref=e14]
+      - paragraph [ref=e15]: "41 tools that drive App Store Connect from Claude Code, Cursor, or any MCP client: edit metadata, upload screenshots, attach builds, run TestFlight, submit, release. The steps Apple's API cannot do are flagged before you hit them, not after you are half done."
+      - generic [ref=e16]:
+        - link "Start free, no card" [ref=e17] [cursor=pointer]:
+          - /url: "#pricing"
+        - generic [ref=e18]:
+          - code [ref=e19]: npx @pofky/asc-mcp init
+          - button "Copy install command" [ref=e20] [cursor=pointer]: Copy
+      - paragraph [ref=e21]:
+        - text: Install, then ask your agent to run
+        - code [ref=e22]: asc_start_trial
+        - text: . Every tool unlocks for 7 days, no card and nothing to cancel. Your .p8 key never leaves your machine.
+        - link "How setup works" [ref=e23] [cursor=pointer]:
+          - /url: "#setup"
+      - generic "Terminal output from the setup check" [ref=e24]:
+        - generic [ref=e25]: asc_setup_check
+        - code [ref=e31]: "> is my App Store Connect setup working? App Store Connect MCP, setup check ======================================== [OK] API key file (.p8): Found ~/.appstoreconnect/private_keys/AuthKey_2X8••••••.p8 [OK] Key ID: 2X8•••••• [OK] Issuer ID: 69a1c7f4-••••-••••-••••-•••••••••••• [OK] Live connection: Authenticated against App Store Connect and listed apps. [WARN] License: Free tier: read + intelligence tools only. Not a problem; the free tools work. Fix: Run `asc_start_trial` for 7 days of everything, no card. It unlocks write/control in this session, no restart. Ready. Try `list_apps`, then `asc_guide` (topic:overview) to see every flow."
+  - main [ref=e32]:
+    - generic [ref=e34]:
+      - generic [ref=e35]: The pipeline
+      - heading "A release is a state machine. Here is who drives each state." [level=2] [ref=e36]
+      - paragraph [ref=e37]:
+        - text: App Store Connect moves a version through fixed states. Most of those transitions have an API. A few do not, and no MCP server can invent one. Amber lists the tool calls your agent makes. Red marks the stages only the website can do, and
+        - code [ref=e38]: asc_guide
+        - text: hands you those steps with the deep link.
+      - list [ref=e39]:
+        - listitem [ref=e40]:
+          - generic [ref=e43]:
+            - generic [ref=e44]: Manual, one time
+            - heading "The app record exists" [level=3] [ref=e45]
+            - paragraph [ref=e46]:
+              - code [ref=e47]: POST /v1/apps
+              - text: is forbidden for API keys, so the record is created once on the website.
+            - paragraph [ref=e48]: ASC website > Apps > +
+        - listitem [ref=e49]:
+          - generic [ref=e52]:
+            - generic [ref=e53]: Prepare for submission
+            - heading "Metadata, price, availability, age rating" [level=3] [ref=e54]
+            - paragraph [ref=e55]: Character limits are validated before the write, so Apple does not bounce it. Price equalizes to about 175 territories.
+            - paragraph [ref=e56]: update_version_metadata · set_app_metadata · set_app_price · set_app_availability · set_age_rating
+        - listitem [ref=e57]:
+          - generic [ref=e60]:
+            - generic [ref=e61]: Build processing
+            - heading "Compile, sign, upload, attach" [level=3] [ref=e62]
+            - paragraph [ref=e63]: Manual-signing profiles are created via the API, then the archive is built and uploaded locally with Xcode's toolchain.
+            - paragraph [ref=e64]: setup_app_store_signing · build_and_archive · upload_binary · wait_for_build · attach_build
+        - listitem [ref=e65]:
+          - generic [ref=e68]:
+            - generic [ref=e69]: Assets and products
+            - heading "Screenshots, subscriptions, in-app purchases" [level=3] [ref=e70]
+            - paragraph [ref=e71]: Screenshots upload per display type. Subscriptions get a group, localization, territory availability, a USA base price fanned out to every territory, and a free trial.
+            - paragraph [ref=e72]: upload_screenshots · create_subscription · create_iap · set_iap_review_screenshot
+        - listitem [ref=e73]:
+          - generic [ref=e76]:
+            - generic [ref=e77]: Manual, website only
+            - heading "Privacy nutrition label and EU trader status" [level=3] [ref=e78]
+            - paragraph [ref=e79]: Neither is in the public API. Both tools return the exact checklist plus the deep link instead of pretending to write them.
+            - paragraph [ref=e80]: set_privacy_nutrition · set_eu_trader_status
+        - listitem [ref=e81]:
+          - generic [ref=e84]:
+            - generic [ref=e85]: Waiting for review
+            - heading "Preflight, then submit" [level=3] [ref=e86]
+            - paragraph [ref=e87]: "Preflight audits the whole version and reports every blocker with the fix. If this app's first in-app purchases are pending, submit aborts on purpose: only the website can bundle those with a version."
+            - paragraph [ref=e88]: release_preflight · submit_for_review
+        - listitem [ref=e89]:
+          - generic [ref=e92]:
+            - generic [ref=e93]: Ready for sale
+            - heading "Release, or roll out over 7 days" [level=3] [ref=e94]
+            - paragraph [ref=e95]: Outward-facing calls require an explicit confirm flag, so an agent cannot ship to the public by accident.
+            - paragraph [ref=e96]: release_version · manage_phased_release
+    - generic [ref=e98]:
+      - generic [ref=e99]: Answers
+      - heading "Common questions, answered directly" [level=2] [ref=e100]
+      - generic [ref=e101]:
+        - heading "How is this different from an MCP server that wraps the API?" [level=3] [ref=e102]
+        - paragraph [ref=e103]: "Wrappers expose Apple's endpoints one to one, which can mean hundreds of tools. That fills an agent's context and leaves the sequencing to it. This server ships 41 opinionated tools that each complete a job: one call sets an age rating by merging the full declaration set, one call prices a subscription across every territory and adds the trial, one call audits a version before submission."
+      - generic [ref=e104]:
+        - heading "What does it actually cost?" [level=3] [ref=e105]
+        - paragraph [ref=e106]:
+          - text: Nothing, for the first seven days. Ask your agent to run
+          - code [ref=e107]: asc_start_trial
+          - text: "and every tool unlocks for a week, no card, nothing to cancel. After that Pro is $9 per month through Polar, cancel any time. Six tools stay free with no asc-mcp account: the setup check, the playbook, the trial starter, listing apps, app details, and review status. The first three need nothing at all. The other three read from App Store Connect, so they need your own Apple API key, the same one every other tool here uses."
+      - generic [ref=e108]:
+        - heading "Where does my API key go?" [level=3] [ref=e109]
+        - paragraph [ref=e110]: Nowhere. The .p8 stays on your machine, JWTs are signed locally, and calls go straight from your computer to api.appstoreconnect.apple.com. Nothing proxies through this project. The only network call it makes elsewhere is a license check that sends your license key, not your credentials.
+      - generic [ref=e111]:
+        - heading "Can an agent submit or release my app by mistake?" [level=3] [ref=e112]
+        - paragraph [ref=e113]: "No. submit_for_review, release_version, and upload_binary each refuse to run without an explicit confirm flag, so an agent has to be told twice. Reviews are the same: the reply tool writes a draft and never posts it."
+      - generic [ref=e114]:
+        - heading "Has this shipped a real app?" [level=3] [ref=e115]
+        - paragraph [ref=e116]: Yes. The control plane drove a 1.0 submission end to end in June 2026, including metadata, age rating, build attach, screenshots, three in-app purchase products priced across 175 territories, and the submission itself. Every limitation listed on this page was found by hitting it live, not by reading the docs.
+    - generic [ref=e118]:
+      - generic [ref=e119]: Pricing
+      - heading "Try it on your own app first." [level=2] [ref=e120]
+      - paragraph [ref=e121]:
+        - text: Every tool, free for seven days, without a card. Ask your agent to run
+        - code [ref=e122]: asc_start_trial
+        - text: and it unlocks in the same conversation, no restart.
+      - generic [ref=e123]:
+        - generic [ref=e124]:
+          - heading "Free" [level=3] [ref=e125]
+          - paragraph [ref=e126]: $0
+          - list [ref=e127]:
+            - listitem [ref=e128]:
+              - code [ref=e129]: asc_start_trial
+              - text: ", 7 days of everything below, no card, nothing to cancel"
+            - listitem [ref=e130]:
+              - code [ref=e131]: asc_setup_check
+              - text: ", diagnoses your setup with a live authenticated call"
+            - listitem [ref=e132]:
+              - code [ref=e133]: asc_guide
+              - text: ", the full playbook per flow with manual steps flagged"
+            - listitem [ref=e134]:
+              - code [ref=e135]: list_apps
+              - text: ","
+              - code [ref=e136]: app_details
+              - text: ","
+              - code [ref=e137]: review_status
+            - listitem [ref=e138]: No asc-mcp account, no signup, no card. Three of the six need nothing at all; the other three read from Apple with your own API key
+          - link "See setup steps" [ref=e139] [cursor=pointer]:
+            - /url: "#setup"
+        - generic [ref=e140]:
+          - heading "Pro" [level=3] [ref=e141]
+          - paragraph [ref=e142]: $9 per month
+          - list [ref=e143]:
+            - listitem [ref=e144]: All 41 tools, including the full write and control plane
+            - listitem [ref=e145]: Metadata, screenshots, builds, TestFlight, submit, release, phased rollout
+            - listitem [ref=e146]: Subscriptions and in-app purchases, priced and localized in one call
+            - listitem [ref=e147]: Reviews, sales reports, preflight audits, keyword and competitor intelligence
+            - listitem [ref=e148]: Cancel any time in Polar. Your license key is emailed and recoverable.
+          - link "Get Pro, $9 per month" [ref=e149] [cursor=pointer]:
+            - /url: https://asc-mcp-license.remewdy.workers.dev/go?tool=site_pricing
+          - paragraph [ref=e150]:
+            - text: Lost your key?
+            - link "Recover it here." [ref=e151] [cursor=pointer]:
+              - /url: https://asc-mcp-license.remewdy.workers.dev/key
+          - paragraph [ref=e152]:
+            - text: Your .p8 never leaves your machine, and no App Store Connect data passes through this project.
+            - link "Privacy" [ref=e153] [cursor=pointer]:
+              - /url: https://asc-mcp-license.remewdy.workers.dev/privacy
+            - text: ·
+            - link "Terms" [ref=e154] [cursor=pointer]:
+              - /url: https://asc-mcp-license.remewdy.workers.dev/terms
+            - text: ". This control plane drove a real 1.0 submission end to end in June 2026. Questions go to a person:"
+            - link "povkonop@gmail.com" [ref=e155] [cursor=pointer]:
+              - /url: mailto:povkonop@gmail.com
+            - text: .
+    - generic [ref=e157]:
+      - generic [ref=e158]: Setup
+      - heading "Three steps, about five minutes" [level=2] [ref=e159]
+      - paragraph [ref=e160]:
+        - text: On Claude Desktop, skip all of it. Download
+        - link "the .mcpb bundle" [ref=e161] [cursor=pointer]:
+          - /url: https://github.com/pofky/asc-mcp/releases/latest
+        - text: and open it. Claude installs it in one click, asks for your Issuer ID, and lets you pick your .p8 with a file picker. No config file, no restart. The steps below are for every other client.
+      - list [ref=e162]:
+        - listitem [ref=e163]:
+          - text: Create an App Store Connect API key. In App Store Connect, open Users and Access, then Integrations, then App Store Connect API. Generate a key with the App Manager role and download the .p8. Apple only lets you download it once. Drop it in Apple's standard folder and the Key ID is read from the filename.
+          - generic [ref=e164]: mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/private_keys/
+        - listitem [ref=e165]:
+          - text: Run init. It finds the key, asks for your Issuer ID and optional Pro key, and prints a paste-ready config block. Add
+          - code [ref=e166]: "--write"
+          - text: and it merges the block into your client config for you, after backing it up.
+          - generic [ref=e167]: npx @pofky/asc-mcp init --write
+        - listitem [ref=e168]:
+          - text: Restart your client and check. Ask your agent to run the setup check. It verifies the key, the Issuer ID, a live authenticated call, and your license tier, and prints the exact fix for anything wrong.
+          - generic [ref=e169]: npx @pofky/asc-mcp doctor
+      - paragraph [ref=e170]: Works with Claude Code, Claude Desktop, Cursor, Windsurf, Cline, and any other MCP client that speaks stdio. Requires Node 18 or newer. Building and uploading a binary additionally needs a Mac with Xcode.
+    - generic [ref=e172]:
+      - generic [ref=e173]: FAQ
+      - heading "What the App Store Connect API cannot do" [level=2] [ref=e174]
+      - paragraph [ref=e175]: "This list matters more than the feature list. Anyone who tells you an agent can do all of App Store Connect has not tried these:"
+      - generic [ref=e176]:
+        - heading "Create an app record" [level=3] [ref=e177]
+        - paragraph [ref=e178]: Forbidden for API keys. Create it once on the website, then everything after is automatable.
+      - generic [ref=e179]:
+        - heading "Set the App Privacy nutrition label" [level=3] [ref=e180]
+        - paragraph [ref=e181]:
+          - text: The data usage resource is not public.
+          - code [ref=e182]: set_privacy_nutrition
+          - text: returns the checklist and the deep link.
+      - generic [ref=e183]:
+        - heading "Declare EU trader status" [level=3] [ref=e184]
+        - paragraph [ref=e185]:
+          - text: No API attribute exists, and it is a legal declaration.
+          - code [ref=e186]: set_eu_trader_status
+          - text: returns the steps.
+      - generic [ref=e187]:
+        - heading "Submit an app's first in-app purchases" [level=3] [ref=e188]
+        - paragraph [ref=e189]:
+          - text: Apple requires the first products to be submitted with the version, which only the website can do.
+          - code [ref=e190]: submit_for_review
+          - text: detects this and stops rather than orphaning your version. Later products submit fine over the API.
+      - generic [ref=e191]:
+        - heading "Post a public reply to a review" [level=3] [ref=e192]
+        - paragraph [ref=e193]:
+          - text: Reading reviews is in the API, replying is not.
+          - code [ref=e194]: draft_review_response
+          - text: writes the reply for you to paste.
+      - generic [ref=e195]:
+        - heading "Use Xcode cloud signing with a least-privilege key" [level=3] [ref=e196]
+        - paragraph [ref=e197]:
+          - text: It fails with a permissions error.
+          - code [ref=e198]: setup_app_store_signing
+          - text: creates real distribution profiles and an ExportOptions.plist for manual signing instead, which works.
+  - contentinfo [ref=e199]:
+    - generic [ref=e200]:
+      - generic [ref=e201]:
+        - link "npm" [ref=e202] [cursor=pointer]:
+          - /url: https://www.npmjs.com/package/@pofky/asc-mcp
+        - link "GitHub" [ref=e203] [cursor=pointer]:
+          - /url: https://github.com/pofky/asc-mcp
+        - link "Guide" [ref=e204] [cursor=pointer]:
+          - /url: https://github.com/pofky/asc-mcp/blob/master/USER_GUIDE.md
+        - link "Limitations" [ref=e205] [cursor=pointer]:
+          - /url: https://github.com/pofky/asc-mcp/blob/master/LIMITATIONS.md
+        - link "Field notes" [ref=e206] [cursor=pointer]:
+          - /url: /writing/license-server/
+        - link "Terms" [ref=e207] [cursor=pointer]:
+          - /url: https://asc-mcp-license.remewdy.workers.dev/terms
+        - link "Privacy" [ref=e208] [cursor=pointer]:
+          - /url: https://asc-mcp-license.remewdy.workers.dev/privacy
+        - link "llms.txt" [ref=e209] [cursor=pointer]:
+          - /url: /llms.txt
+      - paragraph [ref=e210]: asc-mcp v1.9.5, MIT licensed. Built and maintained by Povilas Konopackas, sole trader, Lithuania. Not affiliated with Apple Inc. App Store and App Store Connect are trademarks of Apple Inc.
+      - paragraph [ref=e211]: Last updated 7 August 2026.

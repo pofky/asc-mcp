@@ -47,6 +47,19 @@ export interface DraftResult {
   warning: string;
   degraded: boolean;
   note?: string;
+  /**
+   * Present only when the client cannot sample, so the calling agent has to
+   * write the draft itself: the review it is answering, and the same brief the
+   * sampling prompt would have carried.
+   */
+  review?: {
+    rating: number;
+    title: string | null;
+    body: string | null;
+    reviewer: string | null;
+    territory: string;
+  };
+  drafting_brief?: string;
 }
 
 const APPLE_GUIDELINE_DISCLAIMER =
@@ -176,10 +189,29 @@ export async function draftReviewResponse(
 
   if (!samplingResult.ok) {
     if ("unsupported" in samplingResult && samplingResult.unsupported) {
-      return emptyResult(args, tone, {
-        locale,
-        note: "Your MCP client does not support Sampling. Drafting unavailable. Upgrade Claude Desktop or Claude Code, or draft by hand.",
-      });
+      // Sampling is how this tool would have the client's own model write the
+      // draft. Plenty of clients do not implement it, and telling that user to
+      // "draft by hand" wastes the one model already in the conversation: the
+      // agent that just called this tool can write the reply itself, given the
+      // review and the same rules the sampling prompt would have carried.
+      return {
+        ...emptyResult(args, tone, {
+          locale,
+          note:
+            "This client does not support Sampling, so no draft was generated here. " +
+            "Everything needed to write it is below: follow drafting_brief exactly, " +
+            "write the reply yourself, and show it to the user before they post it in " +
+            "App Store Connect (Apple has no API for posting responses).",
+        }),
+        review: {
+          rating: review.rating,
+          title: review.title || null,
+          body: review.body || null,
+          reviewer: review.reviewerNickname || null,
+          territory: review.territory,
+        },
+        drafting_brief: systemPrompt,
+      };
     }
     return emptyResult(args, tone, {
       locale,
@@ -283,6 +315,29 @@ function filterForbidden(draft: string): string | null {
 }
 
 export function formatDraftForAgent(res: DraftResult): string {
+  // No draft, but everything needed to write one: the client cannot sample, so
+  // the agent reading this is the model that writes the reply. Printing only
+  // the note threw that material away and ended the flow at "draft by hand".
+  if (!res.draft && res.review && res.drafting_brief) {
+    return [
+      `# Write this draft yourself (locale ${res.locale}, tone ${res.tone_used})`,
+      "",
+      res.note ?? "",
+      "",
+      "## The review",
+      `Rating: ${res.review.rating}/5`,
+      `Title: ${res.review.title ?? "(none)"}`,
+      `Body: ${res.review.body ?? "(none)"}`,
+      `Reviewer: ${res.review.reviewer ?? "Anonymous"}`,
+      `Territory: ${res.review.territory}`,
+      "",
+      "## Rules the draft must follow",
+      res.drafting_brief,
+      "",
+      `_${res.warning}_`,
+    ].join("\n");
+  }
+
   if (!res.draft) {
     return res.note ?? "No draft produced.";
   }

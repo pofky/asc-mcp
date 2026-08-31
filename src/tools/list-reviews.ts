@@ -77,6 +77,17 @@ export async function listReviews(
     ? response.data
     : [response.data];
 
+  return formatReviews(reviews, response.meta?.paging?.total);
+}
+
+/**
+ * Render a page of reviews. Split out from the fetch so the shape the agent
+ * actually reads can be tested without a live App Store Connect account.
+ */
+export function formatReviews(
+  reviews: { id: string; attributes: ReviewAttributes }[],
+  total?: number,
+): string {
   if (reviews.length === 0) {
     return "No customer reviews found matching your criteria.";
   }
@@ -88,11 +99,17 @@ export async function listReviews(
   for (const review of reviews) {
     const r = review.attributes;
     result += `### ${stars(r.rating)} ${r.title || "(No title)"}\n`;
-    result += `**By** ${r.reviewerNickname || "Anonymous"} - ${r.territory} - ${r.createdDate.split("T")[0]}\n\n`;
+    result += `**By** ${r.reviewerNickname || "Anonymous"} - ${r.territory} - ${r.createdDate.split("T")[0]}\n`;
+    // The id is the whole point of listing a review you intend to answer.
+    // `draft_review_response` takes `review_id` and its schema says "from
+    // list_reviews", but this formatter never printed one, so the documented
+    // reviews flow, read a review then reply to it, dead-ended here: the agent
+    // had a review it could see and no way to name it. Apple's ids are opaque
+    // UUIDs, so there is nothing to derive it from either.
+    result += `**Review ID**: \`${review.id}\` (pass to draft_review_response)\n\n`;
     result += `${r.body || "(No body)"}\n\n---\n\n`;
   }
 
-  const total = response.meta?.paging?.total;
   if (total && total > reviews.length) {
     result += `\n*Showing ${reviews.length} of ${total} total reviews.*\n`;
   }
