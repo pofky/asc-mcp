@@ -482,3 +482,142 @@ export async function verifyDeleteToken(
   return timingSafeEqual(token, expected);
 }
 
+
+/** The counted redirect to checkout, used by every link we control. */
+export const GO_URL = "https://asc-mcp-license.remewdy.workers.dev/go";
+
+/** The licence page, linked from every email so a lost key is self-serve. */
+export const KEY_PAGE_URL = "https://asc-mcp-license.remewdy.workers.dev/key";
+
+const escapeHtml = (s: string): string =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/** The config block both emails show. Only the Issuer ID is left to fill in. */
+const configSnippet = (key: string) => `{
+  "mcpServers": {
+    "appstore-connect": {
+      "command": "npx",
+      "args": ["-y", "@pofky/asc-mcp"],
+      "env": {
+        "ASC_ISSUER_ID": "YOUR_ISSUER_ID",
+        "ASC_LICENSE_KEY": "${key}"
+      }
+    }
+  }
+}`;
+
+export interface EmailContent {
+  subject: string;
+  html: string;
+  text: string;
+}
+
+/**
+ * The trial key email.
+ *
+ * Pure, and in this file, so what a customer actually receives can be asserted
+ * in tests. Reading the real thing in an inbox found two things worth fixing:
+ * it claimed the key had already been written into the reader's config, which
+ * is false for a one-click bundle install and false whenever the agent could
+ * not find a config file and said so; and its upgrade link was the raw Polar
+ * URL, so the one click that matters most, a trial user deciding to pay, was
+ * the only one not counted, and it made them retype the address we already had.
+ */
+export function trialEmailContent(key: string, expires: string | null, email: string): EmailContent {
+  const safeKey = escapeHtml(key);
+  const ends = expires ? new Date(expires).toUTCString() : `${TRIAL_DAYS} days from now`;
+  // Through the counted redirect, not the raw Polar link: a trial user deciding
+  // to pay is the single most valuable click this product has, and it was the
+  // only one not being counted. `/go` carries the prefill through.
+  const checkout = `${GO_URL}?tool=trial_email&email=${encodeURIComponent(email)}`;
+
+  const html = `
+    <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
+      <h1 style="font-size:20px">Your ${TRIAL_DAYS}-day asc-mcp Pro trial</h1>
+      <p>All 41 tools are unlocked on this key until <strong>${escapeHtml(ends)}</strong>. No card, nothing to cancel.</p>
+      <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
+      <p>Your agent usually writes this into your MCP config for you, and tells you when it could not. Here it is either way, for a second machine or to paste in yourself:</p>
+      <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">${configSnippet(safeKey)}</pre>
+      <p>If your <code>.p8</code> is in <code>~/.appstoreconnect/private_keys/</code>, that block is complete once you fill in your Issuer ID. If the key lives somewhere else, add <code>ASC_PRIVATE_KEY_PATH</code> to the same env block. On Claude for macOS or Windows there is no config file: paste the key into the extension's own License key field.</p>
+      <p><strong>Worth trying first:</strong> ask your agent to run a release preflight on your app, or to give you a morning briefing across all of them. Those two answer the question "is this worth $9" faster than anything else here.</p>
+      <p>When the trial ends, Pro is $9 per month: <a href="${checkout}">subscribe here</a>. Cancel any time.</p>
+      <p style="color:#666;font-size:14px">Lost this key? Retrieve it any time at <a href="${KEY_PAGE_URL}">the license page</a>.</p>
+      <p style="color:#666;font-size:14px">Hit a bug, or something did not work? Just reply to this email. A person reads it.</p>
+    </div>`;
+
+  const text = [
+    `Your ${TRIAL_DAYS}-day asc-mcp Pro trial`,
+    "",
+    `All 41 tools are unlocked on this key until ${ends}. No card, nothing to cancel.`,
+    "",
+    `  ${key}`,
+    "",
+    "Your agent usually writes this into your MCP config for you, and tells you when it could not.",
+    "Here it is either way, for a second machine or to paste in yourself:",
+    "",
+    configSnippet(key),
+    "",
+    "If your .p8 is in ~/.appstoreconnect/private_keys/, that block is complete once you fill in",
+    "your Issuer ID. If the key lives somewhere else, add ASC_PRIVATE_KEY_PATH to the same env",
+    "block. On Claude for macOS or Windows there is no config file: paste the key into the",
+    "extension's own License key field.",
+    "",
+    "Worth trying first: ask your agent to run a release preflight on your app, or to give you a",
+    'morning briefing across all of them. Those two answer the question "is this worth $9" faster',
+    "than anything else here.",
+    "",
+    `When the trial ends, Pro is $9 per month, cancel any time: ${checkout}`,
+    `Lost this key? Retrieve it any time at ${KEY_PAGE_URL}`,
+    "",
+    "Hit a bug, or something did not work? Just reply to this email. A person reads it.",
+  ].join("\n");
+
+  return { subject: `Your ${TRIAL_DAYS}-day asc-mcp Pro trial key`, html, text };
+}
+
+/** The paid licence email, sent on a subscription and on a key lookup. */
+export function licenseEmailContent(key: string): EmailContent {
+  const safeKey = escapeHtml(key);
+
+  const html = `
+    <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
+      <h1 style="font-size:20px">Your asc-mcp Pro license</h1>
+      <p>Thanks for subscribing. Here is your license key:</p>
+      <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
+      <p>If your <code>.p8</code> is in <code>~/.appstoreconnect/private_keys/</code>, this block is complete once you fill in your Issuer ID. If the key lives somewhere else, add <code>ASC_PRIVATE_KEY_PATH</code> to the same env block. On Claude for macOS or Windows there is no config file: paste the key into the extension's own License key field.</p>
+      <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">${configSnippet(safeKey)}</pre>
+      <p>Not set up yet? Drop your <code>.p8</code> into <code>~/.appstoreconnect/private_keys/</code> and run <code>npx @pofky/asc-mcp init --write</code>; it asks for your Issuer ID and this key, then writes the config for you.</p>
+      <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.), then ask it to "list my App Store Connect apps" to confirm Pro is active.</p>
+      <p style="color:#666;font-size:14px">You can also retrieve this key any time at <a href="${KEY_PAGE_URL}">the license page</a>. Keep it private; it unlocks Pro tools on your machine.</p>
+      <p style="color:#666;font-size:14px">Questions or trouble? Just reply to this email.</p>
+    </div>`;
+
+  const text = [
+    "Your asc-mcp Pro license",
+    "",
+    "Thanks for subscribing. Here is your license key:",
+    "",
+    `  ${key}`,
+    "",
+    "If your .p8 is in ~/.appstoreconnect/private_keys/, this block is complete once you fill in",
+    "your Issuer ID. If the key lives somewhere else, add ASC_PRIVATE_KEY_PATH to the same env",
+    "block. On Claude for macOS or Windows there is no config file: paste the key into the",
+    "extension's own License key field.",
+    "",
+    configSnippet(key),
+    "",
+    "Not set up yet? Drop your .p8 into ~/.appstoreconnect/private_keys/ and run",
+    "npx @pofky/asc-mcp init --write; it asks for your Issuer ID and this key, then writes the",
+    "config for you.",
+    "",
+    'Next step: save your config, restart your agent, then ask it to "list my App Store Connect',
+    'apps" to confirm Pro is active.',
+    "",
+    `You can also retrieve this key any time at ${KEY_PAGE_URL}. Keep it private; it unlocks Pro`,
+    "tools on your machine.",
+    "",
+    "Questions or trouble? Just reply to this email.",
+  ].join("\n");
+
+  return { subject: "Your asc-mcp Pro license key", html, text };
+}

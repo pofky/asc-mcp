@@ -29,6 +29,8 @@ import {
   verifyPolarSignature,
   webhookSecrets,
   type LookupRow,
+  trialEmailContent,
+  licenseEmailContent,
 } from "../src/logic.js";
 
 const NOW = new Date("2026-08-06T12:00:00.000Z");
@@ -378,5 +380,44 @@ describe("buildCheckoutUrl", () => {
     expect(url.searchParams.has("utm_content")).toBe(false);
     expect(url.searchParams.has("customer_email")).toBe(false);
     expect(url.searchParams.get("utm_source")).toBe("agent");
+  });
+});
+
+/**
+ * What the customer actually receives. Read in a real inbox on 2026-08-31,
+ * which is the only way these two defects were ever going to be found.
+ */
+describe("emails", () => {
+  const trial = trialEmailContent("ASC-AAAAA-BBBBB-CCCCC-DDDDD", "2026-09-07T09:06:17.000Z", "buyer@example.com");
+
+  it("does not claim the key is already in a config it may never have written", () => {
+    // False for a one-click bundle install, and false whenever the tool itself
+    // just told the user it could not find a config file.
+    expect(trial.html).not.toContain("has already written this into your MCP config");
+    expect(trial.html).toContain("tells you when it could not");
+  });
+
+  it("sends the upgrade click through the counted redirect, with the address prefilled", () => {
+    expect(trial.html).toContain("/go?tool=trial_email");
+    expect(trial.html).toContain("email=buyer%40example.com");
+    // The raw Polar link would work, but it is the one click worth counting.
+    expect(trial.html).not.toContain("https://buy.polar.sh");
+  });
+
+  it("says where the key goes when there is no config file at all", () => {
+    expect(trial.html).toContain("License key field");
+    expect(licenseEmailContent("ASC-1").html).toContain("License key field");
+  });
+
+  it("carries a plain-text alternative that holds the key and the links", () => {
+    for (const mail of [trial, licenseEmailContent("ASC-AAAAA-BBBBB-CCCCC-DDDDD")]) {
+      expect(mail.text).toContain("ASC-AAAAA-BBBBB-CCCCC-DDDDD");
+      expect(mail.text).toContain("asc-mcp-license.remewdy.workers.dev/key");
+      expect(mail.text).not.toContain("<");
+    }
+  });
+
+  it("escapes the key into the HTML rather than interpolating it raw", () => {
+    expect(trialEmailContent('"><script>', null, "a@b.com").html).not.toContain("<script>");
   });
 });
