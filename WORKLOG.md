@@ -1,6 +1,35 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**The zero-subscription month, audited (2026-08-31).**
+
+No new subscription since 5 August, so the whole money path was checked against production instead
+of against the code. It works. npm `latest` is 1.9.5 and matches the repo, a clean `npx` install
+with no environment starts in setup mode and prints the real fix, `POST /trial` minted a live key
+for a throwaway address and `/validate` returned Pro (row deleted afterwards, confirmed by count),
+the worker is healthy, `/go` redirects with attribution, the Polar org is `active` and the product
+is live at $9 USD, and Polar has recorded **zero failed payments** since the org was created.
+Nobody has entered a card and been refused.
+
+**What is actually wrong is the traffic.** Once registry mirrors are subtracted, npm `latest` is
+66 downloads a week, not the ~500 the headline number suggests: the rest is spread evenly across
+every historical version. GitHub shows 10 unique repo visitors in 14 days and 0 stars. The licence
+database holds 4 trials ever, the last on 16 August, and 5 paying rows. Polar's 35 checkout
+sessions are not a demand signal either: every GET of the buy link creates one, and two of today's
+are this audit's own curls.
+
+**Fixed.** The site's Pro button linked straight to Polar, so buy intent from the only marketing
+page was never counted, which is why `intent_events` held two `checkout_click` rows in a month. It
+now goes through `/go?tool=site_pricing`, deployed and confirmed on the live page. The site still
+has no analytics of any kind; the stored Cloudflare token has no RUM scope, so that is an operator
+step, written down rather than left implicit.
+
+**Added.** `DISTRIBUTION.md`, with the measured numbers in section 8 and the ordered work at the
+bottom, and a real `HANDOFF.md` in place of the scaffold. Three items are terminal-doable now: the
+registry description PulseMCP mirrors, the Show HN already written in `launch/`, and the Reddit and
+X drafts next to it.
+
+## Previously
 **Full-journey verification, no money spent (2026-08-11).**
 
 Drove the whole thing end to end: fresh `npx` install, live Apple API, the licence worker running
