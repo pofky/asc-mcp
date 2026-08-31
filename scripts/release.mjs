@@ -164,9 +164,33 @@ run("git", ["add", "-A"], { mutating: true });
 run("git", ["commit", "-m", `release: v${version}`], { mutating: true });
 run("git", ["tag", "-a", `v${version}`, "-m", `v${version}`], { mutating: true });
 run("git", ["push", "origin", "master"], { mutating: true });
-run("git", ["push", "origin", `v${version}`], { mutating: true });
 
+/**
+ * npm first, then the tag.
+ *
+ * The registry refuses to register a version that npm does not have yet: it
+ * checks the package and answers "version X was not found (status: 404)". The
+ * tag push starts the registry workflow, so pushing the tag before publishing
+ * raced our own npm publish and lost. On 1.9.6 the workflow ran, failed that
+ * check, and the release half-landed with a GitHub release and a tag but
+ * nothing on npm or the registry.
+ *
+ * Publishing first also means a failed publish stops the release before a tag
+ * exists, which is the cheaper failure: a tag that points at an unpublished
+ * version has to be deleted by hand.
+ */
 run("npm", ["publish", "--access", "public"], { mutating: true });
+
+// npm's CDN can answer with the previous version for a few seconds after a
+// publish, and the registry's check reads through it. Give it a moment before
+// the tag starts the workflow.
+if (!dry) {
+  const settle = 20_000;
+  console.log(`\nWaiting ${settle / 1000}s for npm to serve ${version} before tagging.`);
+  await new Promise((r) => setTimeout(r, settle));
+}
+
+run("git", ["push", "origin", `v${version}`], { mutating: true });
 
 /**
  * Release notes are written by hand, into RELEASE_NOTES.md, and the release
