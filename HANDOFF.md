@@ -4,6 +4,17 @@ Updated 2026-08-31. Branch `master`.
 
 ## Where things stand
 
+A third pass drove every flow the product advertises, and found the one that
+matters most: **the server never started on Node 18**, which package.json, the
+README, the site and the .mcpb manifest all claim to support. `jose` is ESM-only
+from v6, this package is CommonJS, and `require("jose")` threw before any of our
+code ran on every Node 18 and every Node 20 below 20.19. It is fixed by dropping
+the dependency for Node's own crypto, verified live on 18.20.8, and guarded by a
+test that walks the dependency tree for ESM-only packages.
+
+That makes the unpublished release urgent rather than merely overdue: 1.9.5 on
+npm today does not run for anyone on Node 18.
+
 Two real bugs were found on the second pass, both fixed, and one of them was in
 the install path itself: `npx @pofky/asc-mcp init --write` did nothing when an
 agent ran it, which is the documented way in. The licence-server fix is deployed
@@ -66,6 +77,51 @@ The numbers behind the diagnosis, all measured, are in `DISTRIBUTION.md` section
 5. Only after traffic exists: revisit the trial-to-paid step. Four trials is not a
    sample, and tuning a paywall nobody reaches is wasted work.
 
+## Third pass, every flow driven (2026-08-31)
+
+Fixed and verified: Node 18 startup (above); `list_reviews` now prints the review
+id `draft_review_response` requires, which is the only way across that step;
+`draft_review_response` on a client without Sampling now hands the calling model
+the review and the drafting rules instead of saying "draft by hand"; a mistyped
+command no longer starts the server and hangs on stdio.
+
+Driven and found correct, against production, not the code:
+- Setup mode, `doctor` in both states, `install-skill`/`uninstall-skill`
+  (install, re-install, uninstall, uninstall-when-absent), `version`, `help`.
+- The .mcpb bundle unpacked and run the way Claude Desktop runs it, with no
+  `ASC_KEY_ID` (derived from the filename) and `ASC_INSTALL=mcpb`, on Node 22
+  and Node 18. Its manifest declares the three config fields correctly.
+- All 41 tool schemas: every tool and every property carries a description.
+- Live reads on a real account: `list_apps`, `app_details`, `list_builds`,
+  `list_beta_groups`, `keyword_insights`, `metadata_diff`, `release_notes`,
+  `review_status`, `daily_briefing`, `release_preflight`, `sales_report`,
+  `triage_reviews`, `list_reviews`.
+- Confirm gates: `submit_for_review`, `release_version`, `manage_phased_release`
+  and `create_version` all refuse without `confirm: true`.
+- Error paths: a bogus app id returns Apple's message plus what it usually means,
+  `set_app_availability` refuses to guess, missing arguments are named.
+- A real write, `promotionalText` on Adaptale's unreleased 1.0, confirmed by an
+  independently signed read straight from Apple, then reverted and confirmed the
+  same way.
+- Licence endpoints: bad email, bad fingerprint, non-JSON body, first mint,
+  repeat mint, a second email on the same fingerprint (refused a new key),
+  rate limiting (`TRIAL_MAX` is 10, so eight in a row is correct), `/key` form,
+  `/key` with JSON (400), `/success`, `/privacy`, `/terms`, `/delete` and
+  `/delete/confirm` guards, `/admin/*` 401 without the token, and a 404 route.
+- The whole webhook path against a local worker with a known secret: a signed
+  `subscription.created` mints an active Pro row, a forged signature 401s, a
+  renewal extends, another org's product is ignored, a cancellation keeps access
+  to period end, a revoke is terminal, and a replayed active event after the
+  revoke does not resurrect it.
+- Offline behaviour: with the licence server unreachable, a previously confirmed
+  Pro key keeps working from `~/.asc-mcp/last-verdict.json`, and the gate message
+  says the key is fine rather than sending a paying customer to check their
+  config.
+- The site: every link 200s (npm's 403 is its bot wall, not a broken link),
+  robots/sitemap/llms.txt serve, the JSON-LD parses to four types, one h1, and
+  the page renders at 375px with zero console errors. The worker's own pages had
+  a favicon 404 in the console on every transactional page; fixed and deployed.
+
 ## Also done and verified, 2026-08-31 (second pass)
 
 - The published 1.9.5 was driven over stdio with real Apple credentials: 41
@@ -100,6 +156,10 @@ The numbers behind the diagnosis, all measured, are in `DISTRIBUTION.md` section
   "inactive means revoked" is out of date.
 - `npm publish` and `npm run release` are blocked by the sandbox classifier in an
   agent session. Do not burn a turn retrying: hand the command to the operator.
+- **CI runs a newer Node than the floor in `engines`.** That is how the Node 18
+  breakage survived. `tests/auth-jwt.test.ts` now guards the dependency shape,
+  but an actual Node 18 run is still worth doing before a release:
+  `npx -y -p node@18 which node` gives you a binary to drive `dist/index.js` with.
 - The Polar checkout link is embedded in six files; `scripts/set-checkout-url.mjs`
   rewrites them all. The site's Pro button is now a `/go` link, so the site still
   carries exactly one direct copy, inside the JSON-LD offer.
