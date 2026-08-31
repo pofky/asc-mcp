@@ -10,6 +10,12 @@ The documented way in is a coding agent running `npx @pofky/asc-mcp init --write
 
 Two things it deliberately will not do: it never invents a value (a missing Issuer ID is reported, not guessed, because a config with a wrong one fails later at Apple's auth with a confusing error), and with several client configs on the machine it prints the block and asks which, rather than picking one for you.
 
+**The server did not start at all on Node 18**
+
+`jose` is ESM-only from v6 and this package is CommonJS, so `require("jose")` threw `ERR_REQUIRE_ESM` before the first line of our code ran. That is every Node 18, and every Node 20 before 20.19, while package.json, the README, the landing page and the .mcpb manifest all said Node 18 or newer. Anyone on those versions installed it, saw their client report a server that failed to start, and had nothing to go on.
+
+The dependency is gone. ES256 JWTs are signed with Node's own `crypto`, which needs no package and no build step, and the raw r||s encoding Apple requires is now covered by a test that verifies the signature back. Confirmed live on 18.20.8: authentication, tool calls and the one-click bundle all work. A second test walks the dependency tree and fails if an ESM-only package is ever added again, because nothing in the build or the previous tests noticed this one.
+
 **Three more things the flow audit found**
 
 `list_reviews` never printed a review id, and `draft_review_response` takes one, its schema saying "from list_reviews". The documented reviews flow, read the bad reviews then reply to one, had no way across that gap: Apple's ids are opaque UUIDs with nothing to derive them from. Every listed review now carries its id.
