@@ -113,7 +113,31 @@ function rateLimit(request: Request, scope: string): boolean {
 }
 
 export default {
+  /**
+   * A HEAD is a GET without a body, and uptime checks, link previewers and
+   * `curl -I` all send one. The router only matched GET, so a HEAD of /key or
+   * /success answered 404 and made a page that plainly exists look broken to
+   * anything that checks it that way.
+   */
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    if (request.method === "HEAD") {
+      const asGet = await handleRequest(
+        new Request(request.url, { method: "GET", headers: request.headers }),
+        env,
+        ctx,
+      );
+      return new Response(null, { status: asGet.status, headers: asGet.headers });
+    }
+    return handleRequest(request, env, ctx);
+  },
+};
+
+async function handleRequest(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+): Promise<Response> {
+  {
     const url = new URL(request.url);
 
     // CORS: only allow same-origin for HTML pages, open for /validate (MCP server calls it)
@@ -208,8 +232,8 @@ export default {
       console.error("Worker error");
       return json({ error: "Internal error" }, corsHeaders, 500);
     }
-  },
-};
+  }
+}
 
 async function handleValidate(
   request: Request,
@@ -1515,9 +1539,22 @@ label{display:block;margin-bottom:6px;color:#c0c0c0;font-size:14px}
 .muted{color:#888;font-size:14px}</style></head><body>${body}
 <p class="muted" style="margin-top:40px">&larr; <a href="https://asc-mcp.pages.dev/">asc-mcp</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="mailto:povkonop@gmail.com">povkonop@gmail.com</a></p>
 </body></html>`;
+  // These pages take an email address and hand back a licence key, so they get
+  // the same baseline the landing page has had all along. The style is inline,
+  // which is why style-src allows it; nothing else loads, and nothing here may
+  // be framed.
   return new Response(page, {
     status,
-    headers: { "Content-Type": "text/html;charset=utf-8", ...extraHeaders },
+    headers: {
+      "Content-Type": "text/html;charset=utf-8",
+      "Content-Security-Policy":
+        "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; " +
+        "form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      ...extraHeaders,
+    },
   });
 }
 
