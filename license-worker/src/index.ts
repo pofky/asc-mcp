@@ -520,11 +520,21 @@ async function trialsCreatedToday(env: Env): Promise<number> {
  * The abuse anchor is `fingerprint`: a salted SHA-256 of the user's App Store
  * Connect Issuer ID, hashed on their machine. Getting a second one means paying
  * Apple for a second developer account, which is a $99/year answer to a $9/month
- * question. Email is a second, independent anchor.
+ * question. The email is recorded but not an anchor: see the note below on why
+ * it is deliberately not unique.
  *
- * Uniqueness is enforced by two partial unique indexes rather than by a
- * check-then-insert, because D1 gives no transaction across statements and two
- * concurrent calls would otherwise both pass the check and both insert.
+ * Uniqueness is enforced by a partial unique index on the fingerprint rather
+ * than by a check-then-insert, because D1 gives no transaction across
+ * statements and two concurrent calls would otherwise both pass the check and
+ * both insert.
+ *
+ * The email is NOT unique, and that is deliberate. It reads as a second anchor
+ * and used to be described as one here, but the index was never created and
+ * adding it now would refuse the honest case it would catch: one person with
+ * two Apple developer accounts, who is entitled to evaluate on both. The abuse
+ * it would prevent already costs $99 a year per extra trial, which is a poor
+ * trade against a $9 subscription. Verified against the live database on
+ * 2026-08-31: `idx_licenses_trial_fp` is the only unique index on trials.
  */
 async function handleTrial(
   request: Request,
@@ -1491,7 +1501,12 @@ function html(
     : "asc-mcp";
   const page = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
-<meta name="robots" content="${opts.noindex ? "noindex,nofollow" : "index,follow"}">${
+<meta name="robots" content="${opts.noindex ? "noindex,nofollow" : "index,follow"}">
+<!-- Same mark as the landing page, inline so these pages need no asset route.
+     Without it every transactional page logged a 404 for /favicon.ico, which
+     is the first thing in the console of anyone checking whether the page that
+     just took their money is real. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230E1116'/%3E%3Cpath d='M8 21l4.6-11h1.9L19 21h-2.2l-1-2.6h-4.6L10.2 21H8zm4-4.4h3.2l-1.6-4.3-1.6 4.3z' fill='%23F0A828'/%3E%3Ccircle cx='24' cy='11' r='2.5' fill='%233DC48F'/%3E%3C/svg%3E">${
     opts.canonical ? `\n<link rel="canonical" href="${opts.canonical}">` : ""
   }${opts.head ?? ""}
 <style>body{font-family:-apple-system,system-ui,sans-serif;max-width:600px;margin:40px auto;padding:0 20px;background:#0d0d1a;color:#e0e0e0;line-height:1.6}

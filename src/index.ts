@@ -841,6 +841,14 @@ Usage:
   asc-mcp help             This help.`);
     return 0;
   }
+  // A typo must not silently start the server. `asc-mcp int` used to fall
+  // through to bootstrap(), which sits on stdio waiting for a JSON-RPC frame
+  // that a human at a terminal is never going to send, and reads as a hang.
+  // Flags are left alone: only a bare word can be a mistyped command.
+  if (!cmd.startsWith("-")) {
+    console.error(`asc-mcp: unknown command "${cmd}". Run \`asc-mcp help\` for the list.`);
+    return 1;
+  }
   return null;
 }
 

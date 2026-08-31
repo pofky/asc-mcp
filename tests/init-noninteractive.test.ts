@@ -125,3 +125,29 @@ describe("parseInitArgs", () => {
     expect(opts.write).toBe(true);
   });
 });
+
+describe("unknown CLI command", () => {
+  /**
+   * A typo used to fall through to the MCP server, which then sat on stdio
+   * waiting for a JSON-RPC frame no human is going to type. From a terminal
+   * that is indistinguishable from a hang.
+   */
+  it("says so instead of starting the server", () => {
+    let stdout = "";
+    let stderr = "";
+    let code = 0;
+    try {
+      stdout = execFileSync(process.execPath, [join(process.cwd(), "dist/index.js"), "int"], {
+        encoding: "utf-8",
+        input: "",
+      });
+    } catch (err) {
+      const e = err as { status?: number; stdout?: string; stderr?: string };
+      code = e.status ?? 0;
+      stdout = String(e.stdout ?? "");
+      stderr = String(e.stderr ?? "");
+    }
+    expect(code).toBe(1);
+    expect(stderr + stdout).toContain('unknown command "int"');
+  });
+});

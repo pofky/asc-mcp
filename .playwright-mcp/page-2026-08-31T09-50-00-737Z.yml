@@ -1,0 +1,38 @@
+- generic [active] [ref=f2e1]:
+  - heading "Subscription confirmed" [level=1] [ref=f2e2]
+  - paragraph [ref=f2e3]: Your key is being generated now, and it usually takes a few seconds. It is also emailed to you, so you do not have to keep this page.
+  - generic [ref=f2e4]:
+    - generic [ref=f2e5]: The email you used at checkout
+    - textbox "The email you used at checkout" [ref=f2e6]:
+      - /placeholder: you@example.com
+    - button "Get my license key" [ref=f2e7] [cursor=pointer]
+  - heading "Then what" [level=2] [ref=f2e8]
+  - paragraph [ref=f2e9]:
+    - text: "On Claude for macOS or Windows there is no config file to edit:"
+    - link "download the .mcpb bundle" [ref=f2e10] [cursor=pointer]:
+      - /url: https://github.com/pofky/asc-mcp/releases/latest
+    - text: ", open it, and paste the key into the extension's own License key field."
+  - paragraph [ref=f2e11]:
+    - text: "Every other client: put the key in your MCP config as"
+    - code [ref=f2e12]: ASC_LICENSE_KEY
+    - text: and restart your agent, or run
+    - code [ref=f2e13]: npx @pofky/asc-mcp init --write
+    - text: and it will do it for you. The next page gives you a complete config block to paste.
+  - paragraph [ref=f2e14]:
+    - text: Nothing showing after a minute? That is on us, not you. Email
+    - link "povkonop@gmail.com" [ref=f2e15] [cursor=pointer]:
+      - /url: mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license
+    - text: with the address you checked out with and you will get a key back the same day.
+  - paragraph [ref=f2e16]:
+    - text: ←
+    - link "asc-mcp" [ref=f2e17] [cursor=pointer]:
+      - /url: https://asc-mcp.pages.dev/
+    - text: ·
+    - link "Privacy" [ref=f2e18] [cursor=pointer]:
+      - /url: /privacy
+    - text: ·
+    - link "Terms" [ref=f2e19] [cursor=pointer]:
+      - /url: /terms
+    - text: ·
+    - link "povkonop@gmail.com" [ref=f2e20] [cursor=pointer]:
+      - /url: mailto:povkonop@gmail.com
