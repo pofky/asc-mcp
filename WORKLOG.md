@@ -1,6 +1,23 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**The emails, read in a real inbox (2026-08-31).**
+
+The one flow that could not be checked from here. Two defects, both fixed and deployed. The trial
+email opened with "Your agent has already written this into your MCP config", which is false for a
+one-click bundle install, where there is no config file, and false whenever the agent could not find
+one and said so. And its upgrade link was the raw Polar URL, so a trial user deciding to pay, the
+most valuable click in the product, was the only one not counted, and had to retype an address we
+already had. The link now goes through `/go`, which counts it and passes an optional email into the
+checkout prefill; the redirect target is still the constant checkout link and a malformed address is
+dropped. Both emails also carry a plain-text alternative now, and their bodies live in `logic.ts` as
+pure functions with tests, so the next defect in them is catchable without an inbox.
+
+Left open, because it costs money: every licence email is sent from `license@brewist.app`, another
+product's domain. Deliverability is fine and all five test messages arrived, but a buyer paying for
+a developer tool gets their key from a coffee app's domain. Registering a domain and setting
+`BREVO_SENDER_EMAIL` is the whole fix; the code already reads the variable.
+
 **1.9.7, and the release mechanics that kept half-landing (2026-08-31).**
 
 One product fix: on day 8 of a trial `asc_setup_check` reported "a license key is set but did not
