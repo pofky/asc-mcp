@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { runDoctor, formatDoctor } from "../src/doctor.js";
+import { clearLicenseCache } from "../src/license.js";
 
 const SAVED = { ...process.env };
 
@@ -12,6 +13,8 @@ describe("runDoctor", () => {
   });
   afterEach(() => {
     process.env = { ...SAVED };
+    clearLicenseCache();
+    vi.restoreAllMocks();
   });
 
   it("fails clearly when nothing is configured, and never throws", async () => {
@@ -42,4 +45,28 @@ describe("runDoctor", () => {
     expect(lic?.status).toBe("warn");
     expect(lic?.detail.toLowerCase()).toContain("free");
   });
+
+  /**
+   * A finished trial is not a broken key. The old copy sent that person to look
+   * up a licence that is working exactly as designed, and hid the two things
+   * they need at that moment: the price and the link.
+   */
+  it("says the trial ended, rather than blaming the key", async () => {
+    process.env.ASC_LICENSE_KEY = "ASC-EXPIRED-0000-0000-0000";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ valid: false, tier: "free", reason: "trial_expired" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+
+    const text = formatDoctor(await runDoctor());
+    expect(text).toContain("7-day trial has ended");
+    expect(text).toContain("$9/month");
+    expect(text).not.toContain("did not validate as Pro");
+  });
+
 });
