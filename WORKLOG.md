@@ -1,6 +1,43 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**Second pass: two real bugs, and a competitor (2026-08-31).**
+
+The first pass checked the money path and found it healthy. The second checked the paths it had not
+touched, and the install path was broken for exactly the audience this server is for.
+
+**`init --write` did nothing when an agent ran it.** The documented way in is to ask a coding agent
+to run `npx @pofky/asc-mcp init --write`. An agent has no terminal, so it took the non-interactive
+branch, which printed one line of advice and exited: no config written, no config block printed,
+even with the `.p8` already found and `ASC_ISSUER_ID` already set. Reproduced against the published
+1.9.5 before anything was changed. `init` now takes `--issuer`, `--key-path`, `--key-id`,
+`--license` and `--config`, falls back to the matching `ASC_*` variables, always prints the block,
+and writes it with `--write`. It refuses to invent a missing Issuer ID, and refuses to choose
+between several client configs. Seven new tests drive the built CLI with stdin piped.
+
+**The four-day renewal grace could never fire, and now can.** `shouldBeActive` writes `active = 0`
+as soon as the paid period end is in the past, and `isLicenseUsable` returned "inactive" before it
+reached the grace branch, so the window only ever applied when no webhook arrived at all. The
+customer it was written for is the one in card retry. Grace now applies to a lapsed paid row inside
+the window; revocation is identified by `revoked_at` and stays terminal; cancellations and trials
+still get nothing; `/key` and `/trial` read the same rule. Deployed, and proven on the live worker
+with a synthetic row: in-window `grace: true`, six days out inactive, revoked-in-window refused.
+`POST /key` with a JSON body returns 400 instead of 500. Test row deleted afterwards.
+
+**Verified live, published package, real Apple account.** 41 tools, free reads working, the Pro gate
+refusing with the trial copy, `asc_start_trial` handing a subscriber their paid key, `list_reviews`
+working in the same session with no restart, `release_preflight` and `daily_briefing` answering
+against real apps. Trial mail accepted by Brevo (`key_emailed = 1`). Bundle builds.
+
+**Not shipped: npm 1.9.6.** The sandbox blocked `npm run release`, so npm `latest` is still 1.9.5 and
+the broken `init` is still what users get. One command, from a terminal.
+
+**The competitor.** Heimdall, `erayendes/app-store-connect-mcp`: MIT, free, 890 tools, 47 stars,
+created 19 July, and it publishes to the MCP registry under the name `asc-mcp`. Its npm `latest`
+took 356 downloads last week against our 66. Any directory search for "asc-mcp" now finds it first.
+
+### Earlier today
+
 **The zero-subscription month, audited (2026-08-31).**
 
 No new subscription since 5 August, so the whole money path was checked against production instead
