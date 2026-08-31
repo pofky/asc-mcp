@@ -126,6 +126,13 @@ Driven and found correct, against production, not the code:
   Pro key keeps working from `~/.asc-mcp/last-verdict.json`, and the gate message
   says the key is fine rather than sending a paying customer to check their
   config.
+- The licence emails, read in a real inbox. Two defects came out of that and are
+  fixed and deployed: the trial email claimed "your agent has already written
+  this into your MCP config", which is false for a bundle install and false
+  whenever the agent said it could not find one; and its upgrade link was the
+  raw Polar URL, so the most valuable click in the product was the only one not
+  counted, and it asked the customer to retype an address we already had. Both
+  emails now also carry a plain-text alternative.
 - The site: every link 200s (npm's 403 is its bot wall, not a broken link),
   robots/sitemap/llms.txt serve, the JSON-LD parses to four types, one h1, and
   the page renders at 375px with zero console errors. The worker's own pages had
@@ -146,6 +153,22 @@ Driven and found correct, against production, not the code:
   and a revoked row inside the window stays refused. Row deleted, table clean.
 - `npm run mcpb` builds the 3.7MB bundle. The 1.9.5 bundle on the GitHub release
   has 0 downloads, so the one-click path is unused rather than broken.
+
+## Open decision: the licence emails come from another product's domain
+
+Every licence and trial email is sent as `asc-mcp <license@brewist.app>`. The
+display name is right; the domain belongs to the coffee-log app. A buyer paying
+$9 for a developer tool gets their key from a domain with no connection to it,
+and Gmail can show the mismatch. Nothing is broken, deliverability is fine
+(Brevo accepted every send today and all five arrived), but it is a trust cost
+at exactly the wrong moment.
+
+The fix costs money, so it is the operator's call: register a domain for the
+product (asc-mcp.dev or similar, around $12 a year), verify it in Brevo with
+DKIM, and set `BREVO_SENDER_EMAIL` on the worker. The code already reads that
+variable, so no deploy of new code is needed, only
+`npx wrangler secret put BREVO_SENDER_EMAIL -c license-worker/wrangler.toml`.
+Nothing else in the product depends on the domain.
 
 ## Release mechanics, learned the hard way today
 
