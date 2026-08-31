@@ -37,15 +37,16 @@ pull request. Recording that here so nobody spends the afternoon again.
 
 ## Directories, state as of 6 August 2026
 
-- [ ] **PulseMCP: listed at <https://www.pulsemcp.com/servers/pofky-app-store-connect>, and the
-      listing is wrong.** It carries the April 2026 description, "Check app review status, read
-      customer reviews, and download sales reports", which sells the read-only tier of what is
-      now a 41-tool control plane. Worse than being absent, because it is the string other
-      surfaces mirror. PulseMCP does not take submissions for existing servers: it pipes
-      `server.json` straight from the official MCP registry, so **the fix is to publish a better
-      description to the registry and wait for the resync**, not to fill in a form. Manual
-      fallback if it does not resync: hello@pulsemcp.com, text ready in
-      `launch/pulsemcp-listing-update.txt`.
+- [ ] **PulseMCP: listed, and mirroring the DEPRECATED registry entry.** Re-checked 31 August in a
+      real browser (the site 403s anything that is not one). The page
+      <https://www.pulsemcp.com/servers/pofky-app-store-connect> shows the name
+      `io.github.pofky/appstore-connect-mcp`, the April 2026 read-only description, and a Learn More
+      button pointing at the pre-rename repo URL. **The earlier diagnosis here was wrong**: this is
+      not a sync that has not run yet, it is a sync from an entry that is deprecated and will never
+      get another version, so waiting cannot fix it. They have to repoint the listing at
+      `io.github.pofky/asc-mcp`. Email rewritten and ready:
+      `launch/pulsemcp-listing-update.txt`, to hello@pulsemcp.com.
+
 - [x] **Glama: listed at <https://glama.ai/mcp/servers/pofky/asc-mcp>, marked Unclaimed**, which
       Glama's own notice says means "limited discoverability". `glama.json` added to the repo
       root on 6 August, declaring `pofky` as maintainer, which is the half that can be done from
@@ -55,10 +56,13 @@ pull request. Recording that here so nobody spends the afternoon again.
 - [ ] **MCP.so: presence unconfirmed**, the site returns 403 to everything that is not a browser.
       Submit at <https://mcp.so/submit?type=server> if absent. Fields: name, one-sentence
       description, tool count, transport (stdio), repo URL, homepage, icon.
-- [x] **Smithery: not listed.** `smithery.yaml` added to the repo root on 6 August with the stdio
-      start command and the config schema for the three required env vars.
-- [ ] Publish to Smithery: needs a one-time account at <https://smithery.ai>, after which
-      `smithery mcp build` and `smithery mcp publish` are terminal commands.
+- [x] **Smithery: not listed, and closed as a dead end (6 August).** A `smithery.yaml` was written
+      that morning and deleted the same day in `9fee03b`: Smithery no longer lists a local server
+      from a repo plus a yaml. It takes either a hosted HTTPS server, which is impossible when the
+      whole point is that the `.p8` never leaves the user's machine, or a prebuilt `.mcpb`. The
+      bundle exists instead. **Corrected 31 August**: this entry still claimed the yaml was in the
+      repo root, which it has not been since 6 August, and the next line still listed
+      `smithery mcp build && smithery mcp publish` as work to do. Do not re-add the yaml.
 - [x] **Re-submit to <https://mcpservers.org/submit>. Approved 7 August 2026**, live at
       <https://mcpservers.org/servers/pofky/asc-mcp> with accurate copy: 41 tools, the one-click
       bundle, the in-agent trial and the $9 price.
@@ -68,9 +72,8 @@ pull request. Recording that here so nobody spends the afternoon again.
       Two entries for one repo split the listing between an accurate page and a stale one, and the
       stale one carries exactly the name the rename existed to retire. Email is written and
       Text sent: `launch/mcpservers-org-remove-duplicate.txt`, to contact@mcpservers.org. It offered a
-      redirect as an alternative to deletion. **Check the old slug around 14 August**: if
-      `mcpservers.org/servers/pofky/appstore-connect-mcp` still returns 200 and has not become a
-      redirect, follow up once, then let it go. A stale duplicate is worth one email and one nudge,
+      redirect as an alternative to deletion. **Resolved: checked 31 August, the old slug returns
+      404 and the current one returns 200.** They removed the duplicate; no follow-up needed. A stale duplicate is worth one email and one nudge,
       not a campaign.
 - [ ] Not in the `wong2/awesome-mcp-servers` README itself (checked 7 August, no match for pofky).
       The site listing and the repo README are separate surfaces; the email above offers a redirect,

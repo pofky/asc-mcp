@@ -147,8 +147,12 @@ Terminal, this session or the next:
 Operator, browser, minutes each:
 
 4. Claim the Glama listing, <https://glama.ai/mcp/servers/pofky/asc-mcp>.
-5. Publish to Smithery (`smithery.yaml` is in the repo, the account is not created).
-6. Submit to <https://mcp.so/submit?type=server>.
-7. Turn on Cloudflare Web Analytics for `asc-mcp.pages.dev` and paste the beacon
+5. Submit to <https://mcp.so/submit?type=server>.
+6. Turn on Cloudflare Web Analytics for `asc-mcp.pages.dev` and paste the beacon
    token here. The stored API token has no RUM scope, so this cannot be done from a
    terminal, and without it the site has no traffic number at all.
+
+Smithery is deliberately not on this list: it no longer lists a local stdio
+server from a repo, and a hosted variant is impossible when the whole point is
+that the `.p8` never leaves the user's machine. See
+`launch/distribution-checklist.md`.
