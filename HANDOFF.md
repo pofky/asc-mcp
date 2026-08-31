@@ -4,9 +4,14 @@ Updated 2026-08-31. Branch `master`.
 
 ## Where things stand
 
-**1.9.6 is live on every surface** (npm, the MCP registry, the GitHub release and
+**1.9.7 is live on every surface** (npm, the MCP registry, the GitHub release and
 its bundle, the site), and the whole new-user journey was rehearsed against the
 published package on both Node 18 and Node 22. Nothing is waiting on anyone.
+
+1.9.7 adds one fix: on day 8 of a trial the setup check said "a license key is
+set but did not validate as Pro" and sent the user to look up a key that was
+working exactly as designed, hiding the price and the link at the one moment
+they matter. It now reads the reason `/validate` already returns.
 
 A third pass drove every flow the product advertises, and found the one that
 matters most: **the server never started on Node 18**, which package.json, the
@@ -141,6 +146,20 @@ Driven and found correct, against production, not the code:
   and a revoked row inside the window stays refused. Row deleted, table clean.
 - `npm run mcpb` builds the 3.7MB bundle. The 1.9.5 bundle on the GitHub release
   has 0 downloads, so the one-click path is unused rather than broken.
+
+## Release mechanics, learned the hard way today
+
+- **`npm publish` from this machine leaves the version "staged".** The upload
+  lands, the connection drops before npm acknowledges it, the CLI reports a
+  failure, a retry gets `E409 Cannot publish over previously staged version`,
+  and the version appears on its own four to ten minutes later. Both 1.9.6 and
+  1.9.7 did this. It is a slow release, not a failed one. `scripts/release.mjs`
+  now waits for `registry.npmjs.org` to actually list the version.
+- **The tag must go after npm.** Pushing it starts the registry workflow, and
+  the registry refuses a version npm cannot confirm ("version X was not found").
+  That ordering is what half-landed both releases before it was fixed.
+- If a release half-lands anyway: publish, wait for npm, then
+  `gh workflow run publish-mcp-registry.yml --ref vX.Y.Z`, then deploy the site.
 
 ## Traps
 

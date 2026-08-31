@@ -1,6 +1,28 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**1.9.7, and the release mechanics that kept half-landing (2026-08-31).**
+
+One product fix: on day 8 of a trial `asc_setup_check` reported "a license key is set but did not
+validate as Pro" and told the user to retrieve their key or wait out a server outage. The key was
+fine and the server was fine, the trial was simply over, and that is the one moment where the price
+and the link are the answer. It now reads the reason `/validate` already returns, with separate
+wording for a cancelled subscription and an expired licence.
+
+Two infrastructure fixes. `npm publish` from this machine reliably leaves npm's "staged" state: the
+upload lands, the connection drops before acknowledgement, and the version appears on its own
+several minutes later. The release script treated that as a failure and carried on, and because it
+pushed the tag before publishing, the registry workflow then asked to register a version npm did not
+have. Both 1.9.6 and 1.9.7 half-landed that way. npm now goes first and the script waits for the
+registry to actually serve the version.
+
+The licence pages also got the security headers the landing page has always had (CSP, nosniff,
+DENY framing, referrer policy) and now answer HEAD, which they previously 404'd, so uptime checks
+and link previews saw a broken page. Verified in a browser with no CSP violations.
+
+Everything re-verified at 1.9.7: npm, the MCP registry, the GitHub release and bundle, the site, and
+the published tarball authenticating live against Apple on Node 18.20.8 with Pro unlocked.
+
 **1.9.6 shipped, and the release script's own bug (2026-08-31).**
 
 Published to npm, the MCP registry, a GitHub release with the bundle, and the site, all verified at
