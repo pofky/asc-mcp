@@ -24,6 +24,8 @@ import {
   trialExpiry,
   daysRemaining,
   buildCheckoutUrl,
+  trialEmailContent,
+  licenseEmailContent,
   isLicenseUsable,
   computeActiveFlag,
   shouldBeActive,
@@ -485,10 +487,19 @@ async function recordIntent(env: Env, kind: string, tool: string): Promise<void>
 function handleGo(url: URL, ctx: ExecutionContext, env: Env): Response {
   const raw = url.searchParams.get("tool");
   const tool = isValidToolName(raw) ? raw : "unknown";
+
+  // An optional prefill, used only to fill the checkout's email field. The
+  // redirect target is still the constant checkout link, so this cannot send
+  // anyone anywhere else; a malformed value is dropped rather than passed on.
+  // It exists so the licence emails can link through this counted redirect
+  // without making a customer retype the address we already have.
+  const rawEmail = url.searchParams.get("email");
+  const email = isValidEmail(rawEmail ?? undefined) ? (rawEmail as string) : undefined;
+
   // Counting must not add latency to, or be able to fail, the path to payment.
   ctx.waitUntil(recordIntent(env, "checkout_click", tool));
   return Response.redirect(
-    buildCheckoutUrl(tool === "unknown" ? undefined : tool),
+    buildCheckoutUrl(tool === "unknown" ? undefined : tool, email),
     302,
   );
 }
@@ -1004,20 +1015,7 @@ async function sendLicenseEmail(
 
   const senderEmail = env.BREVO_SENDER_EMAIL || "license@brewist.app";
   const senderName = env.BREVO_SENDER_NAME || "asc-mcp";
-  const safeKey = escapeHtml(key);
-
-  const htmlContent = `
-    <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
-      <h1 style="font-size:20px">Your asc-mcp Pro license</h1>
-      <p>Thanks for subscribing. Here is your license key:</p>
-      <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
-      <p>If your <code>.p8</code> is in <code>~/.appstoreconnect/private_keys/</code>, this block is complete once you fill in your Issuer ID. If the key lives somewhere else, add <code>ASC_PRIVATE_KEY_PATH</code> to the same env block.</p>
-      <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">${CONFIG_SNIPPET(safeKey)}</pre>
-      <p>Not set up yet? Drop your <code>.p8</code> into <code>~/.appstoreconnect/private_keys/</code> and run <code>npx @pofky/asc-mcp init --write</code>; it asks for your Issuer ID and this key, then writes the config for you.</p>
-      <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.), then ask it to "list my App Store Connect apps" to confirm Pro is active.</p>
-      <p style="color:#666;font-size:14px">You can also retrieve this key any time at <a href="https://asc-mcp-license.remewdy.workers.dev/key">the license page</a>. Keep it private; it unlocks Pro tools on your machine.</p>
-      <p style="color:#666;font-size:14px">Questions or trouble? Just reply to this email.</p>
-    </div>`;
+  const content = licenseEmailContent(key);
 
   try {
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -1030,8 +1028,9 @@ async function sendLicenseEmail(
       body: JSON.stringify({
         sender: { name: senderName, email: senderEmail },
         to: [{ email }],
-        subject: "Your asc-mcp Pro license key",
-        htmlContent,
+        subject: content.subject,
+        htmlContent: content.html,
+        textContent: content.text,
       }),
     });
     if (!res.ok) {
@@ -1058,20 +1057,7 @@ async function sendTrialEmail(
 ): Promise<boolean> {
   if (!env.BREVO_API_KEY) return false;
 
-  const safeKey = escapeHtml(key);
-  const ends = expires ? new Date(expires).toUTCString() : `${TRIAL_DAYS} days from now`;
-
-  const htmlContent = `
-    <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
-      <h1 style="font-size:20px">Your ${TRIAL_DAYS}-day asc-mcp Pro trial</h1>
-      <p>All 41 tools are unlocked on this key until <strong>${escapeHtml(ends)}</strong>. No card, nothing to cancel.</p>
-      <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
-      <p>Your agent has already written this into your MCP config. If you need it on another machine, paste it in yourself:</p>
-      <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">${CONFIG_SNIPPET(safeKey)}</pre>
-      <p><strong>Worth trying first:</strong> ask your agent to run a release preflight on your app, or to give you a morning briefing across all of them. Those two answer the question "is this worth $9" faster than anything else here.</p>
-      <p>When the trial ends, Pro is $9 per month: <a href="${CHECKOUT_URL}">subscribe here</a>. Cancel any time.</p>
-      <p style="color:#666;font-size:14px">Hit a bug, or something did not work? Just reply to this email. A person reads it.</p>
-    </div>`;
+  const content = trialEmailContent(key, expires, email);
 
   try {
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -1087,8 +1073,11 @@ async function sendTrialEmail(
           email: env.BREVO_SENDER_EMAIL || "license@brewist.app",
         },
         to: [{ email }],
-        subject: `Your ${TRIAL_DAYS}-day asc-mcp Pro trial key`,
-        htmlContent,
+        subject: content.subject,
+        htmlContent: content.html,
+        // A plain-text alternative, because an HTML-only message scores worse
+        // with spam filters and this one carries a licence key.
+        textContent: content.text,
       }),
     });
     if (!res.ok) {
