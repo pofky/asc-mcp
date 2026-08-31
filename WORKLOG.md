@@ -1,6 +1,23 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**1.9.6 shipped, and the release script's own bug (2026-08-31).**
+
+Published to npm, the MCP registry, a GitHub release with the bundle, and the site, all verified at
+1.9.6. The journey was then rehearsed end to end against the published package: `init --write` from
+a clean `npx` writes a working config, the server authenticates live, a Pro tool refuses with the
+trial copy, `asc_start_trial` returns the paid key and persists it to the config, and
+`release_preflight` runs. Repeated on Node 18.20.8 with the published tarball and its own installed
+dependencies, which is the version that could not start at all before this release.
+
+Getting it out found one more bug, in `scripts/release.mjs`. It pushed the tag, which starts the
+registry workflow, before running `npm publish`. The registry refuses to register a version npm does
+not have yet, so the workflow lost the race against our own publish and the release half-landed:
+a tag and a GitHub release, nothing on npm or the registry. npm goes first now, with a settle window
+before the tag, so a failed publish stops the release before a tag exists. The deprecation step also
+reported a red error on every release, because "already deprecated" is a 400 with exit 1; it now
+only warns when something real went wrong.
+
 **Third pass: the server did not run on Node 18 (2026-08-31).**
 
 Drove every advertised flow, not just the money path. The headline: `jose` is ESM-only from v6, the
