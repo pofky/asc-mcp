@@ -4,6 +4,10 @@ Updated 2026-08-31. Branch `master`.
 
 ## Where things stand
 
+**1.9.6 is live on every surface** (npm, the MCP registry, the GitHub release and
+its bundle, the site), and the whole new-user journey was rehearsed against the
+published package on both Node 18 and Node 22. Nothing is waiting on anyone.
+
 A third pass drove every flow the product advertises, and found the one that
 matters most: **the server never started on Node 18**, which package.json, the
 README, the site and the .mcpb manifest all claim to support. `jose` is ESM-only
@@ -12,8 +16,11 @@ code ran on every Node 18 and every Node 20 below 20.19. It is fixed by dropping
 the dependency for Node's own crypto, verified live on 18.20.8, and guarded by a
 test that walks the dependency tree for ESM-only packages.
 
-That makes the unpublished release urgent rather than merely overdue: 1.9.5 on
-npm today does not run for anyone on Node 18.
+1.9.6 carries that fix. Getting it out exposed one more bug, in the release
+script itself: it pushed the tag before publishing to npm, so the tag-triggered
+registry workflow raced our own publish, asked the registry to register a version
+npm did not have yet, and the release half-landed. npm now goes first. Recovered
+by publishing and re-running the workflow; all three surfaces verified at 1.9.6.
 
 Two real bugs were found on the second pass, both fixed, and one of them was in
 the install path itself: `npx @pofky/asc-mcp init --write` did nothing when an
@@ -65,9 +72,6 @@ The numbers behind the diagnosis, all measured, are in `DISTRIBUTION.md` section
 
 ## Next in order
 
-0. **`npm run release -- 1.9.6`**, from a terminal. Everything it gates on is
-   already green (219 root tests, 39 worker tests, a clean tree, notes written).
-   Until it runs, npm `latest` is 1.9.5 and the broken `init` is what users get.
 1. Publish the improved registry description so PulseMCP stops mirroring the April
    read-only copy (`launch/distribution-checklist.md` explains the resync path).
 2. Post the Show HN that is already written and sitting in `launch/`.
