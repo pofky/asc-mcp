@@ -1,7 +1,47 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
-**The emails, read in a real inbox (2026-08-31).**
+**Fourth full flow audit, and the leak it found: six trials, zero reminders (2026-09-03).**
+
+Everything the product advertises was driven again, against production and the published 1.9.7, not
+read from the code. Nothing was broken. Every surface matches the repo, both test suites are green,
+and the money path works end to end: setup mode, `init` and `init --write` into a real client config,
+Node 18 and Node 22 startup, the free tier's live reads, the Pro gate on write/control/intelligence
+tools, a live trial mint that unlocked all 41 tools in the same session with no restart, the confirm
+gates, the error paths, every CLI subcommand, the skill install lifecycle, the worker's pages and
+headers, and the checkout link resolving to a payable Polar session. The full list is in HANDOFF.md.
+
+What the audit found is not a defect in any flow, it is a missing one. Six trials have been minted
+since 7 August and not one converted. After a trial expires, the price appears in exactly one place:
+inside a tool call the person has to make first, in an agent transcript they may never scroll back
+through. Nothing ever reached them again, and nothing told them the clock was running while it still
+mattered. The paywall was never the problem.
+
+Both halves are now built, tested and committed. The licence worker gets a daily cron
+(`runTrialReminders`, 15:00 UTC): one mail the day before expiry while the key still works, one the
+day after saying what stopped working and what it costs to turn back on, both through the counted
+`/go` redirect with the address prefilled. Idempotent by column, so a double fire cannot mail anyone
+twice and a failed send retries tomorrow rather than being marked done. The lapsed window is three
+days, which is also what stops the first run writing to the four trials that expired in August. And
+the package stops hiding the clock: the setup check and the startup line now read the expiry
+`/validate` has always returned, as a fact at five days out and a warning that names the price at
+two. A subscription is untouched.
+
+Driven, not assumed: the cron was fired against a local worker with a seeded D1 and a deliberately
+invalid Brevo key. It selected exactly the two due rows, skipped the 20-day-old one, and left both
+unstamped when the sends failed. 234 package tests, 62 worker tests.
+
+**Not live.** The D1 migration, the worker deploy and `npm publish` were all refused by the sandbox
+classifier. Four operator commands, in order, in `launch/operator-deploy-trial-reminders.txt`. The
+migration must go before the deploy: the job reads two columns that do not exist yet.
+
+Also found, and left for the operator: one real trial started on 2 September (`info@7stock.app`,
+triggered by `set_app_metadata`, expires 9 September) and one `site_pricing` checkout click the same
+day that did not become a Polar session. The 9 September trial is the first person the new reminders
+will reach. The `asc-mcp` Polar org still holds exactly one order and one subscription, renewing
+5 September; the other five paying rows live in the old grandfathered org.
+
+## Prior: the emails, read in a real inbox (2026-08-31)
 
 The one flow that could not be checked from here. Two defects, both fixed and deployed. The trial
 email opened with "Your agent has already written this into your MCP config", which is false for a

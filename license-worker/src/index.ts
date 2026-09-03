@@ -178,7 +178,13 @@ export async function runTrialReminders(
 ): Promise<{ ending: number; lapsed: number }> {
   // Bounded on both sides so the query stays small as the table grows: nothing
   // older than the lapsed window and nothing further out than the ending one
-  // can be due.
+  // can be due. The bounds are string comparisons on an ISO timestamp, and the
+  // table holds two shapes of those: `/trial` writes `2026-09-09T17:53:55.163Z`
+  // while anything built by SQLite's own `datetime('now')` writes a space where
+  // the T goes. A space sorts below T, so the raw comparison silently drops a
+  // space-shaped row out of its own window; `replace` makes both shapes
+  // comparable. The final decision is `selectTrialReminders`, which parses
+  // dates properly.
   const from = new Date(
     now.getTime() - (LAPSED_EMAIL_WINDOW_DAYS + 1) * 24 * 60 * 60 * 1000,
   ).toISOString();
@@ -190,7 +196,9 @@ export async function runTrialReminders(
     `SELECT id, email, key, expires_at, source, revoked_at, canceled_at,
             trial_ending_emailed_at, trial_lapsed_emailed_at
        FROM licenses
-      WHERE source = 'trial' AND expires_at >= ? AND expires_at <= ?`,
+      WHERE source = 'trial'
+        AND replace(expires_at, ' ', 'T') >= ?
+        AND replace(expires_at, ' ', 'T') <= ?`,
   )
     .bind(from, to)
     .all<TrialRow>();
