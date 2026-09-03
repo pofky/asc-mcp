@@ -37,21 +37,31 @@ days out and a warning naming the price at two.
 2 September, expires the 9th) gets the first reminder this product has ever
 sent. Judge the change on trials started from today, not on the six before it.
 
-## Open, and it blocks the first conversion
+## The reminder cron would have dunned a paying customer
 
-**The reminder cron would have dunned a paying customer.** A purchase does not
-touch the trial row: Polar's webhook inserts a second row, so the trial row
-still expires and the job, selecting on `source = 'trial'` alone, would have
-mailed "your trial has ended, $9 turns it back on" to someone who had already
-paid. Fixed in `76323bb` (a `NOT EXISTS` against live `source='polar'` rows,
-case-insensitive), proven against real SQLite through local D1, 64 worker tests
-green, `tsc` clean. **Not deployed.** The deployed worker still has the old
-query. Run `license-worker/DEPLOY-NEXT.txt` before 8 September, which is when
-the first reminder fires.
+Found and fixed today, after the audit below had already called the flows clean.
+A purchase does not touch the trial row: Polar's webhook inserts a second row,
+so the trial row still expires on its own schedule, and the job, selecting on
+`source = 'trial'` alone, would have mailed "your trial has ended, $9 turns it
+back on" to someone who had already paid. `/key` and `/account` had handled that
+two-row state for months (`src/index.ts:770`); the cron shipped hours earlier did
+not inherit it.
+
+Fixed in `76323bb`: a `NOT EXISTS` against live, non-revoked `source='polar'`
+rows, matched on lowercased address. Proven against real SQLite through local D1,
+the row drops when a case-differing paid row exists and returns when it is
+removed. Two constructed tests cover paid and revoked-paid. 64 worker tests,
+`tsc` clean. **Deployed 2026-09-03, version `81ed14b4`, schedule `0 15 * * *`
+re-armed.** The old query was live from 15:29 until this deploy and no reminder
+was due in that window, so nobody was mailed under it.
+
+Why yesterday's end-to-end run missed it: production has never held a trial row
+whose address also has a paid row, because there have been zero conversions ever.
+Driving real data proves the states that exist, not the ones a new feature is
+built to create. Those need constructed fixtures.
 
 ## Next in order
 
-0. **Deploy the worker** (above). Everything else waits on it.
 1. **Watch 8 to 10 September.** The reminder mails fire for the 9 September
    trial. Check `intent_events` for `trial_ending_email` / `trial_lapsed_email`
    checkout clicks, and Polar for an order. That is the first real conversion
