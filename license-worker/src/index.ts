@@ -192,13 +192,26 @@ export async function runTrialReminders(
     now.getTime() + (ENDING_EMAIL_WINDOW_HOURS + 1) * 60 * 60 * 1000,
   ).toISOString();
 
+  // The NOT EXISTS is the difference between a reminder and a dunning letter to
+  // a customer. A purchase does not change the trial row: Polar's webhook
+  // inserts a second row for the same address with source='polar', so the trial
+  // row still expires on its own schedule and would otherwise be mailed "your
+  // trial has ended, $9 turns it back on" by someone who had already paid it.
+  // Matched on lowercased address because the trial endpoint normalises and the
+  // Polar payload is taken as it arrives.
   const { results } = await env.DB.prepare(
     `SELECT id, email, key, expires_at, source, revoked_at, canceled_at,
             trial_ending_emailed_at, trial_lapsed_emailed_at
-       FROM licenses
+       FROM licenses t
       WHERE source = 'trial'
         AND replace(expires_at, ' ', 'T') >= ?
-        AND replace(expires_at, ' ', 'T') <= ?`,
+        AND replace(expires_at, ' ', 'T') <= ?
+        AND NOT EXISTS (
+              SELECT 1 FROM licenses p
+               WHERE p.source = 'polar'
+                 AND p.revoked_at IS NULL
+                 AND lower(p.email) = lower(t.email)
+            )`,
   )
     .bind(from, to)
     .all<TrialRow>();
