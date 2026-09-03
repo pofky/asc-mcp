@@ -30,6 +30,10 @@ import {
   webhookSecrets,
   type LookupRow,
   trialEmailContent,
+  trialEndingEmailContent,
+  trialLapsedEmailContent,
+  selectTrialReminders,
+  type TrialRow,
   licenseEmailContent,
 } from "../src/logic.js";
 
@@ -419,5 +423,121 @@ describe("emails", () => {
 
   it("escapes the key into the HTML rather than interpolating it raw", () => {
     expect(trialEmailContent('"><script>', null, "a@b.com").html).not.toContain("<script>");
+  });
+});
+
+/**
+ * Six trials expired in silence before these rules existed. What the tests
+ * guard is not the copy but the two ways this feature can do damage: mailing
+ * someone twice, and mailing someone it has no business writing to.
+ */
+describe("trial reminder selection", () => {
+  const row = (over: Partial<TrialRow> = {}): TrialRow => ({
+    id: 1,
+    email: "trialist@example.com",
+    key: "ASC-AAAAA-BBBBB-CCCCC-DDDDD",
+    expires_at: days(1),
+    source: "trial",
+    revoked_at: null,
+    canceled_at: null,
+    trial_ending_emailed_at: null,
+    trial_lapsed_emailed_at: null,
+    ...over,
+  });
+
+  const pick = (r: TrialRow) => selectTrialReminders([r], NOW);
+
+  it("mails a trial that ends within the next day", () => {
+    const due = pick(row({ expires_at: days(0.5) }));
+    expect(due.ending).toHaveLength(1);
+    expect(due.lapsed).toHaveLength(0);
+  });
+
+  it("leaves a trial with days still to run alone", () => {
+    expect(pick(row({ expires_at: days(4) })).ending).toHaveLength(0);
+  });
+
+  it("mails a trial that lapsed yesterday, and no row is ever in both lists", () => {
+    const due = pick(row({ expires_at: days(-1) }));
+    expect(due.lapsed).toHaveLength(1);
+    expect(due.ending).toHaveLength(0);
+  });
+
+  it("does not cold-mail a trial that lapsed weeks ago", () => {
+    // The first run after this shipped would otherwise have written to every
+    // trial in the table, including four that expired in August.
+    expect(pick(row({ expires_at: days(-21) })).lapsed).toHaveLength(0);
+  });
+
+  it("never mails the same row twice, which is what the stamps are for", () => {
+    expect(pick(row({ expires_at: days(0.5), trial_ending_emailed_at: days(-0.1) })).ending)
+      .toHaveLength(0);
+    expect(pick(row({ expires_at: days(-1), trial_lapsed_emailed_at: days(-0.1) })).lapsed)
+      .toHaveLength(0);
+  });
+
+  it("never tells a paying subscriber their access is about to end", () => {
+    // A paid row's expires_at is the renewal date, not an expiry.
+    const due = selectTrialReminders(
+      [row({ source: "polar", expires_at: days(0.5) }), row({ source: "polar", expires_at: days(-1) })],
+      NOW,
+    );
+    expect(due.ending).toHaveLength(0);
+    expect(due.lapsed).toHaveLength(0);
+  });
+
+  it("does not write to someone revoked, cancelled, or without a usable address", () => {
+    for (const over of [
+      { revoked_at: days(-2) },
+      { canceled_at: days(-2) },
+      { email: null },
+      { email: "not-an-address" },
+      { expires_at: null },
+      { expires_at: "not-a-date" },
+    ]) {
+      const due = selectTrialReminders(
+        [row({ expires_at: days(0.5), ...over }), row({ expires_at: days(-1), ...over })],
+        NOW,
+      );
+      expect(due.ending).toHaveLength(0);
+      expect(due.lapsed).toHaveLength(0);
+    }
+  });
+});
+
+describe("trial reminder emails", () => {
+  const ending = trialEndingEmailContent("ASC-AAAAA-BBBBB-CCCCC-DDDDD", "2026-08-07T12:00:00.000Z", "buyer@example.com");
+  const lapsed = trialLapsedEmailContent("buyer@example.com");
+
+  it("counts the click and prefills the address, like every other upgrade link", () => {
+    expect(ending.html).toContain("/go?tool=trial_ending_email");
+    expect(lapsed.html).toContain("/go?tool=trial_lapsed_email");
+    for (const mail of [ending, lapsed]) {
+      expect(mail.html).toContain("email=buyer%40example.com");
+      expect(mail.html).not.toContain("https://buy.polar.sh");
+    }
+  });
+
+  it("names the price, because the mail exists to make that decision cheap", () => {
+    for (const mail of [ending, lapsed]) {
+      expect(mail.html).toContain("$9");
+      expect(mail.text).toContain("$9");
+    }
+  });
+
+  it("says what still works after expiry rather than implying everything stops", () => {
+    expect(lapsed.text).toContain("list_apps");
+    expect(ending.text).toContain("read tools keep");
+  });
+
+  it("carries a plain-text alternative with no markup in it", () => {
+    for (const mail of [ending, lapsed]) {
+      expect(mail.text).not.toContain("<");
+      expect(mail.text.length).toBeGreaterThan(200);
+    }
+  });
+
+  it("escapes the key into the HTML rather than interpolating it raw", () => {
+    expect(trialEndingEmailContent('"><script>', null, "a@b.com").html).not.toContain("<script>");
   });
 });

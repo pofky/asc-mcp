@@ -39,7 +39,7 @@ import { setAppMetadata, setAppPrice, setReviewContact } from "./tools/submissio
 import { setAppAvailability } from "./tools/availability.js";
 import { setupAppStoreSigning } from "./tools/signing.js";
 import { ascGuide } from "./tools/guide.js";
-import { runDoctor, formatDoctor } from "./doctor.js";
+import { runDoctor, formatDoctor, trialDaysLeft } from "./doctor.js";
 import { discoverPrivateKey, keyIdFromPath, runInit, parseInitArgs, injectLicenseKey } from "./setup.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -146,7 +146,17 @@ async function main() {
   let tier: Tier = await validateLicense(config.licenseKey);
 
   if (tier === "pro") {
-    console.error(`asc-mcp ${SERVER_VERSION}: Pro license active. All tools available.`);
+    // A trial says so, with the clock. This line is printed on every start and
+    // is the one an agent is most likely to repeat back, so it is the cheapest
+    // place in the product to tell a trial user where they are in the 7 days.
+    const status = lastLicenseStatus();
+    const left = status?.trial ? trialDaysLeft(status.expires) : null;
+    console.error(
+      left === null
+        ? `asc-mcp ${SERVER_VERSION}: Pro license active. All tools available.`
+        : `asc-mcp ${SERVER_VERSION}: Pro trial, ${left} day(s) left. All tools available. ` +
+            `Keep them for $9/month: ${UPGRADE_URL}`,
+    );
   } else {
     console.error(
       `asc-mcp ${SERVER_VERSION}: Free tier. Call asc_start_trial for 7 days of Pro, no card. Or subscribe at ${UPGRADE_URL}`,

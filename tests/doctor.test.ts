@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { runDoctor, formatDoctor } from "../src/doctor.js";
+import { runDoctor, formatDoctor, trialDaysLeft } from "../src/doctor.js";
 import { clearLicenseCache } from "../src/license.js";
 
 const SAVED = { ...process.env };
@@ -69,4 +69,77 @@ describe("runDoctor", () => {
     expect(text).not.toContain("did not validate as Pro");
   });
 
+  /**
+   * The trial clock. A live trial validates as Pro, and the line used to say
+   * only "all tools unlocked", so the one number a trial user needs was the one
+   * thing the product never told them. Six trials expired in 2026 and none
+   * converted.
+   */
+  const proTrial = (expires: string) =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ valid: true, tier: "pro", trial: true, expires }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+
+  const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString();
+
+  it("counts the days left on a trial instead of just saying Pro", async () => {
+    process.env.ASC_LICENSE_KEY = "ASC-AAAAA-BBBBB-CCCCC-DDDDD";
+    proTrial(inDays(5));
+    const report = await runDoctor();
+    const lic = report.checks.find((c) => c.name === "License");
+    expect(lic?.status).toBe("ok");
+    expect(lic?.detail).toContain("5 days left");
+  });
+
+  it("warns and names the price in the last two days, while the key still works", async () => {
+    process.env.ASC_LICENSE_KEY = "ASC-AAAAA-BBBBB-CCCCC-DDDDD";
+    proTrial(inDays(1));
+    const report = await runDoctor();
+    const lic = report.checks.find((c) => c.name === "License");
+    expect(lic?.status).toBe("warn");
+    expect(lic?.detail).toContain("1 day left");
+    expect(lic?.fix).toContain("$9/month");
+    // A trial nearly up is a warning, never a failure: the key is fine, and a
+    // fail here would read as "your licence is broken" two days early.
+    expect(report.checks.every((c) => c.name !== "License" || c.status !== "fail")).toBe(true);
+  });
+
+  it("says a subscription is Pro without inventing a countdown", async () => {
+    process.env.ASC_LICENSE_KEY = "ASC-AAAAA-BBBBB-CCCCC-DDDDD";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ valid: true, tier: "pro", expires: inDays(28) }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+    const lic = (await runDoctor()).checks.find((c) => c.name === "License");
+    expect(lic?.status).toBe("ok");
+    expect(lic?.detail).toBe("Pro: all tools unlocked.");
+  });
+});
+
+describe("trialDaysLeft", () => {
+  const now = new Date("2026-09-03T12:00:00.000Z");
+
+  it("rounds a partial day up, because the key does still work", () => {
+    expect(trialDaysLeft("2026-09-03T18:00:00.000Z", now)).toBe(1);
+  });
+
+  it("floors at zero rather than counting backwards", () => {
+    expect(trialDaysLeft("2026-09-01T12:00:00.000Z", now)).toBe(0);
+  });
+
+  it("returns null for anything it cannot count, so no line is shown", () => {
+    expect(trialDaysLeft(undefined, now)).toBeNull();
+    expect(trialDaysLeft("whenever", now)).toBeNull();
+  });
 });

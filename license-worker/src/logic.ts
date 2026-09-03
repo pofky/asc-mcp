@@ -621,3 +621,173 @@ export function licenseEmailContent(key: string): EmailContent {
 
   return { subject: "Your asc-mcp Pro license key", html, text };
 }
+
+/**
+ * How long after a trial expires the "it stopped working" mail may still go
+ * out. Past this the message stops being useful and starts being cold mail: the
+ * person has moved on, and reminding them of a tool they tried three weeks ago
+ * buys nothing and costs sender reputation. It also stops the first cron run
+ * after this feature ships from mailing every trial that ever lapsed.
+ */
+export const LAPSED_EMAIL_WINDOW_DAYS = 3;
+
+/**
+ * How far ahead of expiry the "one day left" mail goes out. The window is wider
+ * than a day so a cron run that drifts, or one that fails and catches up on the
+ * next tick, still reaches the row before its key stops working.
+ */
+export const ENDING_EMAIL_WINDOW_HOURS = 30;
+
+/** A trial row as the reminder query returns it. */
+export interface TrialRow {
+  id: number;
+  email: string | null;
+  key: string;
+  expires_at: string | null;
+  source: string;
+  revoked_at?: string | null;
+  canceled_at?: string | null;
+  trial_ending_emailed_at?: string | null;
+  trial_lapsed_emailed_at?: string | null;
+}
+
+/**
+ * Which trial rows are due which reminder, decided in one pure pass so the
+ * rules can be tested without a database or an email provider.
+ *
+ * A row is never in both lists on the same run: an expiry cannot be both in the
+ * next 30 hours and already in the past. The idempotency columns are checked
+ * here rather than in SQL so a row that was mailed once is visibly skipped
+ * rather than silently absent.
+ */
+export function selectTrialReminders(
+  rows: TrialRow[],
+  now: Date,
+): { ending: TrialRow[]; lapsed: TrialRow[] } {
+  const ending: TrialRow[] = [];
+  const lapsed: TrialRow[] = [];
+  const ms = now.getTime();
+
+  for (const row of rows) {
+    // Only self-served trials. A paid row's expiry is a renewal date, and
+    // telling a paying customer their access is about to end would be false.
+    if (row.source !== "trial") continue;
+    if (!row.email || !isValidEmail(row.email)) continue;
+    if (!row.expires_at) continue;
+    // Someone who asked to be gone, or was revoked, does not get mail.
+    if (row.revoked_at || row.canceled_at) continue;
+
+    const end = new Date(row.expires_at).getTime();
+    if (Number.isNaN(end)) continue;
+
+    if (end > ms) {
+      const hoursLeft = (end - ms) / (60 * 60 * 1000);
+      if (hoursLeft <= ENDING_EMAIL_WINDOW_HOURS && !row.trial_ending_emailed_at) {
+        ending.push(row);
+      }
+      continue;
+    }
+
+    const daysSince = (ms - end) / (24 * 60 * 60 * 1000);
+    if (daysSince <= LAPSED_EMAIL_WINDOW_DAYS && !row.trial_lapsed_emailed_at) {
+      lapsed.push(row);
+    }
+  }
+
+  return { ending, lapsed };
+}
+
+/**
+ * The day-before mail. Deliberately not a countdown: it names the two tools
+ * that answer "is this worth $9" and puts the price and the link one click
+ * away, while the key still works and trying them costs nothing.
+ */
+export function trialEndingEmailContent(
+  key: string,
+  expires: string | null,
+  email: string,
+): EmailContent {
+  const safeKey = escapeHtml(key);
+  const ends = expires ? new Date(expires).toUTCString() : "tomorrow";
+  const checkout = `${GO_URL}?tool=trial_ending_email&email=${encodeURIComponent(email)}`;
+
+  const html = `
+    <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
+      <h1 style="font-size:20px">Your asc-mcp trial ends tomorrow</h1>
+      <p>The key below stops unlocking the write and control tools on <strong>${escapeHtml(ends)}</strong>. The read tools keep working after that; metadata, screenshots, builds, submit and release do not.</p>
+      <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
+      <p><strong>If you have not tried these two yet, do it today</strong>, while the trial is still on:</p>
+      <ul>
+        <li>Ask your agent for a <code>release_preflight</code> on the app you are shipping next. It lists what Apple will bounce before you submit.</li>
+        <li>Ask it for a <code>daily_briefing</code>. One answer across every app: version states, what is waiting on you, new reviews.</li>
+      </ul>
+      <p>To keep everything, Pro is $9 per month, cancel any time: <a href="${checkout}">subscribe here</a>. Your existing config keeps working; the key in it is replaced by the one you get back.</p>
+      <p style="color:#666;font-size:14px">Not for you? Nothing happens, nothing to cancel, and you will not hear from us again about it.</p>
+      <p style="color:#666;font-size:14px">Something did not work during the trial? Reply to this email and tell me. A person reads it, and a bug report is worth more to me than the $9.</p>
+    </div>`;
+
+  const text = [
+    "Your asc-mcp trial ends tomorrow",
+    "",
+    `The key below stops unlocking the write and control tools on ${ends}. The read tools keep`,
+    "working after that; metadata, screenshots, builds, submit and release do not.",
+    "",
+    `  ${key}`,
+    "",
+    "If you have not tried these two yet, do it today, while the trial is still on:",
+    "",
+    "  - Ask your agent for a release_preflight on the app you are shipping next. It lists what",
+    "    Apple will bounce before you submit.",
+    "  - Ask it for a daily_briefing. One answer across every app: version states, what is",
+    "    waiting on you, new reviews.",
+    "",
+    `To keep everything, Pro is $9 per month, cancel any time: ${checkout}`,
+    "Your existing config keeps working; the key in it is replaced by the one you get back.",
+    "",
+    "Not for you? Nothing happens, nothing to cancel, and you will not hear from us again",
+    "about it.",
+    "",
+    "Something did not work during the trial? Reply to this email and tell me. A person reads",
+    "it, and a bug report is worth more to me than the $9.",
+  ].join("\n");
+
+  return { subject: "Your asc-mcp Pro trial ends tomorrow", html, text };
+}
+
+/**
+ * The day-after mail, and the last one. Its whole job is to say what stopped
+ * working, because the failure a lapsed user sees is a tool refusing inside an
+ * agent transcript they may not read carefully, and to make the ask once.
+ */
+export function trialLapsedEmailContent(email: string): EmailContent {
+  const checkout = `${GO_URL}?tool=trial_lapsed_email&email=${encodeURIComponent(email)}`;
+
+  const html = `
+    <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
+      <h1 style="font-size:20px">Your asc-mcp trial has ended</h1>
+      <p>Your 7 days are up. <code>list_apps</code>, <code>app_details</code> and <code>review_status</code> still work on the same key and always will. Everything that writes to App Store Connect, and the intelligence tools, now refuse.</p>
+      <p>Pro is $9 per month, cancel any time: <a href="${checkout}">subscribe here</a>. You get a new key by email in seconds; swap it into the same <code>ASC_LICENSE_KEY</code> line and nothing else changes.</p>
+      <p><strong>If you decided against it, that is useful to me.</strong> Reply with one line saying why: it did not do what you needed, it broke, it is too expensive, you ship too rarely to care. I read every reply, and that answer is worth more than the subscription.</p>
+      <p style="color:#666;font-size:14px">This is the last email about the trial.</p>
+    </div>`;
+
+  const text = [
+    "Your asc-mcp trial has ended",
+    "",
+    "Your 7 days are up. list_apps, app_details and review_status still work on the same key",
+    "and always will. Everything that writes to App Store Connect, and the intelligence tools,",
+    "now refuse.",
+    "",
+    `Pro is $9 per month, cancel any time: ${checkout}`,
+    "You get a new key by email in seconds; swap it into the same ASC_LICENSE_KEY line and",
+    "nothing else changes.",
+    "",
+    "If you decided against it, that is useful to me. Reply with one line saying why: it did not",
+    "do what you needed, it broke, it is too expensive, you ship too rarely to care. I read every",
+    "reply, and that answer is worth more than the subscription.",
+    "",
+    "This is the last email about the trial.",
+  ].join("\n");
+
+  return { subject: "Your asc-mcp trial has ended", html, text };
+}

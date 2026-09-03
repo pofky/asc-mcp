@@ -29,6 +29,21 @@ export interface DoctorReport {
   healthy: boolean;
 }
 
+/**
+ * Whole days left on a trial, or null when there is nothing to count.
+ *
+ * Rounded up, so the last partial day reads as "1 day left" rather than "0":
+ * the key does still work, and a user told zero would reasonably stop trying.
+ * Null for a missing or unparseable expiry, which is how a subscription (no
+ * expiry, or a renewal date) stays out of this line entirely.
+ */
+export function trialDaysLeft(expires: string | undefined, now = new Date()): number | null {
+  if (!expires) return null;
+  const end = new Date(expires).getTime();
+  if (Number.isNaN(end)) return null;
+  return Math.max(0, Math.ceil((end - now.getTime()) / (24 * 60 * 60 * 1000)));
+}
+
 const INTEGRATIONS_URL =
   "https://appstoreconnect.apple.com/access/integrations/api";
 
@@ -174,7 +189,31 @@ export async function runDoctor(): Promise<DoctorReport> {
   } else {
     const tier = await validateLicense(licenseKey);
     if (tier === "pro") {
-      checks.push({ name: "License", status: "ok", detail: "Pro: all tools unlocked." });
+      // A live trial also reports Pro, and saying only "all tools unlocked"
+      // hides the one fact that person needs: the clock. Six trials ran out in
+      // 2026 without a single conversion, and the price appeared nowhere a
+      // trial user would look while they still cared. `/validate` has always
+      // returned `trial` and `expires`; this reads them.
+      const status = lastLicenseStatus();
+      const left = status?.trial ? trialDaysLeft(status.expires) : null;
+      if (left === null) {
+        checks.push({ name: "License", status: "ok", detail: "Pro: all tools unlocked." });
+      } else {
+        const ending = left <= 2;
+        checks.push({
+          name: "License",
+          // A warn, not an ok, in the last two days: this is the line an agent
+          // relays, and nothing else in the product says the trial is nearly up.
+          status: ending ? "warn" : "ok",
+          detail:
+            left === 0
+              ? "Pro trial: all tools unlocked, and it expires today."
+              : `Pro trial: all tools unlocked, ${left} day${left === 1 ? "" : "s"} left.`,
+          fix: ending
+            ? `To keep the write and control tools, Pro is $9/month, cancel any time: ${UPGRADE_URL}. The read tools keep working either way.`
+            : undefined,
+        });
+      }
     } else {
       // The licence server says WHY, and the reasons want different answers. A
       // finished trial is not a broken key, and sending that person to look up

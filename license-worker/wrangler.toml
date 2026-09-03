@@ -2,6 +2,13 @@ name = "asc-mcp-license"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
+# The daily trial-reminder run (see runTrialReminders in src/index.ts).
+# 15:00 UTC is late afternoon in Europe and morning on the US west coast, which
+# is when an indie iOS developer is at a machine rather than asleep. The job is
+# idempotent per row, so the exact hour only decides when the mail lands.
+[triggers]
+crons = ["0 15 * * *"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "asc-mcp-licenses"
