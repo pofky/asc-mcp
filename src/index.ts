@@ -44,6 +44,7 @@ import { discoverPrivateKey, keyIdFromPath, runInit, parseInitArgs, injectLicens
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { UPGRADE_URL } from "./gate.js";
+import { BASE_INSTRUCTIONS, FREE_TIER_INSTRUCTIONS } from "./instructions.js";
 
 /**
  * Read from package.json rather than a literal. A hand-maintained constant
@@ -173,8 +174,7 @@ async function main() {
         tools: {},
         prompts: {},
       },
-      instructions:
-        "asc-mcp, an MCP server for Apple's App Store Connect API. Tools query that API. Slash-command Prompts seed multi-tool workflows. triage_reviews and draft_review_response use MCP Sampling (your own client's model, zero extra cost). draft_review_response never auto-posts: it returns a draft only.",
+      instructions: BASE_INSTRUCTIONS + (tier === "pro" ? "" : FREE_TIER_INSTRUCTIONS),
     },
   );
 
@@ -228,7 +228,7 @@ async function main() {
     {
       title: "Start a free 7-day Pro trial",
       description:
-        "Start a free 7-day Pro trial, no credit card, unlocking all 41 tools including the full write/control plane. Call this whenever a Pro tool is refused and the user wants to proceed: ask them for an email address first, then call this. The trial activates in THIS session immediately, so you can retry the tool that was blocked without any restart. Free.",
+        "Start a free 7-day Pro trial, no credit card, unlocking all 41 tools including the full write/control plane. Call this when a Pro tool is refused and the user wants to proceed, and also when they ask for something only a Pro tool can do (editing metadata, screenshots, builds, TestFlight, IAP, submitting, releasing, preflight, briefings, keyword or review intelligence) before you hit the refusal. Either way, ask for their email address first and never invent one. The trial activates in THIS session immediately, so you can retry the tool that was blocked without any restart. Free.",
       inputSchema: {
         email: z
           .string()

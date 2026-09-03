@@ -1,13 +1,13 @@
-v1.9.8: the trial tells you how long it has left
+v1.9.9: the free tier says what it is
 
-Download **asc-mcp-1.9.8.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Every other client: `npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>`.
+Download **asc-mcp-1.9.9.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Every other client: `npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>`.
 
 **What changed**
 
-A running trial reported itself as "Pro license active. All tools available." and nothing else. That is true and useless: the one fact a trial user needs is how many of the seven days are left, and the product never said, in any surface, until the day the tools stopped working.
+On the free tier the server told your agent nothing about tiers at all. So if you installed it and asked it to read something, it read it, and you never found out that 35 more tools exist or that seven days of them are free. The only way to discover any of that was to ask for something locked and get refused.
 
-`asc_setup_check` and `npx @pofky/asc-mcp doctor` now read the expiry the licence server has always returned. A trial reads "Pro trial: all tools unlocked, 5 days left". In the last two days it becomes a warning and names the price, because at that point the useful answer is what it costs to keep the write and control tools, not a green tick. A subscription is unchanged: no countdown, no upsell, just Pro.
+The instructions every MCP client hands the model now say, on the free tier only, which six tools work, which are locked and why, and that `asc_start_trial` unlocks everything for 7 days with no card and takes effect in the running session. They also tell the model to offer that once, drop it if you say no, and never to imply the free read tools are limited, because they are not. On Pro the instructions are unchanged and say nothing about tiers, trials or prices.
 
-The server's startup line says the same thing, so a client that surfaces stderr shows the remaining days without anyone having to ask.
+`asc_start_trial` is now also described as something to offer when you ask for something only a Pro tool can do, rather than only after a refusal has already happened.
 
-Nothing else changed, and nothing behaves differently if you are a subscriber.
+No tool behaviour changed, and nothing new is sent anywhere.
