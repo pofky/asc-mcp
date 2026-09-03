@@ -37,8 +37,21 @@ days out and a warning naming the price at two.
 2 September, expires the 9th) gets the first reminder this product has ever
 sent. Judge the change on trials started from today, not on the six before it.
 
+## Open, and it blocks the first conversion
+
+**The reminder cron would have dunned a paying customer.** A purchase does not
+touch the trial row: Polar's webhook inserts a second row, so the trial row
+still expires and the job, selecting on `source = 'trial'` alone, would have
+mailed "your trial has ended, $9 turns it back on" to someone who had already
+paid. Fixed in `76323bb` (a `NOT EXISTS` against live `source='polar'` rows,
+case-insensitive), proven against real SQLite through local D1, 64 worker tests
+green, `tsc` clean. **Not deployed.** The deployed worker still has the old
+query. Run `license-worker/DEPLOY-NEXT.txt` before 8 September, which is when
+the first reminder fires.
+
 ## Next in order
 
+0. **Deploy the worker** (above). Everything else waits on it.
 1. **Watch 8 to 10 September.** The reminder mails fire for the 9 September
    trial. Check `intent_events` for `trial_ending_email` / `trial_lapsed_email`
    checkout clicks, and Polar for an order. That is the first real conversion
