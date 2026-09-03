@@ -1,45 +1,48 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
-**Fourth full flow audit, and the leak it found: six trials, zero reminders (2026-09-03).**
+**Both funnel leaks shipped and live, and the cron proven in production (2026-09-03).**
 
-Everything the product advertises was driven again, against production and the published 1.9.7, not
-read from the code. Nothing was broken. Every surface matches the repo, both test suites are green,
-and the money path works end to end: setup mode, `init` and `init --write` into a real client config,
-Node 18 and Node 22 startup, the free tier's live reads, the Pro gate on write/control/intelligence
-tools, a live trial mint that unlocked all 41 tools in the same session with no restart, the confirm
-gates, the error paths, every CLI subcommand, the skill install lifecycle, the worker's pages and
-headers, and the checkout link resolving to a payable Polar session. The full list is in HANDOFF.md.
+The fourth flow audit found nothing broken in any flow the product advertises. It found two
+flows that did not exist, and between them they are the entire funnel: only about one install in
+forty ever started a trial, and none of the six trials ever taken converted.
 
-What the audit found is not a defect in any flow, it is a missing one. Six trials have been minted
-since 7 August and not one converted. After a trial expires, the price appears in exactly one place:
-inside a tool call the person has to make first, in an agent transcript they may never scroll back
-through. Nothing ever reached them again, and nothing told them the clock was running while it still
-mattered. The paywall was never the problem.
+Nothing followed a trial. No expiry reminder, no lapsed mail, no cron on the licence worker at
+all. After a trial ended, the price appeared in exactly one place, inside a tool call the person
+had to make first. And the free tier never announced itself: the server instructions, the one
+string every MCP client hands the model on every conversation, said nothing about tiers, so
+someone who installed asc-mcp and asked it to read something got a real answer and never learned
+that 35 more tools existed or that seven days of them were free.
 
-Both halves are now built, tested and committed. The licence worker gets a daily cron
-(`runTrialReminders`, 15:00 UTC): one mail the day before expiry while the key still works, one the
-day after saying what stopped working and what it costs to turn back on, both through the counted
-`/go` redirect with the address prefilled. Idempotent by column, so a double fire cannot mail anyone
-twice and a failed send retries tomorrow rather than being marked done. The lapsed window is three
-days, which is also what stops the first run writing to the four trials that expired in August. And
-the package stops hiding the clock: the setup check and the startup line now read the expiry
-`/validate` has always returned, as a fact at five days out and a warning that names the price at
-two. A subscription is untouched.
+Shipped today, all four surfaces:
+- **1.9.8**, the trial clock. `asc_setup_check`, `doctor` and the startup line read the expiry
+  `/validate` has always returned: a fact at five days out, a warning naming $9 at two. A
+  subscription is untouched.
+- **1.9.9**, tier-aware instructions. On free they name the six tools that work, name what is
+  locked, and say the trial unlocks everything for 7 days with no card in the running session.
+  Bounded on purpose: offer once, drop it on a no, never imply a free read tool is limited. On
+  Pro the string is byte-for-byte unchanged. They moved into `src/instructions.ts` because
+  importing `index.ts` boots a server, so the text could not be tested in place.
+- **The licence worker**, deployed with the D1 migration applied first and Cloudflare confirming
+  the schedule `0 15 * * *`. `runTrialReminders` sends one mail the day before expiry and one the
+  day after, both through the counted `/go` redirect with the address prefilled, idempotent by
+  column so a double fire cannot mail twice and a failed send retries tomorrow.
 
-Driven, not assumed: the cron was fired against a local worker with a seeded D1 and a deliberately
-invalid Brevo key. It selected exactly the two due rows, skipped the 20-day-old one, and left both
-unstamped when the sends failed. 234 package tests, 62 worker tests.
+Proven, not assumed. The deployed cron was run against production data and real Brevo over a
+synthetic trial row pointed at the operator's own inbox: 12 hours from expiry it sent the "ends
+tomorrow" mail and stamped the row; aged to yesterday it sent the "has ended" mail and stamped it;
+re-running immediately sent nothing both times; the four August trials and the live 9 September
+one were untouched. Both synthetic rows were then deleted. 240 package tests, 62 worker tests.
 
-**Not live.** The D1 migration, the worker deploy and `npm publish` were all refused by the sandbox
-classifier. Four operator commands, in order, in `launch/operator-deploy-trial-reminders.txt`. The
-migration must go before the deploy: the job reads two columns that do not exist yet.
+The first real test is **8 September**, when the trial expiring on the 9th gets the first reminder
+this product has ever sent.
 
-Also found, and left for the operator: one real trial started on 2 September (`info@7stock.app`,
-triggered by `set_app_metadata`, expires 9 September) and one `site_pricing` checkout click the same
-day that did not become a Polar session. The 9 September trial is the first person the new reminders
-will reach. The `asc-mcp` Polar org still holds exactly one order and one subscription, renewing
-5 September; the other five paying rows live in the old grandfathered org.
+What is left is distribution, and it is blocked on accounts rather than on work. The Show HN and
+r/iOSProgramming drafts are written and ready in `launch/`. Chrome is not logged in to Hacker
+News, and creating an account or typing a password is not something an agent may do. It is logged
+in to Reddit, but as an auto-generated username with zero posts and no karma, which the sub's
+filter would remove on sight and which would risk the only Reddit identity available. Both are
+left for the operator, with the reasoning written down so nobody rediscovers it.
 
 ## Prior: the emails, read in a real inbox (2026-08-31)
 
