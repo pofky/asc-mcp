@@ -25,6 +25,11 @@ import {
   daysRemaining,
   buildCheckoutUrl,
   trialEmailContent,
+  trialEndingEmailContent,
+  trialLapsedEmailContent,
+  selectTrialReminders,
+  LAPSED_EMAIL_WINDOW_DAYS,
+  ENDING_EMAIL_WINDOW_HOURS,
   licenseEmailContent,
   isLicenseUsable,
   computeActiveFlag,
@@ -45,6 +50,7 @@ import {
   DELETE_TOKEN_TTL_MS,
   type LookupRow,
 } from "./logic.js";
+import type { EmailContent, TrialRow } from "./logic.js";
 
 
 interface Env {
@@ -132,7 +138,131 @@ export default {
     }
     return handleRequest(request, env, ctx);
   },
+
+  /**
+   * The daily trial-reminder run. See `runTrialReminders`.
+   *
+   * Wired to a cron in wrangler.toml rather than to a queue or a Durable Object
+   * alarm because the whole job is one query and a handful of sends, and a cron
+   * that misses a tick catches the same rows up on the next one.
+   */
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runTrialReminders(env, new Date()));
+  },
 };
+
+/** Minimal shape of the cron event; the full type lives in workers-types. */
+interface ScheduledController {
+  scheduledTime: number;
+  cron: string;
+}
+
+/**
+ * Write to trial users about their trial, once before it ends and once after.
+ *
+ * Six trials were minted between August and September 2026 and none converted.
+ * The paywall was not the problem: after a trial expires, the price appears in
+ * exactly one place, inside a tool call the person has to make first, in an
+ * agent transcript they may never scroll back through. This is the only channel
+ * that reaches someone who has stopped using the product, which is precisely
+ * the moment the decision gets made.
+ *
+ * Idempotent by column, not by schedule: each send stamps the row, so a double
+ * cron fire, a retry, or a redeploy cannot mail anyone twice. A send that fails
+ * leaves the stamp unset and is retried on the next run, which is the right way
+ * round: a duplicate is worse than a day late.
+ */
+export async function runTrialReminders(
+  env: Env,
+  now: Date,
+): Promise<{ ending: number; lapsed: number }> {
+  // Bounded on both sides so the query stays small as the table grows: nothing
+  // older than the lapsed window and nothing further out than the ending one
+  // can be due.
+  const from = new Date(
+    now.getTime() - (LAPSED_EMAIL_WINDOW_DAYS + 1) * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const to = new Date(
+    now.getTime() + (ENDING_EMAIL_WINDOW_HOURS + 1) * 60 * 60 * 1000,
+  ).toISOString();
+
+  const { results } = await env.DB.prepare(
+    `SELECT id, email, key, expires_at, source, revoked_at, canceled_at,
+            trial_ending_emailed_at, trial_lapsed_emailed_at
+       FROM licenses
+      WHERE source = 'trial' AND expires_at >= ? AND expires_at <= ?`,
+  )
+    .bind(from, to)
+    .all<TrialRow>();
+
+  const due = selectTrialReminders(results ?? [], now);
+  const stamp = now.toISOString();
+  let ending = 0;
+  let lapsed = 0;
+
+  for (const row of due.ending) {
+    const content = trialEndingEmailContent(row.key, row.expires_at, row.email!);
+    if (!(await sendTransactional(env, row.email!, content))) continue;
+    await env.DB.prepare("UPDATE licenses SET trial_ending_emailed_at = ? WHERE id = ?")
+      .bind(stamp, row.id)
+      .run();
+    ending++;
+  }
+
+  for (const row of due.lapsed) {
+    const content = trialLapsedEmailContent(row.email!);
+    if (!(await sendTransactional(env, row.email!, content))) continue;
+    await env.DB.prepare("UPDATE licenses SET trial_lapsed_emailed_at = ? WHERE id = ?")
+      .bind(stamp, row.id)
+      .run();
+    lapsed++;
+  }
+
+  console.log(`trial reminders: ${ending} ending, ${lapsed} lapsed`);
+  return { ending, lapsed };
+}
+
+/**
+ * One Brevo send, given a prepared body. The three existing senders each
+ * inlined the same request; this is the one used by anything added since, so a
+ * new message cannot ship without the plain-text alternative.
+ */
+async function sendTransactional(
+  env: Env,
+  email: string,
+  content: EmailContent,
+): Promise<boolean> {
+  if (!env.BREVO_API_KEY) return false;
+
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": env.BREVO_API_KEY,
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        sender: {
+          name: env.BREVO_SENDER_NAME || "asc-mcp",
+          email: env.BREVO_SENDER_EMAIL || "license@brewist.app",
+        },
+        to: [{ email }],
+        subject: content.subject,
+        htmlContent: content.html,
+        textContent: content.text,
+      }),
+    });
+    if (!res.ok) {
+      console.error("Brevo send failed", res.status);
+      return false;
+    }
+    return true;
+  } catch {
+    console.error("Brevo send error");
+    return false;
+  }
+}
 
 async function handleRequest(
   request: Request,
