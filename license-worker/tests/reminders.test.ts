@@ -46,7 +46,15 @@ function fakeDb(rows: Row[]) {
                 r.source === "trial" &&
                 r.expires_at !== null &&
                 r.expires_at >= from &&
-                r.expires_at <= to,
+                r.expires_at <= to &&
+                // The NOT EXISTS in the real statement: a trial whose address
+                // already has a live paid row is not a trial any more.
+                !rows.some(
+                  (p) =>
+                    p.source === "polar" &&
+                    p.revoked_at === null &&
+                    (p.email ?? "").toLowerCase() === (r.email ?? "").toLowerCase(),
+                ),
             ) as unknown as T[],
           };
         },
@@ -150,6 +158,43 @@ describe("runTrialReminders", () => {
     expect(sent[0].textContent).toContain("$9");
     expect(sent[0].htmlContent).toContain("ASC-AAAAA-BBBBB-CCCCC-DDDDD");
     expect((sent[0].to as Array<{ email: string }>)[0].email).toBe("trialist@example.com");
+  });
+
+  it("never mails someone who has already bought", async () => {
+    // The conversion we are trying to cause. Polar's webhook inserts a second
+    // row rather than touching the trial one, so without the NOT EXISTS the
+    // customer gets "your trial has ended, $9 turns it back on" the day after
+    // paying $9. Both windows, one paid row.
+    const db = fakeDb([
+      row({ id: 1, expires_at: days(0.5) }),
+      row({ id: 2, expires_at: days(-1), key: "ASC-EEEEE-FFFFF-GGGGG-HHHHH" }),
+      row({
+        id: 3,
+        email: "Trialist@Example.com",
+        source: "polar",
+        expires_at: days(30),
+        key: "ASC-PAID0-PAID0-PAID0-PAID0",
+      }),
+    ]);
+
+    expect(await runTrialReminders(env(db), NOW)).toEqual({ ending: 0, lapsed: 0 });
+    expect(sent).toHaveLength(0);
+    expect(db.updates).toHaveLength(0);
+  });
+
+  it("still mails a trialist whose only paid row was revoked", async () => {
+    const db = fakeDb([
+      row({ id: 1, expires_at: days(0.5) }),
+      row({
+        id: 3,
+        source: "polar",
+        expires_at: days(30),
+        revoked_at: "2026-08-01T00:00:00.000Z",
+        key: "ASC-PAID0-PAID0-PAID0-PAID0",
+      }),
+    ]);
+
+    expect(await runTrialReminders(env(db), NOW)).toEqual({ ending: 1, lapsed: 0 });
   });
 
   it("leaves the live table's own rows alone: nothing is due today", async () => {
