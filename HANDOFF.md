@@ -60,6 +60,38 @@ whose address also has a paid row, because there have been zero conversions ever
 Driving real data proves the states that exist, not the ones a new feature is
 built to create. Those need constructed fixtures.
 
+## Conversion path, audited against production 2026-09-04
+
+Every hop a person takes from a locked tool to a paid key, checked live rather
+than read:
+
+- **The refusal that sells.** Published 1.9.9 driven with real ASC credentials
+  and no licence: server instructions name the free tier, the 35 locked tools
+  and the no-card trial; `list_reviews` refuses with the trial offer, the $9
+  price, the counted `/go?tool=list_reviews` link and the direct Polar link.
+- **The redirect.** `/go` 302s to the checkout with `utm_content` set to the
+  tool and `customer_email` prefilled; a bad tool name degrades to `unknown`
+  rather than redirecting anywhere else.
+- **The product.** Polar `App Store Connect MCP Pro`, $9.00/month recurring, not
+  archived. The checkout link in the worker's constant is the live link, points
+  at that product, and its `success_url` is the worker's own `/success`.
+- **The webhook.** `…/webhook/polar` is registered for the eight subscription
+  events the provisioning code handles. All three deliveries ever made
+  succeeded with 200. Tomorrow's renewal arrives as `subscription.cycled`,
+  which is in that list.
+- **The mails.** Both reminder bodies quote $9 and link through `/go` with the
+  address prefilled, one tagged `trial_ending_email`, the other
+  `trial_lapsed_email`.
+- **The deployed code.** Active worker version is `81ed14b4`, the one carrying
+  the paid-customer exclusion.
+- **The surfaces.** Every outbound link on the site resolves (npm's 403 to curl
+  is bot filtering, `npm view` serves 1.9.9). Site shows v1.9.9 and $9.
+- 240 package tests, 64 worker tests, `tsc` clean in both.
+
+Not verifiable from here, and therefore still unproven: a real payment through
+the live checkout, and a real reminder mail landing in someone's inbox. Both
+resolve on their own between 8 and 10 September.
+
 ## Next in order
 
 1. **Watch 8 to 10 September.** The reminder mails fire for the 9 September
@@ -170,6 +202,11 @@ resolving to a payable Polar session.
   migrations, publishes and D1 writes all needed `dangerouslyDisableSandbox`,
   and several were refused even with it until reworded or retried. It is not a
   tool failure; do not spend turns on quoting.
+- **This audit added two more synthetic `intent_events` rows**, both on
+  2026-09-04 from probing `/go`: one `unknown` and, less usefully, one
+  `trial_ending_email`. The second shares a label with the mails that fire on
+  8 September, so subtract one before reading that number as a click. D1 writes
+  are refused in agent sessions, so it could not be deleted.
 - **One synthetic funnel row survives**: `intent_events` for 2026-09-03,
   `trial_started` / `direct`, count 1, from this audit's own mint. Every delete
   targeting it was refused. Discount it.
