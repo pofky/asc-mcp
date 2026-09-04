@@ -101,29 +101,26 @@ resolve on their own between 8 and 10 September.
 2. **Distribution is now the binding constraint, and it needs the operator.**
    See "Blocked on accounts" below. Nothing in this repo will produce more
    trials until more people arrive.
-3. **Glama's build fails, and the listing is missing our instructions.** Glama
-   mailed a build failure for `asc-mcp` on 4 September. What is provable from
-   here: the Dockerfile builds clean from a pristine clone on both linux/arm64
-   and linux/amd64, and the image answers `initialize` and `tools/list` over
-   stdio in setup mode, so the failure is not a broken Dockerfile. The build was
-   doing two full `npm ci` runs, about 12 minutes cold, so a builder timeout was
-   the most plausible cause that was ours; `bcb90d6` cuts it to 5 by installing
-   once and pruning. Pushing that should trigger a rebuild.
-   The visible cost meanwhile, on
-   `https://glama.ai/mcp/servers/pofky/asc-mcp/schema`: 41 tools and 6 prompts
-   are listed correctly, but Instructions reads "This server publishes no
-   instructions", so the tier-aware string 1.9.9 shipped, the one that tells a
-   free-tier user the trial exists, is absent from the listing. The page is
-   stamped 2026-08-22.
-   The API key now exists (Keychain `autopilot/GLAMA_API_KEY`, indexed in
-   `CREDENTIALS.md`), and the record it returns is worse than the HTML page
-   suggests: `description` still says **"13 curated tools"**, and `tools` is an
-   **empty list**. That record, not the rendered README, is what other
-   directories mirror. A successful rebuild is what refreshes both, so check it
-   with the curl in Environment before assuming a release propagated.
-   **Still needs the operator**: build logs are not on the API and need a
-   signed-in browser session, which an agent may not do. Open "View build
-   details" from the failure mail and paste the error.
+3. **Glama: the build failure is theirs, the missing instructions are
+   mcp-proxy's.** Build `01a06aee` (4 September, 10m33s) never reached our code.
+   It died in `load metadata for docker.io/library/debian:trixie-slim` with
+   `no active session ... context deadline exceeded`, a Docker Hub metadata
+   resolution timeout inside Glama's builder, before `git clone`. **The remedy
+   is a retry**, which any push to master triggers; there is nothing to fix in
+   this repo. Note that Glama ignores our Dockerfile entirely and builds its own
+   spec (debian trixie-slim, Node 24, `npm ci && npm run build`, run under
+   `mcp-proxy`), so `bcb90d6` was not the fix it was written as, only a correct
+   change for everyone else. That spec was run here from a fresh GitHub clone:
+   it builds clean and the server comes up on the free tier under their fake
+   placeholder credentials, so the next successful build will populate the
+   listing.
+   The empty Instructions field is a different, structural cause: **mcp-proxy
+   does not forward `instructions` from the wrapped server's initialize
+   result.** Proven on 6.4.3 (the version inside Glama's image) and on 6.7.12:
+   the same server returns 1234 characters of instructions over stdio and none
+   through the proxy, while `capabilities` and `serverInfo` survive. Every
+   server Glama inspects loses its instructions this way, so no release of ours
+   can fix it. Paste-ready issue: `launch/mcp-proxy-instructions-issue.txt`.
 4. Publish the improved registry description so PulseMCP stops mirroring the
    April read-only copy (`launch/distribution-checklist.md` has the resync path,
    `launch/pulsemcp-listing-update.txt` is the email).
