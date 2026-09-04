@@ -1,0 +1,19 @@
+initialize result drops the downstream server's instructions
+
+mcp-proxy does not forward the `instructions` field from the wrapped server's initialize result, so any client connecting through the proxy sees a server that publishes no instructions. The MCP spec puts `instructions` in InitializeResult alongside `capabilities` and `serverInfo`, and clients place that text ahead of the tool catalog, so losing it changes how a model uses the server.
+
+Reproduction, with any stdio server that returns instructions:
+
+Directly over stdio, the initialize result contains a 1234-character `instructions` string.
+
+  {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"probe","version":"1"}}}
+
+Through the proxy, the same request against http://127.0.0.1:8080/mcp returns:
+
+  {"result":{"protocolVersion":"2025-06-18","capabilities":{"prompts":{"listChanged":true},"tools":{"listChanged":true}},"serverInfo":{"name":"asc-mcp","version":"1.9.9"}},"jsonrpc":"2.0","id":1}
+
+No `instructions` key. `capabilities` and `serverInfo` come through unchanged, so the result is being rebuilt rather than passed along.
+
+Reproduced on 6.4.3 and on 6.7.12, same result on both, so this is not a regression in a recent release. Tested with @pofky/asc-mcp 1.9.9 on Node 24, launched as `mcp-proxy --port 8080 -- node dist/index.js`.
+
+This matters beyond one server: directories that inspect servers through mcp-proxy record them as publishing no instructions, and that is what their listings then show to everyone.
