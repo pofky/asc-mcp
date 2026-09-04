@@ -69,12 +69,30 @@ built to create. Those need constructed fixtures.
 2. **Distribution is now the binding constraint, and it needs the operator.**
    See "Blocked on accounts" below. Nothing in this repo will produce more
    trials until more people arrive.
-3. Publish the improved registry description so PulseMCP stops mirroring the
+3. **Glama's build fails, and the listing is missing our instructions.** Glama
+   mailed a build failure for `asc-mcp` on 4 September. What is provable from
+   here: the Dockerfile builds clean from a pristine clone on both linux/arm64
+   and linux/amd64, and the image answers `initialize` and `tools/list` over
+   stdio in setup mode, so the failure is not a broken Dockerfile. The build was
+   doing two full `npm ci` runs, about 12 minutes cold, so a builder timeout was
+   the most plausible cause that was ours; `bcb90d6` cuts it to 5 by installing
+   once and pruning. Pushing that should trigger a rebuild.
+   The visible cost meanwhile, on
+   `https://glama.ai/mcp/servers/pofky/asc-mcp/schema`: 41 tools and 6 prompts
+   are listed correctly, but Instructions reads "This server publishes no
+   instructions", so the tier-aware string 1.9.9 shipped, the one that tells a
+   free-tier user the trial exists, is absent from the listing. The page is
+   stamped 2026-08-22.
+   **Needs the operator**: the build log and the directory API both sit behind a
+   Glama account. Open "View build details" from the failure mail and paste the
+   error, or create an API key at `glama.ai/settings/api-keys`. Signing in is not
+   something an agent may do.
+4. Publish the improved registry description so PulseMCP stops mirroring the
    April read-only copy (`launch/distribution-checklist.md` has the resync path,
    `launch/pulsemcp-listing-update.txt` is the email).
-4. Turn on Cloudflare Web Analytics for the site. It still has no analytics at
+5. Turn on Cloudflare Web Analytics for the site. It still has no analytics at
    all, so its visit count is unknown and step 2 cannot be measured.
-5. The licence emails still come from `license@brewist.app`. The three reminder
+6. The licence emails still come from `license@brewist.app`. The three reminder
    mails inherit that sender, so this now touches more messages than before.
 
 ## Blocked on accounts, not on work
