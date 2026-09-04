@@ -83,10 +83,15 @@ built to create. Those need constructed fixtures.
    instructions", so the tier-aware string 1.9.9 shipped, the one that tells a
    free-tier user the trial exists, is absent from the listing. The page is
    stamped 2026-08-22.
-   **Needs the operator**: the build log and the directory API both sit behind a
-   Glama account. Open "View build details" from the failure mail and paste the
-   error, or create an API key at `glama.ai/settings/api-keys`. Signing in is not
-   something an agent may do.
+   The API key now exists (Keychain `autopilot/GLAMA_API_KEY`, indexed in
+   `CREDENTIALS.md`), and the record it returns is worse than the HTML page
+   suggests: `description` still says **"13 curated tools"**, and `tools` is an
+   **empty list**. That record, not the rendered README, is what other
+   directories mirror. A successful rebuild is what refreshes both, so check it
+   with the curl in Environment before assuming a release propagated.
+   **Still needs the operator**: build logs are not on the API and need a
+   signed-in browser session, which an agent may not do. Open "View build
+   details" from the failure mail and paste the error.
 4. Publish the improved registry description so PulseMCP stops mirroring the
    April read-only copy (`launch/distribution-checklist.md` has the resync path,
    `launch/pulsemcp-listing-update.txt` is the email).
@@ -209,6 +214,9 @@ resolving to a payable Polar session.
 - Site deploy is explicit, the Pages git integration does not fire:
   `npx wrangler pages deploy site --project-name asc-mcp --branch master`.
 - Cloudflare token: `security find-generic-password -s cloudflare-api -w`.
+- What Glama publishes about us, which goes stale whenever their build fails:
+  `curl -s -H "Authorization: Bearer $(security find-generic-password -s autopilot -a GLAMA_API_KEY -w)" https://glama.ai/api/mcp/v1/servers/pofky/asc-mcp`
+  A healthy record has 41 entries in `tools` and the current description.
 - ASC credentials for driving the server: key `V46UBZ9L93` in
   `~/.appstoreconnect/private_keys/`, issuer
   `d6dd27de-f131-4908-8d76-e81ba84c2160`.
