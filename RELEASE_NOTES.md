@@ -1,13 +1,13 @@
-v1.9.9: the free tier says what it is
+v1.9.10: a declined renewal now says so
 
-Download **asc-mcp-1.9.9.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Every other client: `npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>`.
+Download **asc-mcp-1.9.10.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Every other client: `npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>`.
 
 **What changed**
 
-On the free tier the server told your agent nothing about tiers at all. So if you installed it and asked it to read something, it read it, and you never found out that 35 more tools exist or that seven days of them are free. The only way to discover any of that was to ask for something locked and get refused.
+If a subscription renewal is declined by your bank, the subscription is closed and the licence key stops unlocking Pro. That part is expected. What the product said about it was not: `doctor` reported "a license key is set but did not validate as Pro" and sent you to re-check a key that was never wrong, and the Pro tools greeted you with "Free for 7 days, no card: call `asc_start_trial`", which is an offer the trial endpoint refuses to anyone who has already subscribed.
 
-The instructions every MCP client hands the model now say, on the free tier only, which six tools work, which are locked and why, and that `asc_start_trial` unlocks everything for 7 days with no card and takes effect in the running session. They also tell the model to offer that once, drop it if you say no, and never to imply the free read tools are limited, because they are not. On Pro the instructions are unchanged and say nothing about tiers, trials or prices.
+Now the licence server distinguishes a revoked subscription from a cancelled one from a merely inactive row, and the server says what actually happened. `doctor` names the declined renewal and links straight to restarting. The Pro tools drop the trial offer for anyone who has subscribed before and lead with the price and the link instead.
 
-`asc_start_trial` is now also described as something to offer when you ask for something only a Pro tool can do, rather than only after a refusal has already happened.
+Nothing about tier gating changed: the same keys unlock the same tools as before. This only changes what you are told when a key stops working, and what you are offered next.
 
-No tool behaviour changed, and nothing new is sent anywhere.
+Upgrade if you are a subscriber. If you are on the free tier or in a trial, nothing here affects you.
