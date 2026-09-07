@@ -1,13 +1,13 @@
-v1.9.10: a declined renewal now says so
+v1.9.11: the trial tool now says what it stores, where you can read it
 
-Download **asc-mcp-1.9.10.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Every other client: `npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>`.
+Download **asc-mcp-1.9.11.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Every other client: `npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>`.
 
 **What changed**
 
-If a subscription renewal is declined by your bank, the subscription is closed and the licence key stops unlocking Pro. That part is expected. What the product said about it was not: `doctor` reported "a license key is set but did not validate as Pro" and sent you to re-check a key that was never wrong, and the Pro tools greeted you with "Free for 7 days, no card: call `asc_start_trial`", which is an offer the trial endpoint refuses to anyone who has already subscribed.
+`asc_start_trial` sends two things: the email address you give it, so the key can reach you, and a one-way SHA-256 hash of your Issuer ID, computed on your machine, so one Apple developer account cannot take unlimited free weeks. That has always been true and has always been documented on the website, but the website is not where it happens. The trial is started from inside your agent by someone who may never open the site at all, so the tool now says it at the moment it asks for your address, and the confirmation you get back names both values and links to the deletion page and the privacy policy.
 
-Now the licence server distinguishes a revoked subscription from a cancelled one from a merely inactive row, and the server says what actually happened. `doctor` names the declined renewal and links straight to restarting. The Pro tools drop the trial offer for anyone who has subscribed before and lead with the price and the link instead.
+Nothing about what is collected changed. This release changes only where you are told.
 
-Nothing about tier gating changed: the same keys unlock the same tools as before. This only changes what you are told when a key stops working, and what you are offered next.
+Alongside it, the published privacy policy was corrected. It said the Issuer ID fingerprint is "never sent if you never start a trial", and that was wrong: `asc_start_trial` is also how a subscriber fetches their paid key onto a new machine, and that path records the same fingerprint. The policy now says so, names the lawful basis for each thing it holds, names Brevo as the email processor, and points at the Lithuanian supervisory authority.
 
-Upgrade if you are a subscriber. If you are on the free tier or in a trial, nothing here affects you.
+No tool behaviour changed and no gating changed.

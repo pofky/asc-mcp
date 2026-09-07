@@ -233,7 +233,7 @@ async function main() {
         email: z
           .string()
           .describe(
-            "The user's email address. Required: the trial key is sent there so they still have it later. Ask the user for it; never invent one.",
+            "The user's email address. Required: the trial key is sent there so they still have it later. Ask the user for it; never invent one. Tell them what the request stores: this address and a one-way hash of their Issuer ID, nothing else, and both are deletable at https://asc-mcp-license.remewdy.workers.dev/delete (policy: https://asc-mcp-license.remewdy.workers.dev/privacy).",
           ),
         tool: z
           .string()
@@ -306,6 +306,9 @@ async function main() {
           skipped.length ? `Left untouched: ${skipped.join(", ")}` : "",
           "",
           "All 41 tools are unlocked in this session right now. Retry what you were doing.",
+          "Stored: your email and a one-way hash of your Issuer ID. Nothing else. " +
+            "Delete both at https://asc-mcp-license.remewdy.workers.dev/delete , policy at " +
+            "https://asc-mcp-license.remewdy.workers.dev/privacy",
           result.subscription || !result.checkout_url
             ? ""
             : `When the trial ends, Pro is $9/month: ${result.checkout_url}`,
