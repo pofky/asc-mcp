@@ -61,6 +61,54 @@ None. The site is already live, passes Core Web Vitals, has valid schema, and ha
 - **No unsupportable claims**: no invented star ratings, no "trusted by N teams," no fabricated social proof anywhere in the four surfaces.
 - **og.png is correctly sized** at 1200x630 (confirmed via `file` on the downloaded asset) and readable as a thumbnail (clear wordmark, high contrast).
 
+## Re-verification, 2026-09-07 (post-deploy)
+
+The findings below were acted on and deployed same-day. Re-checked independently
+against the live site (curl + Lighthouse 12.8.2 + `json.loads` + grep against
+`src/gate.ts` and `src/index.ts`), not by trusting the deploy summary.
+
+- **HIGH #2 (trial never shown): FIXED, verified live.** `index.html` now has a second
+  terminal block, `asc_start_trial`, directly under the setup-check one, showing the Pro
+  refusal, the user's one-line answer, and the trial-start confirmation. Three of the
+  strings were checked against source and are verbatim: `"Editing metadata requires
+  Pro."`-shaped refusal and `"Free for 7 days, no card: call the asc_start_trial tool
+  with the user's email..."` (`src/gate.ts:58,68-69`), `"Saved to ... so it survives a
+  restart."` (`src/index.ts:277`), `"Pro trial started. N day(s), no card, nothing to
+  cancel."` (`src/index.ts:302`).
+- **HIGH #4 (no comparison): FIXED, verified live.** A dated comparison table in
+  `#pricing` names Heimdall (890 tools, free, MIT, linked to
+  `github.com/erayendes/app-store-connect-mcp`), zelentsov-dev/asc-mcp (502 tools, free,
+  MIT, linked), fastlane and the App Store Connect website, with a "read from each
+  project on 7 September 2026" line and a paragraph that concedes tool count rather than
+  disputing it. The same block is mirrored in `llms.txt` under "How it compares (verified
+  7 September 2026)".
+- **MEDIUM #5 (date contradiction): FIXED, verified live.** Footer now reads "Last
+  updated 7 September 2026", matching the JSON-LD `dateModified` of `2026-09-07`.
+- **MEDIUM #6 (stale version badge): FIXED, verified live.** Both occurrences on
+  `writing/license-server/index.html` (nav and footer) now read `v1.9.10`.
+- **MEDIUM #8 (title lacks brand): PARTIALLY addressed, new defect introduced.** The
+  title is now `asc-mcp: App Store Connect MCP server for releases` (50 chars, verified
+  live), which puts the brand token first and the primary keyword second. The standard
+  requires primary keyword first, brand last; this reverses that order rather than
+  fixing it. Not launch-blocking, no CRITICAL item depends on it, but it should be
+  reordered, for example `App Store Connect MCP: for releases | asc-mcp`, keyword first,
+  brand last, within the 60-char budget.
+- **HIGH #3 (no trial copy box): still open, confirmed live.** `asc_start_trial` is
+  still plain prose at `index.html:232,374,408`; the install command still has the only
+  copy button. CRO friction, not a launch blocker.
+- **MEDIUM #7 (llms.txt hash claim uncorroborated): still open, confirmed live.**
+  `llms.txt` (lines 12 and 56 in this fetch) still states the SHA-256-hash-of-Issuer-ID
+  detail with no matching line in `index.html`'s FAQPage (grepped live, no "hash"
+  anywhere on the page). Minor AEO cross-surface consistency gap, not a launch blocker.
+- **HIGH #1 (Glama listing): confirmed external, no repo-side fix.** Their builder fails
+  resolving `debian:trixie-slim` from Docker Hub before it ever clones this repo.
+  Correctly out of scope for a site-file audit.
+
+Overall verdict on re-verification: **PASS**. No CRITICAL item existed in the original
+report or exists now; two HIGH-tier items (#3, #7) and one new MEDIUM-tier regression
+(title order) remain open but none block launch. Sentinel written to
+`.autopilot/state/seo_review_done`.
+
 ## Criteria matrix
 
 ```csv
@@ -69,7 +117,7 @@ seo.title.length,index.html,pass,"53 chars, ""App Store Connect MCP: ship a rele
 seo.title.length,writing/license-server/,pass,"59 chars, includes ""| asc-mcp"""
 seo.title.length,llms.txt,n/a,"plain text file, no <title>"
 seo.title.length,README.md,n/a,"markdown rendered by npm/Glama, no <head>"
-seo.title.keyword,index.html,fail,"index.html:6 keyword-first but brand token ""asc-mcp"" absent from title entirely; see HIGH #8"
+seo.title.keyword,index.html,fail,"re-verified 2026-09-07 post-deploy: title changed to ""asc-mcp: App Store Connect MCP server for releases"" (50 chars), brand now present but leads the title with keyword second, reversing the required order; see MEDIUM #8 re-verification note"
 seo.title.keyword,writing/license-server/,pass,"writing/license-server/index.html:6, keyword first, ""| asc-mcp"" last"
 seo.title.keyword,llms.txt,n/a,"plain text, no <title>"
 seo.title.keyword,README.md,n/a,"npm/Glama render their own chrome around the markdown"
@@ -167,14 +215,14 @@ aeo.answer.block,writing/license-server/,pass,"each of the 7 cases opens with a 
 aeo.answer.block,llms.txt,pass,"Facts section (llms.txt:5-19) is written entirely as quotable declarative sentences"
 aeo.answer.block,README.md,pass,"tool tables and Security section state capabilities as direct facts, README.md:286-293"
 aeo.evidence,index.html,fail,"specific numbers present (41 tools, $9/month, 7 days, 175 territories) but the visible ""Last updated 31 August 2026"" (index.html:493) contradicts the schema's dateModified of 2026-09-07 (index.html:519); a self-contradicting date is worse than no date, see MEDIUM #5"
-aeo.evidence,writing/license-server/,fail,"footer/nav version badge reads v1.9.5 (writing/license-server/index.html:142,317) against the product's actual v1.9.10, a stale specific number presented as current fact; see MEDIUM #6"
+aeo.evidence,writing/license-server/,pass,"re-verified 2026-09-07 post-deploy: both version badges now read v1.9.10, matching the rest of the site; see MEDIUM #6 re-verification note"
 aeo.evidence,llms.txt,fail,"trial hash-of-Issuer-ID claim (llms.txt:56) is not corroborated on index.html's own FAQPage, so the specific claim is not evidenced consistently across the site's own citable surfaces; see MEDIUM #7"
 aeo.evidence,README.md,pass,"version, publish date, and tool counts in README.md:7 match the live site exactly"
-aeo.comparison,index.html,fail,"no named comparison against free/larger alternatives (Heimdall, zelentsov-dev, etc.) anywhere on the indexed canonical page; the #different section argues in the abstract only. Comparison exists in README.md:268-284 but not here; see HIGH #4"
+aeo.comparison,index.html,pass,"re-verified 2026-09-07 post-deploy: dated comparison table live in #pricing naming Heimdall, zelentsov-dev/asc-mcp, fastlane and the ASC website, each linked, with a concession paragraph on tool count; see HIGH #4 re-verification note"
 aeo.comparison,writing/license-server/,n/a,"article is about license-server engineering, not product comparison; not the right page for this content"
-aeo.comparison,llms.txt,n/a,"llms.txt states facts and capability limits but is not the right format for a competitive table"
+aeo.comparison,llms.txt,pass,"re-verified 2026-09-07 post-deploy: ""How it compares (verified 7 September 2026)"" section added to llms.txt mirroring the on-page comparison table"
 aeo.comparison,README.md,pass,"explicit comparison table against ""Raw API wrappers (free)"", README.md:268-284, honest about tradeoffs (tool count 80-982 vs 41)"
-aeo.dates,index.html,fail,"dateModified present in schema (index.html:519) but visible footer text disagrees (index.html:493); see MEDIUM #5"
+aeo.dates,index.html,pass,"re-verified 2026-09-07 post-deploy: footer now reads ""Last updated 7 September 2026"", matching dateModified 2026-09-07; see MEDIUM #5 re-verification note"
 aeo.dates,writing/license-server/,pass,"datePublished and dateModified in schema (writing/license-server/index.html:117) match the visible ""Last updated 7 August 2026"" (writing/license-server/index.html:320)"
 aeo.dates,llms.txt,pass,"llms.txt:63 citation string carries an explicit updated date matching the current release"
 aeo.dates,README.md,n/a,"README has no persistent dateModified concept; npm shows its own last-publish timestamp independently"
