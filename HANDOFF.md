@@ -1,6 +1,6 @@
 # Handoff: appstore-connect-mcp
 
-Updated 2026-09-03. Branch `master`.
+Updated 2026-09-07. Branch `master`.
 
 ## Where things stand
 
@@ -60,6 +60,49 @@ whose address also has a paid row, because there have been zero conversions ever
 Driving real data proves the states that exist, not the ones a new feature is
 built to create. Those need constructed fixtures.
 
+## 7 September: the one paying subscription churned, involuntarily
+
+`kabrail.chamoun@gmail.com`, the only active subscription in the asc-mcp Polar
+org, is gone. Not a decision: the 5 September renewal charge was **declined for
+insufficient funds**, Polar retried for two days, then on 7 September at 10:59
+canceled and revoked the subscription and voided the $9 invoice.
+`customer_cancellation_reason` is null, which is what involuntary churn looks
+like. The worker handled all three webhooks correctly (row 41: active=0,
+canceled_at, revoked_at).
+
+**What the customer saw was wrong, and that is fixed and live in 1.9.10.**
+`isLicenseUsable` collapsed every switched-off row into `inactive`, so `doctor`
+said "a license key is set but did not validate as Pro" and sent them to
+re-check a key that was never wrong, and the Pro gate opened with "Free for
+7 days, no card: call asc_start_trial", an offer the trial endpoint refuses to a
+former subscriber. The worker now returns `revoked` / `canceled` (gating
+unchanged), `doctor` names the declined renewal, and `requirePro` drops the
+trial offer for any lapsed paid reason. Proven against production: a POST to
+`/validate` with that customer's key returns `reason: "revoked"`, and published
+1.9.10 renders it as "This subscription is no longer active. The usual cause is
+a renewal payment that did not go through."
+
+**Open, and it needs the operator**: nobody has told this person. Polar's own
+dunning mail is the only contact they have had, if it fired.
+`Marketing/failed-renewal-winback.txt` is paste-ready and its link is verified
+live (tagged `failed_renewal_email`, address prefilled). Worth deciding too
+whether the worker should send that automatically on a revoke; it is not built,
+because a webhook cannot reliably tell a declined card from a deliberate
+cancellation, and with eight customers a human note is better anyway.
+
+## Where the funnel actually stands, 7 September
+
+- **1 paid subscription lost**, 0 gained. The asc-mcp org now has zero active
+  subscriptions. The five grandfathered rows in the old org are untouched.
+- **No new trial since 2 September.** Five days, zero. `info@7stock.app` is
+  still the only live one, expires 9 September 17:53 UTC.
+- **The first reminder mail this product has ever sent fires 8 September at
+  15:00 UTC**, to that trial. Its row is unstamped, so nothing has gone out yet.
+- npm `latest` took 81 downloads last week against 546 across all versions.
+- **Glama is still stale after four days and several pushes**: `tools: []` and
+  the April "13 curated tools" description. Their builder, not our repo. It has
+  not retried successfully, so a push is evidently not enough to trigger one.
+
 ## Conversion path, audited against production 2026-09-04
 
 Every hop a person takes from a locked tool to a paid key, checked live rather
@@ -94,14 +137,17 @@ resolve on their own between 8 and 10 September.
 
 ## Next in order
 
-1. **Watch 8 to 10 September.** The reminder mails fire for the 9 September
+1. **Send the win-back** (`Marketing/failed-renewal-winback.txt`). One declined
+   card is the entire difference between one paying customer and none, and
+   nobody has spoken to them in our voice.
+2. **Watch 8 to 10 September.** The reminder mails fire for the 9 September
    trial. Check `intent_events` for `trial_ending_email` / `trial_lapsed_email`
    checkout clicks, and Polar for an order. That is the first real conversion
    signal this product has ever had.
-2. **Distribution is now the binding constraint, and it needs the operator.**
+3. **Distribution is now the binding constraint, and it needs the operator.**
    See "Blocked on accounts" below. Nothing in this repo will produce more
    trials until more people arrive.
-3. **Glama: the build failure is theirs, the missing instructions are
+4. **Glama: the build failure is theirs, the missing instructions are
    mcp-proxy's.** Build `01a06aee` (4 September, 10m33s) never reached our code.
    It died in `load metadata for docker.io/library/debian:trixie-slim` with
    `no active session ... context deadline exceeded`, a Docker Hub metadata
@@ -121,12 +167,12 @@ resolve on their own between 8 and 10 September.
    through the proxy, while `capabilities` and `serverInfo` survive. Every
    server Glama inspects loses its instructions this way, so no release of ours
    can fix it. Paste-ready issue: `launch/mcp-proxy-instructions-issue.txt`.
-4. Publish the improved registry description so PulseMCP stops mirroring the
+5. Publish the improved registry description so PulseMCP stops mirroring the
    April read-only copy (`launch/distribution-checklist.md` has the resync path,
    `launch/pulsemcp-listing-update.txt` is the email).
-5. Turn on Cloudflare Web Analytics for the site. It still has no analytics at
+6. Turn on Cloudflare Web Analytics for the site. It still has no analytics at
    all, so its visit count is unknown and step 2 cannot be measured.
-6. The licence emails still come from `license@brewist.app`. The three reminder
+7. The licence emails still come from `license@brewist.app`. The three reminder
    mails inherit that sender, so this now touches more messages than before.
 
 ## Blocked on accounts, not on work
@@ -183,7 +229,7 @@ resolving to a payable Polar session.
 
 240 package tests, 62 worker tests, `tsc --noEmit` clean in both.
 
-## The funnel, measured today
+## The funnel, as measured on 3 September (superseded above)
 
 - 13 licence rows: 8 paid (5 in the old grandfathered Polar org), 5 trials.
 - The `asc-mcp` Polar org holds one order and one subscription, **renewing
