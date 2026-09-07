@@ -135,6 +135,46 @@ Not verifiable from here, and therefore still unproven: a real payment through
 the live checkout, and a real reminder mail landing in someone's inbox. Both
 resolve on their own between 8 and 10 September.
 
+## The gates found a live false privacy claim, 7 September
+
+The legal audit turned up something none of the product work would have: the
+published privacy policy said the Issuer ID fingerprint is "never sent if you
+never start a trial". It is. `asc_start_trial` is also the path a subscriber
+uses to fetch a paid key onto a new machine, and that path stores the same
+digest as `claim_fingerprint` (`license-worker/src/index.ts:831`,
+`schema.sql:26`). Verified in the code before touching anything.
+
+Corrected and deployed (worker version `547f95f2`): both paths described, the
+"useless to anyone who obtains it" claim dropped because the salt is a public
+constant in an MIT repo which makes the digest pseudonymous rather than
+anonymous, lawful basis stated per category, Brevo named as the email
+processor, controller identity given, and the Lithuanian supervisory authority
+named. Policy `dateModified` moved with it.
+
+Three further corrections, all live:
+
+- The site said only a hash leaves your machine on a trial. The same request
+  carries the email address. Visible answer and FAQPage JSON-LD now say so.
+- Comparison claims a reader could disprove: fastlane is reachable from an agent
+  by shelling out, App Store Connect is not free but included with the $99/year
+  developer programme, and two rows were both called asc-mcp.
+- "whatever a tool list claims" was the only line in the block aimed at
+  competitors rather than at Apple's API, and it accused named traders of
+  overclaiming. Now "no matter which client you point at it".
+
+**1.9.11** carries the one product change: GDPR Article 13 wants the notice
+where the data is collected, and for an in-agent product that is the tool call,
+not a website the user never opens. `asc_start_trial` now names both stored
+values and links the deletion page and policy, in its argument description and
+in the confirmation it returns.
+
+Left for the operator, deliberately: the winback mail now has a trader identity
+and an opt-out (the ePrivacy soft opt-in requires one and it had none), but
+sending it is still yours. So is the refund policy, which exists nowhere, and
+the retention question the auditor raised: erasure currently deletes the
+fingerprint too, which hands out a second free trial, and the GDPR-clean fix is
+to null the email and key and keep the anchor. That is a conversion decision.
+
 ## Next in order
 
 1. **Send the win-back** (`Marketing/failed-renewal-winback.txt`). One declined
