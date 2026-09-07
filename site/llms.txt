@@ -9,7 +9,7 @@
 - One-click install on Claude Desktop (macOS and Windows): download the `.mcpb` bundle from https://github.com/pofky/asc-mcp/releases/latest and open it. Claude installs it in one click and collects the Issuer ID and the `.p8` file natively, with no config file editing and no restart. Every other client uses the `npx` command above.
 - Tool count: 41 tools and 6 prompts. 6 tools are free, 35 require Pro or a running trial.
 - Free tools: `asc_start_trial`, `asc_setup_check`, `asc_guide`, `list_apps`, `app_details`, `review_status`. No asc-mcp account or signup is required for any of them. The first three need nothing at all; the other three read from App Store Connect, so they need your own Apple API key like every other tool here.
-- Free trial: all 41 tools for 7 days, no credit card and nothing to cancel. Started in-agent by calling the `asc_start_trial` tool with an email address, not on a website. It activates in the running session, so a tool that was just refused works on the next call with no restart. One trial per Apple developer account, identified by a one-way hash of the Issuer ID computed on the user's machine.
+- Free trial: all 41 tools for 7 days, no credit card and nothing to cancel. Started in-agent by calling the `asc_start_trial` tool with an email address, not on a website. It activates in the running session, so a tool that was just refused works on the next call with no restart. One trial per Apple developer account, identified by a one-way hash of the Issuer ID computed on the user's machine. The request also carries the email address the user supplies, so the key can be delivered.
 - Pricing: free for the first 7 days via `asc_start_trial`, then Pro is $9 per month, billed through Polar, cancel any time. Purchase: https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj
 - License key recovery: https://asc-mcp-license.remewdy.workers.dev/key
 - Architecture: the App Store Connect `.p8` private key stays on the user's machine. JWTs are signed locally. API calls go directly from the user's computer to api.appstoreconnect.apple.com with no proxy. The only other outbound call validates the license key.
@@ -53,7 +53,7 @@ A: Nothing for the first 7 days: `asc_start_trial` unlocks all 41 tools with no 
 A: Yes, apart from four website-only steps: creating the app record, the App Privacy nutrition label, EU trader status, and an app's very first in-app purchases. asc-mcp flags each of these before you hit them and hands over the exact steps and deep link.
 
 **Q: Is my App Store Connect API key sent anywhere?**
-A: No. The `.p8` is read locally, tokens are signed locally, and requests go straight to Apple. The one exception is narrow and opt-in: if you start a free trial, a SHA-256 hash of your Issuer ID is sent so one Apple account cannot take unlimited trials. The Issuer ID itself, the Key ID and the `.p8` are never transmitted.
+A: No. The `.p8` is read locally, tokens are signed locally, and requests go straight to Apple. The one exception is narrow and user-initiated: calling `asc_start_trial` sends the email address you give it, plus a SHA-256 hash of your Issuer ID computed on your machine so one Apple account cannot take unlimited trials. The Issuer ID itself, the Key ID and the `.p8` are never transmitted. Privacy policy: https://asc-mcp-license.remewdy.workers.dev/privacy
 
 **Q: How is it different from MCP servers that wrap the App Store Connect API?**
 A: Wrappers map endpoints one to one, which can mean hundreds of tools and leaves sequencing to the agent. asc-mcp ships 41 job-shaped tools: one call merges and submits a full age-rating declaration, one call prices a subscription across about 175 territories with a free trial, one call audits a version and lists every submission blocker with its fix.
@@ -64,10 +64,10 @@ asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.9.10, upda
 
 ## How it compares (verified 7 September 2026)
 
-- asc-mcp: $9/month, six tools free with no time limit, 41 job-shaped tools, preflight audit, and a maintained record of what Apple's API refuses to do.
+- asc-mcp (@pofky/asc-mcp, this project): $9/month, six tools free with no time limit, 41 job-shaped tools, preflight audit, and a maintained record of what Apple's API refuses to do.
 - Heimdall (github.com/erayendes/app-store-connect-mcp): free, MIT, 890 tools generated from Apple's OpenAPI spec, with macros and a confirm-before-write flag.
 - zelentsov-dev/asc-mcp (github.com/zelentsov-dev/asc-mcp): free, MIT, 502 tools, also covers Xcode Cloud, which asc-mcp does not.
-- fastlane: free, MIT, a Ruby CLI rather than an MCP server, so an agent cannot call it as a tool.
-- App Store Connect website: free, manual, in a browser.
+- fastlane: free, MIT, a Ruby CLI rather than an MCP server, so an agent reaches it by shelling out and parsing text rather than by calling a typed tool.
+- App Store Connect website: included with the $99/year Apple Developer Program, manual, in a browser.
 
-Every competitor here is free and two expose far more tools. What is paid for is not tool count: the App Privacy label, EU trader status, an app's first in-app purchase, and creating the app record itself cannot be done through Apple's API at all, and asc-mcp flags each one inline before you start. That list is public at https://github.com/pofky/asc-mcp/blob/master/LIMITATIONS.md and the free asc_guide tool serves it to an agent mid-task.
+Every other MCP server here is free and two expose far more tools. What is paid for is not tool count: the App Privacy label, EU trader status, an app's first in-app purchase, and creating the app record itself cannot be done through Apple's API at all, and asc-mcp flags each one inline before you start. That list is public at https://github.com/pofky/asc-mcp/blob/master/LIMITATIONS.md and the free asc_guide tool serves it to an agent mid-task.

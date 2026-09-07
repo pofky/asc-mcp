@@ -1378,7 +1378,7 @@ async function handleKeyLookup(
 function handlePrivacy(headers: Record<string, string>): Response {
   return html(`
     <h1>Privacy Policy</h1>
-    <p><em>Last updated: August 6, 2026</em></p>
+    <p><em>Last updated: September 7, 2026</em></p>
 
     <h2>What we collect</h2>
     <p>When you purchase a Pro license, we store:</p>
@@ -1386,6 +1386,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>Your email address (from the checkout provider)</li>
       <li>A generated license key</li>
       <li>Your subscription ID (for managing renewals and cancellations)</li>
+      <li>If you later use <code>asc_start_trial</code> to fetch your paid key onto a machine, the same one-way fingerprint described below, recorded once so that a second person who knows your email address cannot read your key out of the API</li>
     </ul>
     <p>When you start a free 7-day trial with the <code>asc_start_trial</code> tool, we store:</p>
     <ul>
@@ -1398,11 +1399,12 @@ function handlePrivacy(headers: Record<string, string>): Response {
 
     <h2>The trial fingerprint, specifically</h2>
     <p>A trial gives away paid software, so we need to know that one person cannot take an unlimited number of them. The anchor we use is your App Store Connect Issuer ID, because it identifies an Apple developer account rather than a person.</p>
-    <p><strong>Your Issuer ID is not sent to us.</strong> It is hashed with SHA-256 on your own machine and only the resulting digest is transmitted. The digest cannot be reversed into your Issuer ID, is useless to anyone who obtains it, and is sent only at the moment you explicitly ask to start a trial. It is never sent on startup, never sent during normal use, and never sent if you never start a trial.</p>
+    <p><strong>Your Issuer ID is not sent to us.</strong> It is hashed with SHA-256 on your own machine and only the resulting digest is transmitted. It is sent only when you call <code>asc_start_trial</code>, whether that is to begin a trial or to fetch a paid key onto a new machine, so a subscriber who never trialled can still have one recorded. It is never sent on startup and never sent during normal use of any other tool.</p>
+    <p>The digest cannot be turned back into your Issuer ID by anyone who obtains it. It is not anonymous, though: the hashing recipe is public in our open-source code, so somebody who already knows a specific Issuer ID could confirm a digest matches it. We treat it as pseudonymous personal data, and everything below applies to it.</p>
 
     <h2>What we don't collect</h2>
     <ul>
-      <li>Your Apple API credentials never leave your machine. The .p8 private key and Key ID are never transmitted anywhere by this software, and your Issuer ID is only ever sent as the one-way digest described above, only when you start a trial</li>
+      <li>Your Apple API credentials never leave your machine. The .p8 private key and Key ID are never transmitted anywhere by this software, and your Issuer ID is only ever sent as the one-way digest described above, only when you call <code>asc_start_trial</code></li>
       <li>No App Store Connect data passes through our servers</li>
       <li>No usage analytics or telemetry from the software. The MCP server does not report which tools you run, or when, or how often</li>
       <li>No cookies, no advertising identifiers, no third-party trackers</li>
@@ -1414,10 +1416,13 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>A license key validation check, sending only the license key string. This happens on startup when you have a key set, and the result is cached for 24 hours.</li>
       <li>A trial request, sending the email you provided, the one-way fingerprint, and the tool name. This happens only when you call <code>asc_start_trial</code>.</li>
     </ul>
-    <p>Separately, when you click a subscribe link from inside your agent, it passes through a redirect on our server that increments a daily counter of the form "3 people clicked the buy link from the submit_for_review tool today". That counter holds a date, a tool name and a number. It records no identifier, no IP address, no user agent, and nothing that could be tied back to you.</p>
+    <p>Separately, when you click a subscribe link from inside your agent, it passes through a redirect on our server that increments a daily counter of the form "3 people clicked the buy link from the submit_for_review tool today". That counter holds a date, a tool name and a number. It records no identifier, no IP address, no user agent, and nothing that could be tied back to you. A link we email you may carry your address in it as a checkout prefill, so you do not have to retype it; that value is passed to the checkout and is not written to the counter.</p>
 
     <h2>Data storage</h2>
     <p>License data is stored on Cloudflare D1 (EU region). Cloudflare acts as our infrastructure provider under their <a href="https://www.cloudflare.com/cloudflare-customer-dpa/">Data Processing Agreement</a>.</p>
+
+    <h2>Email delivery</h2>
+    <p>Licence keys, deletion confirmation links and the occasional product notice are sent through <a href="https://www.brevo.com/">Brevo</a>, a French email provider acting as our processor under their data processing agreement. They receive your email address and the contents of the message, and nothing else.</p>
 
     <h2>Payment processing</h2>
     <p>Payments are handled by <a href="https://polar.sh">Polar.sh</a>, who acts as Merchant of Record. We never see your credit card details. Polar's privacy policy applies to the checkout process.</p>
@@ -1426,8 +1431,19 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <p>We keep your email, license key and subscription id for as long as the record exists, including after a subscription is cancelled or a trial ends. Two honest reasons: a cancelled subscriber who resubscribes should get their history back rather than a support ticket, and deleting a finished trial record is the same as handing out a second free trial.</p>
     <p>You can delete all of it whenever you like at <a href="/delete">/delete</a>. We email you a confirmation link first, so that nobody can remove your license by typing your address into a form, and the deletion runs when you click it. This is the only deletion mechanism: there is no automatic purge on a timer, and we would rather say so than publish a promise no code keeps.</p>
 
+    <h2>Who controls this data</h2>
+    <p>The data controller is Povilas Konopackas, sole trader, Lithuania, reachable at povkonop@gmail.com.</p>
+
+    <h2>Why we are allowed to hold it</h2>
+    <ul>
+      <li>Your email, licence key and subscription id, for a paid subscription: performance of the contract you entered into when you subscribed (GDPR Article 6(1)(b)). We cannot deliver or validate a licence without them.</li>
+      <li>Your email and licence key, for a free trial: taking steps at your request before entering a contract (Article 6(1)(b)).</li>
+      <li>The one-way Issuer ID fingerprint: our legitimate interest in not giving the same person an unlimited number of free trials, and in not reading a paying customer's key out to a stranger who guessed their email address (Article 6(1)(f)). We considered doing this with the email alone and rejected it, because that would let anyone burn a stranger's trial by typing their address.</li>
+    </ul>
+
     <h2>Your rights (GDPR)</h2>
-    <p>You can request access to, correction of, or deletion of your personal data at any time. To delete your data, visit <a href="/delete">/delete</a> and click the link we email you, or just email us and we will do it by hand.</p>
+    <p>You can ask for access to your data, correction of it, a copy of it in a portable format, or its deletion, at any time. To delete it, visit <a href="/delete">/delete</a> and click the link we email you, or email us and we will do it by hand. Because the fingerprint is held on legitimate interest, you can also object to that processing under Article 21; in practice objecting means the record is deleted, which also ends any trial anchored to it. We answer within one month.</p>
+    <p>If you think we have handled your data badly you can complain to the Lithuanian State Data Protection Inspectorate (Valstybine duomenu apsaugos inspekcija, <a href="https://vdai.lrv.lt/">vdai.lrv.lt</a>), or to the supervisory authority where you live.</p>
 
     <h2>Contact</h2>
     <p>For privacy questions: povkonop@gmail.com</p>
@@ -1436,7 +1452,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
   `, headers, 200, {
     title: "Privacy Policy",
     canonical: "https://asc-mcp-license.remewdy.workers.dev/privacy",
-    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"asc-mcp","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Privacy Policy"}]},{"@type":"WebPage","name":"Privacy Policy","url":"https://asc-mcp-license.remewdy.workers.dev/privacy","dateModified":"2026-08-06","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
+    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"asc-mcp","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Privacy Policy"}]},{"@type":"WebPage","name":"Privacy Policy","url":"https://asc-mcp-license.remewdy.workers.dev/privacy","dateModified":"2026-09-07","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
   });
 }
 

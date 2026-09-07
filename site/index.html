@@ -386,9 +386,12 @@ When the trial ends, Pro is $9/month.</code></pre>
       <p><span class="fact">Nowhere.</span> The .p8 stays on your machine, JWTs are signed locally, and calls go
       straight from your computer to api.appstoreconnect.apple.com. Nothing proxies through this project. The only
       network call it makes elsewhere is a license check that sends your license key, not your credentials.</p>
-      <p>One narrow exception, and only if you start a trial: a SHA-256 hash of your Issuer ID is computed on your
-      machine and sent, so one Apple developer account cannot take unlimited trials. The Issuer ID itself, the Key
-      ID and the .p8 are never transmitted.</p>
+      <p>One narrow exception, and only when you call <code>asc_start_trial</code>: that request sends the email
+      address you give it, so the key can reach you, and a SHA-256 hash of your Issuer ID computed on your machine,
+      so one Apple developer account cannot take unlimited trials. The Issuer ID itself, the Key ID and the .p8 are
+      never transmitted. Both values are covered by the
+      <a href="https://asc-mcp-license.remewdy.workers.dev/privacy">privacy policy</a>, and you can delete them at any
+      time.</p>
     </div>
 
     <div class="q">
@@ -457,7 +460,7 @@ When the trial ends, Pro is $9/month.</code></pre>
           </thead>
           <tbody>
             <tr class="us">
-              <td>asc-mcp</td>
+              <td>asc-mcp (<code>@pofky/asc-mcp</code>, this project)</td>
               <td>$9 per month, 6 tools free with no expiry</td>
               <td>41</td>
               <td>Tools shaped like jobs, a preflight audit before you submit, and a maintained record of what
@@ -480,11 +483,12 @@ When the trial ends, Pro is $9/month.</code></pre>
               <td><a href="https://fastlane.tools/">fastlane</a></td>
               <td>Free, MIT</td>
               <td>Not applicable</td>
-              <td>The incumbent CLI. Ruby toolchain and lane files, and your agent cannot call it as a tool</td>
+              <td>The incumbent CLI. Ruby toolchain and lane files. Not an MCP server, so an agent reaches it by
+                shelling out and parsing text rather than by calling a typed tool</td>
             </tr>
             <tr>
               <td><a href="https://appstoreconnect.apple.com/">App Store Connect</a></td>
-              <td>Free</td>
+              <td>Included with the $99/year Apple Developer Program</td>
               <td>Not applicable</td>
               <td>Apple's own console, in a browser, by hand</td>
             </tr>
@@ -492,12 +496,14 @@ When the trial ends, Pro is $9/month.</code></pre>
         </table>
       </div>
       <p class="reassure" style="margin-top:12px">Competitor tool counts, licences and prices read from each
-        project on 7 September 2026.</p>
+        project on 7 September 2026. These projects ship fast and the counts change; the links go to the source
+        so you can check today's numbers yourself.</p>
       <p style="margin-top:18px"><b style="color:var(--text)">So why pay.</b> Not for the tool count, which is a
         losing number here and always will be: a generated server gets one tool per endpoint for free. You pay for
         the part that cannot be generated, which is knowing what Apple will not let you do. The App Privacy label,
         EU trader status, the first in-app purchase of an app, and the app record itself cannot be created or set
-        through the API at all, whatever a tool list claims, and finding that out costs a release. This server
+        through the App Store Connect API at all, no matter which client you point at it, and finding that out costs a
+        release. This server
         flags every one of them inline, before you start, and keeps the list current by hitting the live API and
         being refused. <a href="https://github.com/pofky/asc-mcp/blob/master/LIMITATIONS.md">Read the list</a>, it
         is public and it is the product. The six free tools include <code>asc_guide</code>, which serves that same
@@ -588,7 +594,7 @@ When the trial ends, Pro is $9/month.</code></pre>
       <a href="/llms.txt">llms.txt</a>
     </div>
     <p style="margin:0">asc-mcp v1.9.10, MIT licensed. Built and maintained by Povilas Konopackas, sole trader,
-      Lithuania. Not affiliated with Apple Inc. App Store and App Store Connect are trademarks of Apple Inc.</p>
+      Lithuania. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, Xcode and iOS are trademarks of Apple Inc.</p>
     <p style="margin:8px 0 0">Last updated 7 September 2026.</p>
   </div>
 </footer>
@@ -625,7 +631,7 @@ async function copyHandler() {
 {"@type":"Question","name":"How do I start the asc-mcp free trial?","acceptedAnswer":{"@type":"Answer","text":"Ask your coding agent to call the asc_start_trial tool with your email address. There is no website signup and no credit card. The key it returns activates in the running session, so the Pro tool you were blocked on works on the very next call without restarting your agent, and the key is written into your MCP config so it survives a restart. One trial per Apple developer account."}},
 {"@type":"Question","name":"Is there a free trial of asc-mcp?","acceptedAnswer":{"@type":"Answer","text":"Yes. All 41 tools are free for 7 days, no credit card and nothing to cancel. You start it from inside your coding agent by calling the asc_start_trial tool with your email address, rather than signing up on a website. The trial activates in the running session, so the tool you were blocked on works on the next call without restarting your agent. One trial per Apple developer account."}},
 {"@type":"Question","name":"Can an AI agent submit an app to the App Store?","acceptedAnswer":{"@type":"Answer","text":"Yes, with limits. asc-mcp can edit version metadata, upload screenshots, attach a build, set the age rating, price and availability, then submit for review and release. Four things must still be done on the App Store Connect website: creating the app record, the App Privacy nutrition label, and EU trader status. An app's very first in-app purchases must also be submitted with the version on the website."}},
-{"@type":"Question","name":"Is it safe to give an MCP server an App Store Connect API key?","acceptedAnswer":{"@type":"Answer","text":"With asc-mcp the .p8 private key never leaves your machine. JWTs are signed locally and API calls go directly from your computer to api.appstoreconnect.apple.com with no proxy. The only other network call is a license validation that sends the license key, not your Apple credentials. If you start a free trial, one further value is sent: a SHA-256 hash of your Issuer ID, computed on your machine, so a single Apple developer account cannot take unlimited trials. The Issuer ID itself, the Key ID and the .p8 are never transmitted."}},
+{"@type":"Question","name":"Is it safe to give an MCP server an App Store Connect API key?","acceptedAnswer":{"@type":"Answer","text":"With asc-mcp the .p8 private key never leaves your machine. JWTs are signed locally and API calls go directly from your computer to api.appstoreconnect.apple.com with no proxy. The only other network call is a license validation that sends the license key, not your Apple credentials. Calling asc_start_trial sends two further values: the email address you give it, so the key can reach you, and a SHA-256 hash of your Issuer ID, computed on your machine, so a single Apple developer account cannot take unlimited trials. The Issuer ID itself, the Key ID and the .p8 are never transmitted."}},
 {"@type":"Question","name":"What can the App Store Connect API not do?","acceptedAnswer":{"@type":"Answer","text":"Creating an app record (POST /v1/apps is forbidden for API keys), creating App Groups, setting the App Privacy nutrition label, declaring EU trader status, submitting an app's first in-app purchases, posting public replies to reviews, and Xcode cloud signing with a least-privilege key. asc-mcp returns the exact manual steps and deep links for each instead of failing silently."}},
 {"@type":"Question","name":"Which clients does asc-mcp work with?","acceptedAnswer":{"@type":"Answer","text":"Any MCP client that speaks stdio, including Claude Code, Claude Desktop, Cursor, Windsurf and Cline. It needs Node 18 or newer. Building and uploading a binary additionally requires a Mac with Xcode."}}]}
 ]}
