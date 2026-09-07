@@ -140,6 +140,14 @@ export function isLicenseUsable(
   // Revocation stays terminal: `revoked_at` is stamped by the revoke path and no
   // amount of grace brings that row back.
   if (!row.active && !isWithinRenewalGrace(row, now)) {
+    // Say which kind of dead this is. "inactive" is true but useless to the
+    // person reading it: a customer whose renewal card was declined and whose
+    // subscription Polar then revoked was told a licence key "did not validate",
+    // which sends them to check a key that is perfectly correct instead of
+    // telling them a payment failed and offering the one link that fixes it.
+    // Gating is unchanged, only the label.
+    if (row.revoked_at) return { usable: false, reason: "revoked" };
+    if (row.canceled_at) return { usable: false, reason: "canceled" };
     return { usable: false, reason: "inactive" };
   }
   if (!row.expires_at) return { usable: true };

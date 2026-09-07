@@ -47,10 +47,20 @@ export function requirePro(
   // broken. `reason` comes from the licence server's last verdict on their key.
   const spent = lastLicenseStatus()?.reason === "trial_expired";
 
+  // A former subscriber must not be offered a free trial either. Someone whose
+  // renewal was declined, or who cancelled, is refused by the trial endpoint
+  // anyway, so the offer reads as broken at the exact moment they were willing
+  // to pay. They get the same wording as a spent trial: the price and the link.
+  const reason = lastLicenseStatus()?.reason;
+  const lapsedPaid = reason === "revoked" || reason === "canceled" || reason === "inactive";
+
   return (
     `${capability} requires Pro.\n\n` +
-    (spent
-      ? "Your 7-day trial has ended. Pro is $9/month, cancel any time:\n" +
+    (spent || lapsedPaid
+      ? (spent
+          ? "Your 7-day trial has ended. "
+          : "Your subscription is no longer active; a declined renewal is the usual cause. ") +
+        "Pro is $9/month, cancel any time:\n" +
         `  ${upgradeUrl(tool)}\n` +
         `  (direct link: ${CHECKOUT_URL})\n\n` +
         "If you already subscribed, call `asc_start_trial` with the same email and it will fetch " +

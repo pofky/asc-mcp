@@ -122,7 +122,7 @@ describe("isLicenseUsable", () => {
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
     expect(
       isLicenseUsable({ expires_at: yesterday, active: 0, revoked_at: "2026-08-01" }, now),
-    ).toEqual({ usable: false, reason: "inactive" });
+    ).toEqual({ usable: false, reason: "revoked" });
   });
 
   it("does validate a lapsed subscription that was only deactivated by a late renewal", () => {

@@ -70,6 +70,30 @@ describe("runDoctor", () => {
   });
 
   /**
+   * A declined renewal is not a broken key either. Row 41 on 7 September 2026:
+   * the card was refused for insufficient funds, Polar revoked the
+   * subscription, and doctor told a customer who had been paying since August
+   * that a key "did not validate", sending them to re-check something that was
+   * never wrong.
+   */
+  it("names a declined renewal instead of blaming the key", async () => {
+    process.env.ASC_LICENSE_KEY = "ASC-REVOKED-0000-0000-0000";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ valid: false, tier: "free", reason: "revoked" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+
+    const text = formatDoctor(await runDoctor());
+    expect(text).toContain("renewal payment that did not go through");
+    expect(text).not.toContain("did not validate as Pro");
+  });
+
+  /**
    * The trial clock. A live trial validates as Pro, and the line used to say
    * only "all tools unlocked", so the one number a trial user needs was the one
    * thing the product never told them. Six trials expired in 2026 and none
