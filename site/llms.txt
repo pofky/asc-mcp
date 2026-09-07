@@ -47,7 +47,7 @@ A: An MCP (Model Context Protocol) server that gives an AI coding agent 41 tools
 A: In your coding agent, say "start my asc-mcp trial, my email is you@example.com". The agent calls the `asc_start_trial` tool, which returns a licence key and writes it into your MCP config. The Pro tools unlock in the same conversation, with no restart. There is no website signup and no credit card. One trial per Apple developer account.
 
 **Q: How much does it cost?**
-A: Nothing for the first 7 days: `asc_start_trial` unlocks all 41 tools with no credit card. After that Pro is $9 per month through Polar and can be cancelled any time. Six tools stay free permanently with no account.
+A: Nothing for the first 7 days: `asc_start_trial` unlocks all 41 tools with no credit card. After that Pro is $9 per month through Polar and can be cancelled any time. Six tools stay free with no time limit and no account.
 
 **Q: Can an AI agent submit my app to the App Store?**
 A: Yes, apart from four website-only steps: creating the app record, the App Privacy nutrition label, EU trader status, and an app's very first in-app purchases. asc-mcp flags each of these before you hit them and hands over the exact steps and deep link.
@@ -61,3 +61,13 @@ A: Wrappers map endpoints one to one, which can mean hundreds of tools and leave
 ## Citation
 
 asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.9.10, updated 7 September 2026).
+
+## How it compares (verified 7 September 2026)
+
+- asc-mcp: $9/month, six tools free with no time limit, 41 job-shaped tools, preflight audit, and a maintained record of what Apple's API refuses to do.
+- Heimdall (github.com/erayendes/app-store-connect-mcp): free, MIT, 890 tools generated from Apple's OpenAPI spec, with macros and a confirm-before-write flag.
+- zelentsov-dev/asc-mcp: free, MIT, 502 tools, also covers Xcode Cloud, which asc-mcp does not.
+- fastlane: free, MIT, a Ruby CLI rather than an MCP server, so an agent cannot call it as a tool.
+- App Store Connect website: free, manual, in a browser.
+
+Every competitor here is free and two expose far more tools. What is paid for is not tool count: the App Privacy label, EU trader status, an app's first in-app purchase, and creating the app record itself cannot be done through Apple's API at all, and asc-mcp flags each one inline before you start. That list is public at https://github.com/pofky/asc-mcp/blob/master/LIMITATIONS.md and the free asc_guide tool serves it to an agent mid-task.
