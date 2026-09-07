@@ -23,7 +23,8 @@
     "docs": "tsc && node scripts/gen-docs.mjs",
     "lint": "tsc --noEmit",
     "mcpb": "npm run build && node scripts/build-mcpb.mjs",
-    "release": "node scripts/release.mjs"
+    "release": "node scripts/release.mjs",
+    "check:site": "node scripts/check-site-strings.mjs"
   },
   "keywords": [
     "mcp",
