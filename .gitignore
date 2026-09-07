@@ -12,3 +12,7 @@ build/
 # Playwright MCP scratch output and one-off screenshots from flow audits.
 .playwright-mcp/
 site-*.png
+.autopilot/
+.claude/
+.mcp.json
+.mcp.json.bak-*
