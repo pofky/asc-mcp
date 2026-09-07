@@ -109,6 +109,76 @@ report or exists now; two HIGH-tier items (#3, #7) and one new MEDIUM-tier regre
 (title order) remain open but none block launch. Sentinel written to
 `.autopilot/state/seo_review_done`.
 
+## Re-verification 2, 2026-09-07 (second post-deploy pass, v1.9.11)
+
+Re-checked live again against `https://asc-mcp.pages.dev/`, `/llms.txt` and
+`/writing/license-server/` after a further deploy. Read the actual `<script>` in the
+served HTML, not the coordinator's description of it.
+
+- **HIGH #3 (no trial copy box): FIXED, verified live, and the copy-handler rewrite is
+  correct.** `index.html:277-278` adds a second `.install`-style block, `id="ask"`,
+  containing the literal trial sentence, with a `data-copy="ask"` button. The handler at
+  `index.html:602-618` now does
+  `document.querySelectorAll('#copy, [data-copy]').forEach(...)` and resolves the target
+  as `document.getElementById(btn.dataset.copy || 'cmd')`. Traced both cases by hand: the
+  install button (`id="copy"`, no `data-copy` attribute) resolves `dataset.copy` to
+  `undefined`, so `|| 'cmd'` correctly targets the install code block; the trial button
+  (`data-copy="ask"`) resolves to `getElementById('ask')`, the trial sentence. The
+  `catch` fallback uses the same resolved `target` variable in both branches, so the
+  range-selection fallback also selects the right element for whichever button was
+  clicked. Not a copy-paste bug.
+- **MEDIUM #7 (llms.txt hash claim uncorroborated): FIXED, verified live.** Both the
+  visible answer (`index.html:388-393`, "Where does my API key go?") and the FAQPage
+  JSON-LD entry ("Is it safe to give an MCP server an App Store Connect API key?") now
+  state that `asc_start_trial` sends the email address in addition to the Issuer ID
+  hash, matching `llms.txt`. Read as a direct, complete answer, not a hedge: it lists
+  both values, states what they are for, and repeats what is never sent.
+- **MEDIUM #8 (title brand-order regression): FIXED, verified live.** Title is now
+  `App Store Connect MCP server for releases | asc-mcp`, 51 characters, keyword first,
+  brand last, closing this finding for real this time.
+- **Legal-audit copy changes: verified accurate, not just present.** The comparison
+  table's own row now reads `asc-mcp (@pofky/asc-mcp, this project)`
+  (`index.html:463`); the App Store Connect row now says "Included with the $99/year
+  Apple Developer Program" (`index.html:491`) instead of the misleading "Free"; the
+  fastlane row no longer claims an agent cannot call it, it now says fastlane is "Not an
+  MCP server, so an agent reaches it by shelling out and parsing text rather than by
+  calling a typed tool" (`index.html:483-484`), a narrower and more defensible claim;
+  the dated disclosure line now adds "These projects ship fast and the counts change"
+  (`index.html:498-499`); the "So why pay" paragraph no longer contains "whatever a tool
+  list claims" and still reads as a direct, non-hedged argument (`index.html:501-508`).
+  `llms.txt`'s "How it compares" section (lines 65-73) mirrors all of this. FAQPage and
+  the SoftwareApplication block both still parse clean (`json.loads`, one `@graph` block,
+  zero errors).
+- **New, independently-found regression: the trademark and version rollout did not reach
+  the sub-page.** `writing/license-server/index.html:317` still says "Not affiliated
+  with Apple Inc. App Store and App Store Connect are trademarks of Apple Inc." while
+  `index.html:597` was expanded to "Not affiliated with, endorsed by or sponsored by
+  Apple Inc. Apple, App Store, App Store Connect, TestFlight, Xcode and iOS are
+  trademarks of Apple Inc." The two pages now carry different trademark disclaimers for
+  the same product, which undercuts the point of the legal audit that produced the wider
+  one. Same page also still reads `v1.9.10` in both the nav badge (`:142`) and footer
+  (`:317`) while the rest of the site moved to `v1.9.11` (confirmed in the
+  `SoftwareApplication` JSON-LD, `index.html:628`, and the index footer/nav). This is
+  the same staleness pattern as the original MEDIUM #6, one version behind again,
+  because the version string is still hand-copied per file rather than templated from
+  one source, exactly the risk flagged in MEDIUM #6's original fix recommendation. Not
+  launch-blocking on its own, but it should be fixed in the same pass that produced the
+  wider disclaimer, and it will keep recurring every release until the version badge is
+  templated instead of duplicated.
+- **Everything previously verified as unaffected, re-confirmed:** JSON-LD still parses
+  clean on both HTML pages; zero em-dashes and zero standard-banned phrases across
+  index.html, llms.txt and the writing page; Core Web Vitals still excellent live
+  (Lighthouse 12.8.2: LCP 0.9s, CLS 0, TBT 0ms, performance/accessibility/best-practices
+  1.00, SEO 0.92 with the same robots-txt tooling false positive); robots.txt and
+  sitemap.xml both still 200.
+
+Verdict on this pass: **PASS**. HIGH #3 and MEDIUM #7 and MEDIUM #8 are now genuinely
+closed, verified by reading the served markup and tracing the copy-handler logic, not by
+trusting either report. HIGH #1 (Glama) remains open and external. One new, non-blocking
+MEDIUM is recorded above: the writing page's trademark disclaimer and version badge did
+not get the same update as the home page. Sentinel rewritten:
+`.autopilot/state/seo_review_done`.
+
 ## Criteria matrix
 
 ```csv
@@ -117,7 +187,7 @@ seo.title.length,index.html,pass,"53 chars, ""App Store Connect MCP: ship a rele
 seo.title.length,writing/license-server/,pass,"59 chars, includes ""| asc-mcp"""
 seo.title.length,llms.txt,n/a,"plain text file, no <title>"
 seo.title.length,README.md,n/a,"markdown rendered by npm/Glama, no <head>"
-seo.title.keyword,index.html,fail,"re-verified 2026-09-07 post-deploy: title changed to ""asc-mcp: App Store Connect MCP server for releases"" (50 chars), brand now present but leads the title with keyword second, reversing the required order; see MEDIUM #8 re-verification note"
+seo.title.keyword,index.html,pass,"re-verified 2026-09-07, second pass: title now ""App Store Connect MCP server for releases | asc-mcp"" (51 chars), keyword first, brand last; see MEDIUM #8 re-verification note 2"
 seo.title.keyword,writing/license-server/,pass,"writing/license-server/index.html:6, keyword first, ""| asc-mcp"" last"
 seo.title.keyword,llms.txt,n/a,"plain text, no <title>"
 seo.title.keyword,README.md,n/a,"npm/Glama render their own chrome around the markdown"
@@ -190,7 +260,7 @@ cro.depth.intent,index.html,pass,"pricing is a same-page anchor section, zero cl
 cro.depth.intent,writing/license-server/,pass,"single scroll-depth article, no pagination or gating"
 cro.depth.intent,llms.txt,n/a,"not a navigable page"
 cro.depth.intent,README.md,pass,"pricing link and cost stated in the first five lines, README.md:5,15"
-cro.cta.copy,index.html,fail,"""Start free, no card"" (index.html:215) names an outcome, not a destination, and does not itself start anything, it scrolls to #pricing where the actual action is a prose instruction; see HIGH #2/#3"
+cro.cta.copy,index.html,pass,"re-verified 2026-09-07, second pass: the underlying friction this criterion was proxying for is fixed, the trial-start sentence now has its own copy box (index.html:277-278) alongside the install command, so ""Start free, no card"" leading to #pricing is followed by a directly actionable, copy-pasteable step rather than a prose instruction; see HIGH #3 re-verification note 2"
 cro.cta.copy,writing/license-server/,pass,"the end-of-article link names its destination plainly (asc-mcp), writing/license-server/index.html:298"
 cro.cta.copy,llms.txt,n/a,"not a visual page"
 cro.cta.copy,README.md,pass,"[Get Pro](...) and [Retrieve your license key](...) both name their destination, README.md:159"
@@ -216,7 +286,7 @@ aeo.answer.block,llms.txt,pass,"Facts section (llms.txt:5-19) is written entirel
 aeo.answer.block,README.md,pass,"tool tables and Security section state capabilities as direct facts, README.md:286-293"
 aeo.evidence,index.html,fail,"specific numbers present (41 tools, $9/month, 7 days, 175 territories) but the visible ""Last updated 31 August 2026"" (index.html:493) contradicts the schema's dateModified of 2026-09-07 (index.html:519); a self-contradicting date is worse than no date, see MEDIUM #5"
 aeo.evidence,writing/license-server/,pass,"re-verified 2026-09-07 post-deploy: both version badges now read v1.9.10, matching the rest of the site; see MEDIUM #6 re-verification note"
-aeo.evidence,llms.txt,fail,"trial hash-of-Issuer-ID claim (llms.txt:56) is not corroborated on index.html's own FAQPage, so the specific claim is not evidenced consistently across the site's own citable surfaces; see MEDIUM #7"
+aeo.evidence,llms.txt,pass,"re-verified 2026-09-07, second pass: index.html's visible privacy answer and FAQPage JSON-LD now both disclose the email-plus-hash detail llms.txt states, corroborated across surfaces; see MEDIUM #7 re-verification note 2"
 aeo.evidence,README.md,pass,"version, publish date, and tool counts in README.md:7 match the live site exactly"
 aeo.comparison,index.html,pass,"re-verified 2026-09-07 post-deploy: dated comparison table live in #pricing naming Heimdall, zelentsov-dev/asc-mcp, fastlane and the ASC website, each linked, with a concession paragraph on tool count; see HIGH #4 re-verification note"
 aeo.comparison,writing/license-server/,n/a,"article is about license-server engineering, not product comparison; not the right page for this content"
