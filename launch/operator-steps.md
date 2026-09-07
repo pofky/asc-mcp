@@ -85,7 +85,8 @@ fix is to submit again.
 
 Checked in the browser on 6 August. We are **not listed**, and searching "App Store Connect" there
 returns only 4 results, so the category is unusually thin: MCPXcode, a mirror repo,
-`zelentsov-dev` (advertising "208 tools across 25 workers"), and `alperduzgun`. A curated 41-tool
+`zelentsov-dev` (advertising "208 tools across 25 workers" on 6 August, 502 as of
+7 September, see `launch/competitors.md` for the dated table), and `alperduzgun`. A curated 41-tool
 server would stand out rather than be buried.
 
 The problem is that **mcp.so no longer has a free submission route.** The submit page now offers one
