@@ -230,6 +230,21 @@ export async function runDoctor(): Promise<DoctorReport> {
           detail: "This subscription was cancelled and the paid period has ended.",
           fix: `Resubscribe at ${UPGRADE_URL}, or retrieve a different key at ${LICENSE_API_URL}/key.`,
         },
+        // A renewal that fails to charge ends as a revocation, and this is the
+        // message that customer sees. It happened on 7 September: the card was
+        // declined for insufficient funds, the subscription was revoked, and the
+        // generic text told a paying customer their key "did not validate",
+        // which sends them to re-check a key that was never wrong instead of
+        // saying a payment failed and where to fix it.
+        revoked: {
+          detail:
+            "This subscription is no longer active. The usual cause is a renewal payment that did not go through.",
+          fix: `Start it again at ${UPGRADE_URL}; you get a new key by email in seconds and swap it into the same ASC_LICENSE_KEY line. If you believe this is wrong, reply to your licence email and a person will look.`,
+        },
+        inactive: {
+          detail: "This subscription is not active right now, so the Pro tools are locked.",
+          fix: `Check the card on file, or start again at ${UPGRADE_URL}. Already resubscribed? Retrieve the current key at ${LICENSE_API_URL}/key.`,
+        },
         expired: {
           detail: "This licence has expired.",
           fix: `Renew at ${UPGRADE_URL}, or retrieve your current key at ${LICENSE_API_URL}/key.`,

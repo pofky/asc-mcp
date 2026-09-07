@@ -439,6 +439,29 @@ describe("the gate adapts to a trial that has already been spent", () => {
   });
 
   /**
+   * A subscriber whose renewal card is declined ends up revoked, and until
+   * 7 September 2026 the gate greeted them with "Free for 7 days, no card:
+   * call asc_start_trial". The trial endpoint refuses a former subscriber, so
+   * the one person in the funnel who had already proven they would pay was
+   * handed an offer that fails. This is the recovery message instead.
+   */
+  it("does not offer a trial to a subscriber whose renewal was declined", async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ valid: false, tier: "free", reason: "revoked" }), {
+        status: 200,
+      })) as never;
+    await validateLicense("ASC-REVOKED-SUB-KEY");
+    globalThis.fetch = realFetch;
+
+    const msg = requirePro("free", "Submitting for review", "submit_for_review")!;
+    expect(msg).toContain("no longer active");
+    expect(msg).toContain("declined renewal");
+    expect(msg).not.toContain("Free for 7 days");
+    expect(msg).toContain("$9/month");
+  });
+
+  /**
    * The last line of the gate told everyone to "set ASC_LICENSE_KEY in your MCP
    * server config". A one-click install has no server block in any config file,
    * so that sent bundle users hunting for JSON that does not exist, right after

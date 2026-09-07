@@ -128,7 +128,7 @@ describe("isLicenseUsable", () => {
   it("never resurrects a revoked row, however recently it lapsed", () => {
     expect(
       isLicenseUsable(paid({ active: 0, expires_at: days(-1), revoked_at: "2026-08-01" }), NOW),
-    ).toEqual({ usable: false, reason: "inactive" });
+    ).toEqual({ usable: false, reason: "revoked" });
     expect(
       isLicenseUsable(paid({ active: 1, expires_at: days(-1), revoked_at: "2026-08-01" }), NOW),
     ).toEqual({ usable: false, reason: "revoked" });
@@ -143,7 +143,25 @@ describe("isLicenseUsable", () => {
   it("gives a cancelled subscription no grace once its period ends", () => {
     expect(
       isLicenseUsable(paid({ active: 0, expires_at: days(-1), canceled_at: "2026-08-20" }), NOW),
-    ).toEqual({ usable: false, reason: "inactive" });
+    ).toEqual({ usable: false, reason: "canceled" });
+  });
+
+  it("names a failed renewal as revoked, not as a vague inactive", () => {
+    // The exact shape row 41 took on 7 September: the renewal charge was
+    // declined for insufficient funds, Polar canceled and revoked within a
+    // second, and the row still carries the period end it was paid through.
+    // "inactive" sent that customer to check a key that was never wrong.
+    expect(
+      isLicenseUsable(
+        paid({
+          active: 0,
+          expires_at: days(28),
+          canceled_at: "2026-09-07 10:59:34",
+          revoked_at: "2026-09-07 10:59:35",
+        }),
+        NOW,
+      ),
+    ).toEqual({ usable: false, reason: "revoked" });
   });
 
   // The grace window exists so a late renewal webhook cannot demote someone who

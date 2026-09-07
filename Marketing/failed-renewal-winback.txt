@@ -1,0 +1,13 @@
+Your asc-mcp renewal did not go through
+
+Hi Kabrail,
+
+Your asc-mcp Pro renewal on 5 September was declined by the bank (insufficient funds), and after two days of retries the subscription closed automatically, which switched your licence key off. Nothing is wrong with the key itself, and nothing was charged.
+
+If you still want it, starting again takes a minute and $9: https://asc-mcp-license.remewdy.workers.dev/go?tool=failed_renewal_email&email=kabrail.chamoun%40gmail.com
+
+You get a new key by email in seconds and swap it into the same ASC_LICENSE_KEY line in your config. Everything else stays as it is.
+
+If you had already decided to stop, that is completely fine and you do not need to reply. I would still like to know what was missing, if you have a minute for one sentence. I read every reply myself.
+
+Pavel
