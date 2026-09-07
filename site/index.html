@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>asc-mcp: App Store Connect MCP server for releases</title>
+<title>App Store Connect MCP server for releases | asc-mcp</title>
 <meta name="description" content="41 tools that drive App Store Connect from Claude Code, Cursor or any MCP client. Free 7-day trial, no card. Pro is $9/month.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://asc-mcp.pages.dev/">
@@ -273,6 +273,10 @@ When the trial ends, Pro is $9/month.</code></pre>
     </div>
     <p class="reassure" style="margin-top:12px">That is the whole signup. No account on this site, no card, no
       restart, and the agent does it in the conversation you are already in.</p>
+    <div class="install" style="margin-top:12px;max-width:none">
+      <code id="ask">start my asc-mcp trial, my email is you@example.com</code>
+      <button type="button" data-copy="ask" aria-label="Copy the sentence that starts the trial">Copy</button>
+    </div>
   </div>
 </header>
 
@@ -382,6 +386,9 @@ When the trial ends, Pro is $9/month.</code></pre>
       <p><span class="fact">Nowhere.</span> The .p8 stays on your machine, JWTs are signed locally, and calls go
       straight from your computer to api.appstoreconnect.apple.com. Nothing proxies through this project. The only
       network call it makes elsewhere is a license check that sends your license key, not your credentials.</p>
+      <p>One narrow exception, and only if you start a trial: a SHA-256 hash of your Issuer ID is computed on your
+      machine and sent, so one Apple developer account cannot take unlimited trials. The Issuer ID itself, the Key
+      ID and the .p8 are never transmitted.</p>
     </div>
 
     <div class="q">
@@ -587,21 +594,25 @@ When the trial ends, Pro is $9/month.</code></pre>
 </footer>
 
 <script>
-document.getElementById('copy').addEventListener('click', async function () {
+document.querySelectorAll('#copy, [data-copy]').forEach(function (b) {
+  b.addEventListener('click', copyHandler);
+});
+async function copyHandler() {
   var btn = this;
+  var target = document.getElementById(btn.dataset.copy || 'cmd');
   try {
-    await navigator.clipboard.writeText(document.getElementById('cmd').textContent);
+    await navigator.clipboard.writeText(target.textContent);
     btn.textContent = 'Copied';
   } catch (e) {
     var r = document.createRange();
-    r.selectNodeContents(document.getElementById('cmd'));
+    r.selectNodeContents(target);
     var sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(r);
     btn.textContent = 'Selected';
   }
   setTimeout(function () { btn.textContent = 'Copy'; }, 1800);
-});
+}
 </script>
 
 <script type="application/ld+json">
@@ -614,7 +625,7 @@ document.getElementById('copy').addEventListener('click', async function () {
 {"@type":"Question","name":"How do I start the asc-mcp free trial?","acceptedAnswer":{"@type":"Answer","text":"Ask your coding agent to call the asc_start_trial tool with your email address. There is no website signup and no credit card. The key it returns activates in the running session, so the Pro tool you were blocked on works on the very next call without restarting your agent, and the key is written into your MCP config so it survives a restart. One trial per Apple developer account."}},
 {"@type":"Question","name":"Is there a free trial of asc-mcp?","acceptedAnswer":{"@type":"Answer","text":"Yes. All 41 tools are free for 7 days, no credit card and nothing to cancel. You start it from inside your coding agent by calling the asc_start_trial tool with your email address, rather than signing up on a website. The trial activates in the running session, so the tool you were blocked on works on the next call without restarting your agent. One trial per Apple developer account."}},
 {"@type":"Question","name":"Can an AI agent submit an app to the App Store?","acceptedAnswer":{"@type":"Answer","text":"Yes, with limits. asc-mcp can edit version metadata, upload screenshots, attach a build, set the age rating, price and availability, then submit for review and release. Four things must still be done on the App Store Connect website: creating the app record, the App Privacy nutrition label, and EU trader status. An app's very first in-app purchases must also be submitted with the version on the website."}},
-{"@type":"Question","name":"Is it safe to give an MCP server an App Store Connect API key?","acceptedAnswer":{"@type":"Answer","text":"With asc-mcp the .p8 private key never leaves your machine. JWTs are signed locally and API calls go directly from your computer to api.appstoreconnect.apple.com with no proxy. The only other network call is a license validation that sends the license key, not your Apple credentials."}},
+{"@type":"Question","name":"Is it safe to give an MCP server an App Store Connect API key?","acceptedAnswer":{"@type":"Answer","text":"With asc-mcp the .p8 private key never leaves your machine. JWTs are signed locally and API calls go directly from your computer to api.appstoreconnect.apple.com with no proxy. The only other network call is a license validation that sends the license key, not your Apple credentials. If you start a free trial, one further value is sent: a SHA-256 hash of your Issuer ID, computed on your machine, so a single Apple developer account cannot take unlimited trials. The Issuer ID itself, the Key ID and the .p8 are never transmitted."}},
 {"@type":"Question","name":"What can the App Store Connect API not do?","acceptedAnswer":{"@type":"Answer","text":"Creating an app record (POST /v1/apps is forbidden for API keys), creating App Groups, setting the App Privacy nutrition label, declaring EU trader status, submitting an app's first in-app purchases, posting public replies to reviews, and Xcode cloud signing with a least-privilege key. asc-mcp returns the exact manual steps and deep links for each instead of failing silently."}},
 {"@type":"Question","name":"Which clients does asc-mcp work with?","acceptedAnswer":{"@type":"Answer","text":"Any MCP client that speaks stdio, including Claude Code, Claude Desktop, Cursor, Windsurf and Cline. It needs Node 18 or newer. Building and uploading a binary additionally requires a Mac with Xcode."}}]}
 ]}
