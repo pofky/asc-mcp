@@ -1,3 +1,5 @@
+
+
 <!-- AUTOPILOT:BEGIN -->
 # Autopilot — Project Rules
 
@@ -40,6 +42,13 @@ Full docs: `/Volumes/T7/Projects/autopilot/docs/` — read on demand.
 
 9. **Commit hygiene** — rollback-safe splits, push main after gates
    pass. Details: `autopilot/docs/commit-hygiene.md`
+
+## Four stations, product features
+In a project with `[feature] mode = "boundary"`, product work is one feature: one worktree, one proof bundle, one scored review, one server-side merge. Runbook: `autopilot/docs/software-factory.md`.
+1. **Start.** `autopilot feature start <slug>` (skill `autopilot-feature-start`), then work only inside `.claude/worktrees/<slug>`.
+2. **Build.** Commit on `feat/<slug>` to the stack standard (`autopilot-code-structure`). Session ending first: `autopilot feature park <slug>`.
+3. **Prove.** `autopilot feature prove <slug>` captures before and after into the bundle (skill `autopilot-prove`).
+4. **Ship.** `autopilot feature ready <slug>` (skill `autopilot-ship`) verifies gates, scores the review, pushes and opens a draft PR. Zero-customer projects merge through the fleet gate; live projects merge by operator click (`autopilot feature merge <slug>`).
 
 ## On-demand references (read when the topic comes up)
 
