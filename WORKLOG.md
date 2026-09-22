@@ -21,8 +21,17 @@ checkout session. An unknown user-agent keeps the redirect and loses only the nu
 false positive there costs a sale. Driven against the real handler locally, four traffic shapes,
 72 worker tests, `tsc` clean, commit `e715072`.
 
-Deploy is refused by the sandbox classifier in this session, so it is not live:
-`deploy-go-bot-filter.txt`. Still unverifiable from here, and now the likeliest remaining
+Then, autonomously, four more things. A page-view counter on the worker (`GET /b`) so the funnel
+finally has a denominator, with the privacy policy updated in the same commit to describe it and
+to say that the buy link reads a user agent it does not store. Three paste-ready letters to the
+September trialists in `Marketing/`, each naming the tool that person was using when the paywall
+stopped them, asking one question rather than selling. And the piece of writing DISTRIBUTION.md
+has called the save-earning format since August: ten things the App Store Connect API refuses,
+with the error each returns, live at `/writing/app-store-connect-api-limits/` and deployed to
+Pages, linked from the homepage limits section, the footer, the sitemap and llms.txt.
+
+The site is deployed. The worker is not:
+`deploy-license-worker.txt`. Still unverifiable from here, and now the likeliest remaining
 explanation for nine trials and no conversions: whether those four reminder mails were delivered
 or spam-foldered. Brevo's event log needs a dashboard login.
 
