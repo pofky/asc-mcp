@@ -611,6 +611,8 @@ const BEACON_PATHS: Record<string, string> = {
   "/index.html": "home",
   "/writing/license-server/": "writing_license_server",
   "/writing/license-server": "writing_license_server",
+  "/writing/app-store-connect-api-limits/": "writing_api_limits",
+  "/writing/app-store-connect-api-limits": "writing_api_limits",
 };
 
 /**

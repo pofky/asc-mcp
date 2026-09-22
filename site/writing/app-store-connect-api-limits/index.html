@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What the App Store Connect API cannot do | asc-mcp</title>
+<meta name="description" content="Ten things App Store Connect will not let an API key do, the error each one returns, and the shortest way round it. Current as of September 2026.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://asc-mcp.pages.dev/writing/app-store-connect-api-limits/">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://asc-mcp.pages.dev/writing/app-store-connect-api-limits/">
+<meta property="og:title" content="What the App Store Connect API cannot do">
+<meta property="og:description" content="Ten things App Store Connect will not let an API key do, the error each one returns, and the shortest way round it. Current as of September 2026.">
+<meta property="og:image" content="https://asc-mcp.pages.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="What the App Store Connect API cannot do">
+<meta name="twitter:description" content="Ten walls in Apple's API, the error each one returns, and the shortest way round it.">
+<meta name="twitter:image" content="https://asc-mcp.pages.dev/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230E1116'/%3E%3Cpath d='M8 21l4.6-11h1.9L19 21h-2.2l-1-2.6h-4.6L10.2 21H8zm4-4.4h3.2l-1.6-4.3-1.6 4.3z' fill='%23F0A828'/%3E%3Ccircle cx='24' cy='11' r='2.5' fill='%233DC48F'/%3E%3C/svg%3E">
+<style>
+:root{
+  --ink:#0e1116; --panel:#161b22; --panel-2:#1b2129; --line:#232a33;
+  /* --dim is lightened from the homepage value #6d7986, which measures 4.26:1
+     on --ink and fails WCAG AA for the small text it is used on. */
+  --text:#e7ecf2; --muted:#95a1b0; --dim:#7d8b9a;
+  --amber:#f0a828; --green:#3dc48f; --flag:#e0705a;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --measure:66ch;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--ink);color:var(--text);font-family:var(--sans);
+  font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(240,168,40,.28)}
+a{color:var(--text);text-decoration:none;border-bottom:1px solid var(--line)}
+a:hover{border-bottom-color:var(--amber)}
+a:focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:3px}
+h1,h2,h3{font-weight:700;letter-spacing:-.022em;line-height:1.14;margin:0}
+h1{font-size:clamp(1.95rem,6.4vw,3rem)}
+h2{font-size:clamp(1.3rem,4vw,1.75rem);letter-spacing:-.018em;margin:0 0 6px}
+h3{font-size:1.02rem;letter-spacing:-.008em;margin:0 0 6px}
+p{margin:0 0 1.05rem}
+.wrap{width:100%;max-width:960px;margin:0 auto;padding:0 20px}
+.narrow{max-width:var(--measure)}
+.eyebrow{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 14px;display:block;
+}
+.top{padding:4px 0;font-family:var(--mono);font-size:.78rem;color:var(--muted);
+  display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.top a{border:0;color:var(--muted);display:inline-flex;align-items:center;min-height:44px}
+.top a:hover{color:var(--text)}
+.mark{color:var(--text);font-weight:600;letter-spacing:.02em}
+.mark b{color:var(--amber);font-weight:600}
+.ver{margin-left:auto;color:var(--dim)}
+
+header.hero{padding:22px 0 8px}
+.meta{font-family:var(--mono);font-size:.76rem;color:var(--dim);margin:16px 0 0}
+.standfirst{font-size:1.12rem;color:var(--muted);margin:20px 0 0}
+
+article{padding:44px 0 0}
+.case{border-top:1px solid var(--line);padding:38px 0 4px}
+.case .n{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--amber);display:block;margin:0 0 10px;
+}
+.cost{
+  border-left:2px solid var(--flag);padding:2px 0 2px 14px;margin:0 0 1.05rem;
+  color:var(--muted);font-size:.95rem;
+}
+.cost b{color:var(--text);font-weight:600}
+pre{
+  font-family:var(--mono);font-size:.79rem;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:13px 14px;overflow-x:auto;margin:0 0 1.05rem;color:#c9d3de;line-height:1.55;
+}
+code{font-family:var(--mono);font-size:.88em;color:var(--text)}
+p code,li code{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+ul{margin:0 0 1.05rem;padding-left:1.1rem}
+li{margin:0 0 .5rem}
+.rule{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;margin:0 0 1.05rem;
+}
+.rule .lbl{
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--green);display:block;margin:0 0 6px;
+}
+.rule p{margin:0}
+section.q{border-top:1px solid var(--line);padding:52px 0 0}
+.qa{margin:0 0 26px}
+.qa p{margin:0}
+.cta{
+  border:1px solid var(--line);background:var(--panel-2);border-radius:12px;
+  padding:22px 22px 8px;margin:46px 0 0;
+}
+footer{border-top:1px solid var(--line);padding:34px 0 54px;color:var(--dim);font-size:.86rem;margin-top:54px}
+footer a{color:var(--muted)}
+.foot-links{display:flex;flex-wrap:wrap;gap:0 18px;font-family:var(--mono);font-size:.78rem;margin-bottom:10px}
+.foot-links a{display:inline-flex;align-items:center;min-height:44px}
+@media(max-width:560px){
+  .top{gap:0 14px}
+  .ver{display:none}
+  body{font-size:16.5px}
+}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+{"@type":"BreadcrumbList","itemListElement":[
+ {"@type":"ListItem","position":1,"name":"App Store Connect MCP","item":"https://asc-mcp.pages.dev/"},
+ {"@type":"ListItem","position":2,"name":"What the App Store Connect API cannot do","item":"https://asc-mcp.pages.dev/writing/app-store-connect-api-limits/"}]},
+{"@type":"BlogPosting",
+ "headline":"What the App Store Connect API cannot do",
+ "description":"Ten things App Store Connect will not let an API key do, the error each one returns, and the shortest way round it. Current as of September 2026.",
+ "url":"https://asc-mcp.pages.dev/writing/app-store-connect-api-limits/",
+ "datePublished":"2026-09-22","dateModified":"2026-09-22",
+ "inLanguage":"en",
+ "author":{"@type":"Person","name":"Povilas Konopackas"},
+ "publisher":{"@type":"Organization","name":"asc-mcp","url":"https://asc-mcp.pages.dev/"},
+ "mainEntityOfPage":{"@type":"WebPage","@id":"https://asc-mcp.pages.dev/writing/app-store-connect-api-limits/"},
+ "keywords":"App Store Connect API, API limitations, POST /v1/apps, appDataUsages, FIRST_NON_CONSUMABLE_MUST_BE_SUBMITTED_ON_VERSION, app privacy nutrition label, EU DSA trader status, fastlane"},
+{"@type":"FAQPage","mainEntity":[
+ {"@type":"Question","name":"Can you create an app record with the App Store Connect API?","acceptedAnswer":{"@type":"Answer","text":"No. POST /v1/apps is refused for API keys, whatever role the key holds. The app record has to be created once in the App Store Connect website, after which everything about it is writable over the API. There is no supported automation for that first step, and there has not been one since the API launched."}},
+ {"@type":"Question","name":"Why does submitting an in-app purchase return FIRST_NON_CONSUMABLE_MUST_BE_SUBMITTED_ON_VERSION?","acceptedAnswer":{"@type":"Answer","text":"Because it is the app's first in-app purchase. Apple requires the first products of a type to be reviewed together with an app version, and only the website can bundle the two into one submission. Create and configure the product over the API as normal, then submit it from the version page in the website. Every product after the first submits over the API without complaint."}},
+ {"@type":"Question","name":"Can the App Store Connect API set the app privacy nutrition label?","acceptedAnswer":{"@type":"Answer","text":"No. The data-collection answers live behind appDataUsages, which is not part of the public API, so the privacy questionnaire is website-only. The same is true of the EU Digital Services Act trader declaration, which has no public attribute at all and is a legal statement about who you are rather than a setting."}},
+ {"@type":"Question","name":"Can you reply to an App Store review through the API?","acceptedAnswer":{"@type":"Answer","text":"You can read reviews and ratings over the API, and you cannot post the public reply. Drafting the response is automatable, pasting it is not. This is the one limit on the list that costs real time, because review responses are the part of App Store Connect that actually benefits from being written where the context is."}}]}]}</script>
+</head>
+<body>
+
+<div class="wrap">
+  <nav class="top">
+    <a href="/" class="mark" style="border:0">asc<b>-</b>mcp</a>
+    <a href="/#pipeline">Pipeline</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/#faq">Limits</a>
+    <a href="https://github.com/pofky/asc-mcp">GitHub</a>
+    <span class="ver">v1.9.11</span>
+  </nav>
+</div>
+<main>
+<header class="hero">
+  <div class="wrap narrow">
+    <span class="eyebrow">Field notes</span>
+    <h1>What the App Store Connect API cannot do</h1>
+    <p class="standfirst">Apple documents what their API offers. Nobody documents what it refuses, so you find out one 403 at a time, usually in the middle of a release. This is that list: ten things no API key can do, the error each one actually returns, and the shortest path round it. It is maintained because our own tools have to detect every one of them before they start work.</p>
+    <p class="meta">22 September 2026 &middot; Povilas Konopackas &middot; from the tool definitions behind <a href="/">asc-mcp</a></p>
+  </div>
+</header>
+
+<article>
+<div class="wrap narrow">
+
+<p>Most of App Store Connect is automatable, and more of it than people assume. Metadata, screenshots, builds, pricing across every territory, in-app purchases, subscriptions with introductory offers, phased release, review submission: all of it has endpoints, and all of it works. The awkward part is the small set of things that do not, because they are not listed anywhere as a set. They are discovered.</p>
+
+<p>There are two kinds of wall here. Most are Apple's: an endpoint that does not exist, or exists and refuses API keys. One is ours, and it is marked as ours. Each entry says what breaks, what comes back, and what to do instead.</p>
+
+<section class="case">
+<span class="n">One</span>
+<h2>Create an app record</h2>
+<div class="cost"><b>Returns:</b> 403 on <code>POST /v1/apps</code>, for every key and every role.</div>
+<p>The app record is the one thing that must be made by a human in the website. There is no supported way to create it with an API key, and there never has been. Probing the collection confirms the shape of the restriction: <code>apps</code> answers <code>GET</code> and <code>PATCH</code>, and nothing else.</p>
+<p>In practice this is a once-per-app annoyance rather than a blocker, but it does mean the sentence "fully automated first release" is not true for anyone, whatever tooling they use. The first release always has a human in the website for about ninety seconds.</p>
+<div class="rule"><span class="lbl">Do instead</span><p>App Store Connect website, Apps, the plus button. Bundle ID, SKU and primary language. Everything after that is writable over the API.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Two</span>
+<h2>Delete an app record</h2>
+<div class="cost"><b>Returns:</b> 403 on <code>DELETE /v1/apps</code>. Builds and appInfos cannot be deleted either.</div>
+<p>Removing an app is the most misunderstood item on this list, because the automatable half and the manual half are not where people expect. Taking the app off sale everywhere <em>is</em> fully automatable, and Apple requires it even for an app that was never released: set availability to an empty territory list, which switches off all roughly 175 territories, and remove any in-app purchases from sale as well.</p>
+<p>Only the last step is manual, and it has conditions worth knowing before you start:</p>
+<ul>
+<li>App Information, Additional Information, Remove App, in the website.</li>
+<li>Account Holder or Admin role. It is not visible to anyone else.</li>
+<li>It is also not visible while the app sits in Ready for Review, Waiting for Review, In Review, Metadata Rejected or Rejected. Cancel the submission first, or wait.</li>
+<li>The SKU can never be reused anywhere in the organisation. The bundle ID cannot be reused either, if a build was ever uploaded against it.</li>
+</ul>
+<div class="rule"><span class="lbl">Do instead</span><p>Automate the off-sale sweep, then do the removal by hand. The two reuse rules are permanent, so pick the SKU of a throwaway app as carefully as a real one.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Three</span>
+<h2>Submit an app's first in-app purchases</h2>
+<div class="cost"><b>Returns:</b> <code>FIRST_NON_CONSUMABLE_MUST_BE_SUBMITTED_ON_VERSION</code>, with the equivalent for each product type.</div>
+<p>This one catches people who have already automated everything else, because creating the product works perfectly. Price, availability, localisations, review screenshot, state moves to Ready to Submit. Then the submission is refused, and the reason is that Apple wants an app's first products of a type reviewed together with a version, and only the website can put the two into one submission.</p>
+<p>The failure matters more than it looks, because a half-done submission can orphan the version. Our <code>submit_for_review</code> detects the condition and aborts before it submits anything, rather than discovering it halfway.</p>
+<div class="rule"><span class="lbl">Do instead</span><p>Configure the products over the API, then open the version in the website, use Add for Review, tick the products and submit them together. Every later product submits over the API normally.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Four</span>
+<h2>Fill in the app privacy nutrition label</h2>
+<div class="cost"><b>Returns:</b> nothing. <code>appDataUsages</code> is not in the public API at all.</div>
+<p>The privacy questionnaire, the one that produces the data-collection card on your product page, has no public endpoint. It is not a permissions problem and no key unlocks it; the resource is simply not published.</p>
+<p>It also cannot be skipped: an app without it will not pass review. Since the answers are stable across releases, the honest automation is to be told exactly which boxes to tick, once, rather than to pretend the call exists.</p>
+<div class="rule"><span class="lbl">Do instead</span><p>Website, App Privacy. Our <code>set_privacy_nutrition</code> returns the exact checklist for your app and a deep link to the page, so the manual step is a two-minute one.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Five</span>
+<h2>Declare EU Digital Services Act trader status</h2>
+<div class="cost"><b>Returns:</b> nothing. No public attribute, no resource.</div>
+<p>Since the DSA came into force, an app distributed in the EU needs a trader declaration with a verified name, address and contact details. There is no API attribute for it, and arguably there should not be: it is a legal statement about who is selling, not a setting.</p>
+<p>Leaving it undone eventually removes the app from EU storefronts, which is a slower and more expensive failure than a rejection.</p>
+<div class="rule"><span class="lbl">Do instead</span><p>Website, Business, Trader Status. <code>set_eu_trader_status</code> returns the steps and the deep link. The decision is yours and your accountant's.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Six</span>
+<h2>Create an App Group</h2>
+<div class="cost"><b>Returns:</b> nothing. Identifiers of this kind are portal-only.</div>
+<p>App Groups, the identifier two of your own targets need to share a container, live in the Apple Developer portal rather than in App Store Connect, and that portal has no equivalent API surface. Neither does the capability wiring that goes with them.</p>
+<div class="rule"><span class="lbl">Do instead</span><p>Apple Developer portal, Identifiers. Once per group, and it outlives every release.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Seven</span>
+<h2>Create a signing certificate, or use cloud signing</h2>
+<div class="cost"><b>Returns:</b> a permission error, specifically because the key is least-privilege.</div>
+<p>This one is a consequence of doing the right thing. An API key scoped to what a release needs does not carry certificate rights, so requesting a distribution certificate through it fails, and cloud signing fails with it. A key that could mint signing identities would be a considerably more dangerous thing to keep in an agent's environment.</p>
+<div class="rule"><span class="lbl">Do instead</span><p>Keep an Apple Distribution certificate in the login keychain, and generate manual-signing profiles and an ExportOptions.plist against it. <code>setup_app_store_signing</code> does that part.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Eight</span>
+<h2>Compile the binary</h2>
+<div class="cost"><b>Returns:</b> not applicable. No API compiles code.</div>
+<p>Obvious when stated, and still worth stating, because it is the reason a release cannot run entirely in the cloud: producing an <code>.ipa</code> needs the Xcode toolchain on a Mac. The API accepts the upload, it does not perform the build.</p>
+<div class="rule"><span class="lbl">Do instead</span><p>Archive and export locally, then upload. The upload, the processing wait and the attachment to a version are all automatable.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Nine</span>
+<h2>Post a public response to a review</h2>
+<div class="cost"><b>Returns:</b> reviews are readable; the public reply is not writable.</div>
+<p>Reviews, ratings and their territories all come back over the API, which is what makes reading them in an agent worthwhile. Publishing the reply does not, so the last step is a paste into the website.</p>
+<p>Of everything here this is the one that costs the most real time, because a reply is exactly the kind of writing that benefits from happening where the context already is.</p>
+<div class="rule"><span class="lbl">Do instead</span><p>Draft it where the review is, paste it in the website. <code>draft_review_response</code> writes it; you post it.</p></div>
+</section>
+
+<section class="case">
+<span class="n">Ten</span>
+<h2>Capture simulator screenshots, in our tools</h2>
+<div class="cost"><b>Returns:</b> nothing yet. This one is our gap, not Apple's.</div>
+<p>Uploading screenshots is fully automatable, and we automate it. Producing the PNGs from a simulator is on our roadmap and not built, so today you bring your own images. It is on this list because a list of walls that quietly omits the author's own is not worth reading.</p>
+<div class="rule"><span class="lbl">Do instead</span><p>Produce the PNGs however you already do, then <code>upload_screenshots</code> handles sizing, ordering and the per-locale sets.</p></div>
+</section>
+
+<section class="case">
+<span class="n">And three that work, but will still bite</span>
+<h2>Possible, and not obvious</h2>
+<p>These are not refusals. They are the places where the API does exactly what you asked and the result is not what you wanted.</p>
+<ul>
+<li><strong>An app has more than one appInfo, and Apple hands you the wrong one first.</strong> An app that is live or in review keeps a locked appInfo alongside the editable one, and the collection returns the locked record first. Anything that takes the first row, or asks for <code>limit=1</code>, gets the one that cannot be written, and the PATCH comes back 409. Select the editable record explicitly.</li>
+<li><strong>Subscription state does not recompute on its own.</strong> An in-app purchase becomes Ready to Submit the moment price, availability and a review screenshot are in place. A subscription does not: it needs availability first, then the USA base price, then equalisation across the roughly 175 territories, then any per-territory introductory offers, and then a no-op PATCH to make the state recompute. Same product family, different behaviour.</li>
+<li><strong>Availability defaults to everywhere.</strong> Creating something without naming territories makes it available in all of them. That is usually what you want and occasionally very much not, and it is the same lever you need to pull to an empty list when you are removing an app.</li>
+</ul>
+</section>
+
+<section class="q">
+<span class="eyebrow">Questions people actually type</span>
+<div class="qa">
+<h3>Can you create an app record with the App Store Connect API?</h3>
+<p>No. <code>POST /v1/apps</code> is refused for API keys, whatever role the key holds. The app record has to be created once in the App Store Connect website, after which everything about it is writable over the API. There is no supported automation for that first step, and there has not been one since the API launched.</p>
+</div>
+
+<div class="qa">
+<h3>Why does submitting an in-app purchase return FIRST_NON_CONSUMABLE_MUST_BE_SUBMITTED_ON_VERSION?</h3>
+<p>Because it is the app's first in-app purchase. Apple requires the first products of a type to be reviewed together with an app version, and only the website can bundle the two into one submission. Create and configure the product over the API as normal, then submit it from the version page in the website. Every product after the first submits over the API without complaint.</p>
+</div>
+
+<div class="qa">
+<h3>Can the App Store Connect API set the app privacy nutrition label?</h3>
+<p>No. The data-collection answers live behind <code>appDataUsages</code>, which is not part of the public API, so the privacy questionnaire is website-only. The same is true of the EU Digital Services Act trader declaration, which has no public attribute at all and is a legal statement about who you are rather than a setting.</p>
+</div>
+
+<div class="qa">
+<h3>Can you reply to an App Store review through the API?</h3>
+<p>You can read reviews and ratings over the API, and you cannot post the public reply. Drafting the response is automatable, pasting it is not. This is the one limit on the list that costs real time, because review responses are the part of App Store Connect that actually benefits from being written where the context is.</p>
+</div>
+
+</section>
+
+<div class="cta">
+<h3>Where this list comes from</h3>
+<p>It is not written by hand. Every entry above is generated from the tool definitions in <a href="/">asc-mcp</a>, an MCP server that drives App Store Connect from a coding agent: 41 tools that either do the thing over the API or, for the ten above, return the exact manual steps and stop cleanly rather than leaving a release half-done.</p>
+<p>Six tools work with no licence, three of those without any Apple credentials, and a seven-day trial of the rest starts from inside your agent with no card. If you only came for the list, the list is <a href="https://github.com/pofky/asc-mcp/blob/master/LIMITATIONS.md">in the repo</a> too, and it moves whenever Apple does.</p>
+<p>The other piece of writing here is about the billing behind it: <a href="/writing/license-server/">seven ways a license server quietly cuts off paying customers</a>.</p>
+</div>
+
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-links">
+      <a href="/">Home</a>
+      <a href="https://www.npmjs.com/package/@pofky/asc-mcp">npm</a>
+      <a href="https://github.com/pofky/asc-mcp">GitHub</a>
+      <a href="https://github.com/pofky/asc-mcp/blob/master/license-worker/src/logic.ts">logic.ts</a>
+      <a href="https://asc-mcp-license.remewdy.workers.dev/terms">Terms</a>
+      <a href="https://asc-mcp-license.remewdy.workers.dev/privacy">Privacy</a>
+      <a href="/llms.txt">llms.txt</a>
+    </div>
+    <p style="margin:0">asc-mcp v1.9.11, MIT licensed. Built and maintained by Povilas Konopackas, sole trader,
+      Lithuania. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, Xcode and iOS are trademarks of Apple Inc.
+      Polar is a trademark of its respective owner.</p>
+    <p style="margin:8px 0 0">Last updated 22 September 2026.</p>
+  </div>
+</footer>
+<script>
+// One request, once per page load, to our own licence worker. It sends the
+// path and nothing else: no cookie, no identifier, no third party, no library.
+// It exists so the funnel has a denominator; see /privacy on that host.
+try {
+  fetch(
+    'https://asc-mcp-license.remewdy.workers.dev/b?p=' + encodeURIComponent(location.pathname),
+    { mode: 'no-cors', keepalive: true, cache: 'no-store' }
+  );
+} catch (e) { /* a counter must never be able to break the page */ }
+</script>
+</body>
+</html>
