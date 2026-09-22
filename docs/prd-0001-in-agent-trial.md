@@ -137,6 +137,13 @@ Therefore:
   produces no data anyway. Demand is measured instead from two things the user deliberately
   initiates: opening the buy link (`/go`) and starting a trial (`trigger_tool`). This is weaker
   data, and it is the version that does not require us to walk back a privacy promise.
+- **Amended 2026-09-22.** A third counter now exists, and it does fire on its own: the marketing
+  site asks the worker to increment a page view on load (`/b`). The line it does not cross is the
+  same one: nothing counts from inside the MCP process, which still reports nothing about which
+  tools anyone runs. The stored row is a date, a page name and a number, the same shape as `/go`,
+  and the privacy page describes it including the headers the request unavoidably carries. Without
+  it every funnel number here is a numerator with no denominator, which is what nine trials and no
+  conversions had been measured against for a month.
 
 ## Risks
 

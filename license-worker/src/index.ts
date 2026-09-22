@@ -634,14 +634,6 @@ async function recordIntent(env: Env, kind: string, tool: string): Promise<void>
 }
 
 /**
- * Counted redirect to checkout. This is the only demand signal we collect, and
- * it is collected from a link the user deliberately opened, not from a beacon
- * inside the MCP process. See the privacy note in PRD-0001.
- *
- * The redirect target is the CHECKOUT_URL constant with validated parameters
- * appended, so no input reaches the Location header.
- */
-/**
  * The site's page-view counter. Same shape as the buy-link counter and the same
  * discipline: a day, a page name, a number, and nothing else. No cookie, no
  * identifier, no IP, no stored user agent, nothing that distinguishes one
@@ -683,6 +675,15 @@ function handleBeacon(
   });
 }
 
+/**
+ * Counted redirect to checkout, and the stronger of the two demand signals we
+ * collect: this one comes from a link a person deliberately opened, while the
+ * page counter above fires on its own. Neither is a beacon inside the MCP
+ * process, which still reports nothing. See the privacy note in PRD-0001.
+ *
+ * The redirect target is the CHECKOUT_URL constant with validated parameters
+ * appended, so no input reaches the Location header.
+ */
 function handleGo(
   request: Request,
   url: URL,
@@ -1486,7 +1487,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <ul>
       <li>Your Apple API credentials never leave your machine. The .p8 private key and Key ID are never transmitted anywhere by this software, and your Issuer ID is only ever sent as the one-way digest described above, only when you call <code>asc_start_trial</code></li>
       <li>No App Store Connect data passes through our servers</li>
-      <li>No usage analytics or telemetry from the software. The MCP server does not report which tools you run, or when, or how often</li>
+      <li>No usage analytics or telemetry from the software. The MCP server does not report which tools you run, or when, or how often. Our marketing site does count page views, in the aggregate form described below</li>
       <li>No cookies, no advertising identifiers, no third-party trackers</li>
     </ul>
 
@@ -1497,7 +1498,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>A trial request, sending the email you provided, the one-way fingerprint, and the tool name. This happens only when you call <code>asc_start_trial</code>.</li>
     </ul>
     <p>Separately, when you click a subscribe link from inside your agent, it passes through a redirect on our server that increments a daily counter of the form "3 people clicked the buy link from the submit_for_review tool today". That counter holds a date, a tool name and a number. It records no identifier, no IP address, no user agent, and nothing that could be tied back to you. Your browser's user agent string is read at the moment of the request, and only to tell a crawler apart from a person so that the two are counted separately; it is not stored. A link we email you may carry your address in it as a checkout prefill, so you do not have to retype it; that value is passed to the checkout and is not written to the counter.</p>
-    <p>Our marketing site counts page views the same way. Each page asks our own server to add one to a daily count of the form "12 views of the home page today". That request carries the path of the page and nothing else: no cookie, no local storage, no advertising or device identifier, no third-party analytics service, and no stored IP address or user agent. It cannot distinguish you from any other visitor, or one of your visits from the next, and there is nothing in it to link back to a licence, a trial or an email address.</p>
+    <p>Our marketing site counts page views the same way. Each page asks our own server to add one to a daily count of the form "12 views of the home page today". The only thing the page puts in that request is the path you are on. It is an ordinary web request, so it also carries what your browser attaches to every request it makes, including your IP address and your user agent; we read the user agent and the browser's prefetch headers at that moment, for the same reason as above, to count a crawler separately from a person. Neither is stored, and neither reaches the counter. What is written down is a date, a page name and a number: no cookie, no local storage, no advertising or device identifier, and no third-party analytics service. The stored count cannot distinguish you from any other visitor, or one of your visits from the next, and there is nothing in it to link back to a licence, a trial or an email address.</p>
 
     <h2>Data storage</h2>
     <p>License data is stored on Cloudflare D1 (EU region). Cloudflare acts as our infrastructure provider under their <a href="https://www.cloudflare.com/cloudflare-customer-dpa/">Data Processing Agreement</a>.</p>
@@ -1510,6 +1511,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
 
     <h2>Data retention</h2>
     <p>We keep your email, license key and subscription id for as long as the record exists, including after a subscription is cancelled or a trial ends. Two honest reasons: a cancelled subscriber who resubscribes should get their history back rather than a support ticket, and deleting a finished trial record is the same as handing out a second free trial.</p>
+    <p>The two counters described above, the buy-link clicks and the page views, are kept indefinitely, because a date, a page name and a number are not about anyone and there is nothing in them to delete.</p>
     <p>You can delete all of it whenever you like at <a href="/delete">/delete</a>. We email you a confirmation link first, so that nobody can remove your license by typing your address into a form, and the deletion runs when you click it. This is the only deletion mechanism: there is no automatic purge on a timer, and we would rather say so than publish a promise no code keeps.</p>
 
     <h2>Who controls this data</h2>
@@ -1520,6 +1522,8 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>Your email, licence key and subscription id, for a paid subscription: performance of the contract you entered into when you subscribed (GDPR Article 6(1)(b)). We cannot deliver or validate a licence without them.</li>
       <li>Your email and licence key, for a free trial: taking steps at your request before entering a contract (Article 6(1)(b)).</li>
       <li>The one-way Issuer ID fingerprint: our legitimate interest in not giving the same person an unlimited number of free trials, and in not reading a paying customer's key out to a stranger who guessed their email address (Article 6(1)(f)). We considered doing this with the email alone and rejected it, because that would let anyone burn a stranger's trial by typing their address.</li>
+      <li>The user agent, prefetch headers and IP address that reach our server while a page view or a buy-link click is being counted: our legitimate interest in knowing how many real people arrive, and in keeping automated traffic out of a payment funnel (Article 6(1)(f)). None of it is stored, and what is stored is a count that identifies nobody.</li>
+      <li>An email to someone who has started a trial or held a subscription, about that product: our legitimate interest in asking a small number of our own users what they thought and whether they want to continue (Article 6(1)(f)). Every such message names us, says why you are receiving it and carries a free opt-out, and you can object at any time under Article 21(2) by replying with the word stop or writing to the address below, after which we will not email you about the product again.</li>
     </ul>
 
     <h2>Your rights (GDPR)</h2>
