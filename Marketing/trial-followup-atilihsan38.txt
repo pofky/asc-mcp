@@ -1,0 +1,15 @@
+How is the asc-mcp trial going?
+
+Hi,
+
+You started an asc-mcp trial on 19 September while updating version metadata, and it runs until 26 September. I build it, and I am writing to ask a single question rather than to sell you anything: did it do what you needed?
+
+If it did not, I would like the detail. Metadata is where App Store Connect hides most of its rules, and knowing which one bit you is worth more to me than the subscription.
+
+If it did, it is $9 a month, the key arrives by email in seconds and nothing needs reinstalling: https://asc-mcp-license.remewdy.workers.dev/go?tool=trial_followup_email&email=atilihsan38%40gmail.com
+
+One line back is plenty. I read every reply myself.
+
+Pavel
+
+Povilas Konopackas, sole trader, Lithuania. povkonop@gmail.com. You are getting this because you started a free trial of asc-mcp. Reply with the word stop and I will not email you about the product again.

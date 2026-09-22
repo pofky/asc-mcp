@@ -1,0 +1,15 @@
+What stopped you with asc-mcp?
+
+Hi,
+
+You started an asc-mcp trial on 11 September when you asked your agent to create an in-app purchase, and it ran out a week later. I am the person who builds it, and I am writing because I would rather hear what happened than guess.
+
+There is no pitch in this email. I only want to know which of these it was: it did not do the thing you needed, it did the thing but something about it was awkward, you were only looking, or you never got back to it. One line is plenty, and I read every reply myself.
+
+If it was the first one, tell me what you asked it for. Creating an IAP is one of the places where Apple's API and their website do not agree with each other, and I would like to know whether you hit one of those walls or one of mine.
+
+If you do want it back, it is $9 a month and the key arrives by email in seconds: https://asc-mcp-license.remewdy.workers.dev/go?tool=trial_followup_email&email=canmucahit942%40gmail.com
+
+Pavel
+
+Povilas Konopackas, sole trader, Lithuania. povkonop@gmail.com. You are getting this because you started a free trial of asc-mcp. Reply with the word stop and I will not email you about the product again.
