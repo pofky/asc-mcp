@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>What the App Store Connect API cannot do | asc-mcp</title>
-<meta name="description" content="Ten things App Store Connect will not let an API key do, the error each one returns, and the shortest way round it. Current as of September 2026.">
+<title>App Store Connect API limits: what it cannot do | asc-mcp</title>
+<meta name="description" content="The App Store Connect API's limitations: ten things no API key can do, the error each one returns, and the shortest way round it. September 2026.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://asc-mcp.pages.dev/writing/app-store-connect-api-limits/">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://asc-mcp.pages.dev/writing/app-store-connect-api-limits/">
 <meta property="og:title" content="What the App Store Connect API cannot do">
-<meta property="og:description" content="Ten things App Store Connect will not let an API key do, the error each one returns, and the shortest way round it. Current as of September 2026.">
+<meta property="og:description" content="The App Store Connect API's limitations: ten things no API key can do, the error each one returns, and the shortest way round it. September 2026.">
 <meta property="og:image" content="https://asc-mcp.pages.dev/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="What the App Store Connect API cannot do">
@@ -112,7 +112,7 @@ footer a{color:var(--muted)}
  {"@type":"ListItem","position":2,"name":"What the App Store Connect API cannot do","item":"https://asc-mcp.pages.dev/writing/app-store-connect-api-limits/"}]},
 {"@type":"BlogPosting",
  "headline":"What the App Store Connect API cannot do",
- "description":"Ten things App Store Connect will not let an API key do, the error each one returns, and the shortest way round it. Current as of September 2026.",
+ "description":"The App Store Connect API's limitations: ten things no API key can do, the error each one returns, and the shortest way round it. September 2026.",
  "url":"https://asc-mcp.pages.dev/writing/app-store-connect-api-limits/",
  "datePublished":"2026-09-22","dateModified":"2026-09-22",
  "inLanguage":"en",
@@ -159,7 +159,7 @@ footer a{color:var(--muted)}
 <span class="n">One</span>
 <h2>Create an app record</h2>
 <div class="cost"><b>Returns:</b> 403 on <code>POST /v1/apps</code>, for every key and every role.</div>
-<p>The app record is the one thing that must be made by a human in the website. There is no supported way to create it with an API key, and there never has been. Probing the collection confirms the shape of the restriction: <code>apps</code> answers <code>GET</code> and <code>PATCH</code>, and nothing else.</p>
+<p>The app record is the one thing that must be made by a human in the website. There is no supported way to create it with an API key, and there never has been. Probing the collection confirms the shape of the restriction: the <a href="https://developer.apple.com/documentation/appstoreconnectapi/apps">apps</a> resource answers <code>GET</code> and <code>PATCH</code>, and nothing else.</p>
 <p>In practice this is a once-per-app annoyance rather than a blocker, but it does mean the sentence "fully automated first release" is not true for anyone, whatever tooling they use. The first release always has a human in the website for about ninety seconds.</p>
 <div class="rule"><span class="lbl">Do instead</span><p>App Store Connect website, Apps, the plus button. Bundle ID, SKU and primary language. Everything after that is writable over the API.</p></div>
 </section>
@@ -171,7 +171,7 @@ footer a{color:var(--muted)}
 <p>Removing an app is the most misunderstood item on this list, because the automatable half and the manual half are not where people expect. Taking the app off sale everywhere <em>is</em> fully automatable, and Apple requires it even for an app that was never released: set availability to an empty territory list, which switches off all roughly 175 territories, and remove any in-app purchases from sale as well.</p>
 <p>Only the last step is manual, and it has conditions worth knowing before you start:</p>
 <ul>
-<li>App Information, Additional Information, Remove App, in the website.</li>
+<li>App Information, Additional Information, <a href="https://developer.apple.com/help/app-store-connect/manage-app-information/remove-an-app">Remove App</a>, in the website.</li>
 <li>Account Holder or Admin role. It is not visible to anyone else.</li>
 <li>It is also not visible while the app sits in Ready for Review, Waiting for Review, In Review, Metadata Rejected or Rejected. Cancel the submission first, or wait.</li>
 <li>The SKU can never be reused anywhere in the organisation. The bundle ID cannot be reused either, if a build was ever uploaded against it.</li>
@@ -192,7 +192,7 @@ footer a{color:var(--muted)}
 <span class="n">Four</span>
 <h2>Fill in the app privacy nutrition label</h2>
 <div class="cost"><b>Returns:</b> nothing. <code>appDataUsages</code> is not in the public API at all.</div>
-<p>The privacy questionnaire, the one that produces the data-collection card on your product page, has no public endpoint. It is not a permissions problem and no key unlocks it; the resource is simply not published.</p>
+<p>The <a href="https://developer.apple.com/app-store/app-privacy-details/">privacy questionnaire</a>, the one that produces the data-collection card on your product page, has no public endpoint. It is not a permissions problem and no key unlocks it; the resource is simply not published.</p>
 <p>It also cannot be skipped: an app without it will not pass review. Since the answers are stable across releases, the honest automation is to be told exactly which boxes to tick, once, rather than to pretend the call exists.</p>
 <div class="rule"><span class="lbl">Do instead</span><p>Website, App Privacy. Our <code>set_privacy_nutrition</code> returns the exact checklist for your app and a deep link to the page, so the manual step is a two-minute one.</p></div>
 </section>
@@ -201,7 +201,7 @@ footer a{color:var(--muted)}
 <span class="n">Five</span>
 <h2>Declare EU Digital Services Act trader status</h2>
 <div class="cost"><b>Returns:</b> nothing. No public attribute, no resource.</div>
-<p>Since the DSA came into force, an app distributed in the EU needs a trader declaration with a verified name, address and contact details. There is no API attribute for it, and arguably there should not be: it is a legal statement about who is selling, not a setting.</p>
+<p>Since the <a href="https://developer.apple.com/support/dsa">DSA</a> came into force, an app distributed in the EU needs a trader declaration with a verified name, address and contact details. There is no API attribute for it, and arguably there should not be: it is a legal statement about who is selling, not a setting.</p>
 <p>Leaving it undone eventually removes the app from EU storefronts, which is a slower and more expensive failure than a rejection.</p>
 <div class="rule"><span class="lbl">Do instead</span><p>Website, Business, Trader Status. <code>set_eu_trader_status</code> returns the steps and the deep link. The decision is yours and your accountant's.</p></div>
 </section>
@@ -284,7 +284,7 @@ footer a{color:var(--muted)}
 
 <div class="cta">
 <h3>Where this list comes from</h3>
-<p>It is not written by hand. Every entry above is generated from the tool definitions in <a href="/">asc-mcp</a>, an MCP server that drives App Store Connect from a coding agent: 41 tools that either do the thing over the API or, for the ten above, return the exact manual steps and stop cleanly rather than leaving a release half-done.</p>
+<p>It is not written by hand. Every entry above is generated from the tool definitions in <a href="/#pricing">asc-mcp</a>, an MCP server that drives App Store Connect from a coding agent: 41 tools that either do the thing over the API or, for the ten above, return the exact manual steps and stop cleanly rather than leaving a release half-done.</p>
 <p>Six tools work with no licence, three of those without any Apple credentials, and a seven-day trial of the rest starts from inside your agent with no card. If you only came for the list, the list is <a href="https://github.com/pofky/asc-mcp/blob/master/LIMITATIONS.md">in the repo</a> too, and it moves whenever Apple does.</p>
 <p>The other piece of writing here is about the billing behind it: <a href="/writing/license-server/">seven ways a license server quietly cuts off paying customers</a>.</p>
 </div>
