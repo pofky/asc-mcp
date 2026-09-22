@@ -23,6 +23,7 @@ import {
   isValidEmail,
   trialExpiry,
   daysRemaining,
+  classifyGoVisit,
   buildCheckoutUrl,
   trialEmailContent,
   trialEndingEmailContent,
@@ -333,7 +334,7 @@ async function handleRequest(
       }
 
       if (url.pathname === "/go") {
-        return handleGo(url, ctx, env);
+        return handleGo(request, url, ctx, env);
       }
 
       if (url.pathname === "/admin/stats" && request.method === "GET") {
@@ -635,9 +636,31 @@ async function recordIntent(env: Env, kind: string, tool: string): Promise<void>
  * The redirect target is the CHECKOUT_URL constant with validated parameters
  * appended, so no input reaches the Location header.
  */
-function handleGo(url: URL, ctx: ExecutionContext, env: Env): Response {
+function handleGo(
+  request: Request,
+  url: URL,
+  ctx: ExecutionContext,
+  env: Env,
+): Response {
   const raw = url.searchParams.get("tool");
   const tool = isValidToolName(raw) ? raw : "unknown";
+
+  // Crawlers and mail-gateway link scanners follow this link constantly, and
+  // every one of them used to be counted as buy intent and to open a Polar
+  // checkout session. They are recorded under their own kind instead, so the
+  // real number stays readable and the noise stays visible. See
+  // classifyGoVisit for why the redirect is withheld from fewer of them than
+  // the count is.
+  const visit = classifyGoVisit(
+    request.headers.get("User-Agent"),
+    [
+      request.headers.get("Sec-Purpose"),
+      request.headers.get("Purpose"),
+      request.headers.get("X-Moz"),
+      request.headers.get("X-Purpose"),
+    ],
+    request.method,
+  );
 
   // An optional prefill, used only to fill the checkout's email field. The
   // redirect target is still the constant checkout link, so this cannot send
@@ -648,7 +671,17 @@ function handleGo(url: URL, ctx: ExecutionContext, env: Env): Response {
   const email = isValidEmail(rawEmail ?? undefined) ? (rawEmail as string) : undefined;
 
   // Counting must not add latency to, or be able to fail, the path to payment.
-  ctx.waitUntil(recordIntent(env, "checkout_click", tool));
+  ctx.waitUntil(
+    recordIntent(env, visit.automated ? "checkout_click_bot" : "checkout_click", tool),
+  );
+
+  if (!visit.redirect) {
+    // 204 rather than an error: this is a correct response to a machine, and
+    // nothing about it should look broken to a monitor that happens to be
+    // watching the link.
+    return new Response(null, { status: 204 });
+  }
+
   return Response.redirect(
     buildCheckoutUrl(tool === "unknown" ? undefined : tool, email),
     302,

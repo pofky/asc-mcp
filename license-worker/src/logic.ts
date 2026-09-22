@@ -491,6 +491,113 @@ export async function verifyDeleteToken(
 }
 
 
+/**
+ * Tokens that appear in the user-agent of something that is not a person.
+ *
+ * Kept to strings that no shipping browser sends, because the cost of the two
+ * mistakes is not symmetric: counting a crawler as a buyer only corrupts a
+ * number, while refusing to redirect a real person loses the sale this whole
+ * product exists to make.
+ *
+ * `preview`, `scanner`, `fetch` and `proxy` are here because corporate mail
+ * gateways open every link in a message before the recipient does. One of them,
+ * on the teamapex.com trial of 17 September, opened our buy link with the
+ * address rewritten to `dbegfe.gufva@teamapex.com` and the tool name scrambled
+ * to `gevby_fzbvy`, which is how we know they rewrite payloads too.
+ */
+const AUTOMATED_UA_TOKENS = [
+  "bot",
+  "crawl",
+  "spider",
+  "slurp",
+  "preview",
+  "scanner",
+  "monitor",
+  "curl/",
+  "wget",
+  "python-requests",
+  "python-urllib",
+  "okhttp",
+  "go-http-client",
+  "java/",
+  "headless",
+  "phantomjs",
+  "lighthouse",
+  "axios",
+  "node-fetch",
+  "undici",
+  "libwww",
+  "httpclient",
+  "facebookexternalhit",
+  "whatsapp",
+  "telegrambot",
+  "slackbot",
+  "discordbot",
+  "proxy",
+];
+
+/** What a single hit on /go was, and what to do about it. */
+export interface GoVisit {
+  /** False only for something we are confident is a person clicking. */
+  automated: boolean;
+  /** Whether to send the 302. A refused redirect returns 204. */
+  redirect: boolean;
+}
+
+/**
+ * Decide whether a hit on /go is a buying human.
+ *
+ * This exists because the one demand number this product owns was fiction.
+ * Between 3 and 21 September /go recorded one or two `site_pricing`
+ * "checkout clicks" almost every day while the site had no analytics, nobody
+ * arrived from anywhere, and Polar recorded 70 checkout sessions and zero
+ * orders. Every GET of the redirect counted, and every redirect that was
+ * followed opened a Polar checkout session, so crawlers and link scanners
+ * following a plain `<a href>` produced a daily drumbeat of fake intent that
+ * made the funnel look alive.
+ *
+ * Two different decisions come out of one classification, on purpose:
+ *
+ * - **Counting** is aggressive. Anything that does not look like a browser is
+ *   recorded under a separate `kind` rather than discarded, so the noise stays
+ *   measurable instead of becoming invisible.
+ * - **Redirecting** is conservative. It is withheld only from an explicit
+ *   prefetch and from a user-agent that names itself as a crawler; both of
+ *   those are software that never buys, and not sending them on stops them
+ *   opening a Polar checkout session. Everything else is still sent to
+ *   checkout, because a false positive here costs a customer.
+ */
+export function classifyGoVisit(
+  userAgent: string | null | undefined,
+  prefetchHints: (string | null | undefined)[],
+  method = "GET",
+): GoVisit {
+  // Chrome, Firefox and Safari all announce a speculative load, and a browser
+  // that is guessing at a navigation is not a person who has decided to buy.
+  if (prefetchHints.some((h) => typeof h === "string" && h.trim() !== "")) {
+    return { automated: true, redirect: false };
+  }
+
+  const ua = (userAgent ?? "").toLowerCase().trim();
+
+  // A HEAD is never a click: nothing renders a payment page from one.
+  if (method.toUpperCase() === "HEAD") return { automated: true, redirect: true };
+
+  // No user-agent at all is a script. It still gets the redirect, because a
+  // stripped header is also what some privacy tooling does to a real request.
+  if (ua === "") return { automated: true, redirect: true };
+
+  if (AUTOMATED_UA_TOKENS.some((t) => ua.includes(t))) {
+    return { automated: true, redirect: false };
+  }
+
+  // Every shipping browser sends this, and nothing else here needs to be true
+  // for a redirect, only for the count to be trusted.
+  if (!ua.includes("mozilla/5.0")) return { automated: true, redirect: true };
+
+  return { automated: false, redirect: true };
+}
+
 /** The counted redirect to checkout, used by every link we control. */
 export const GO_URL = "https://asc-mcp-license.remewdy.workers.dev/go";
 
