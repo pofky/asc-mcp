@@ -9,7 +9,7 @@
  * be refused.
  */
 import { describe, it, expect } from "vitest";
-import { classifyGoVisit } from "../src/logic";
+import { beaconPage, classifyGoVisit } from "../src/logic";
 
 const CHROME =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
@@ -90,5 +90,44 @@ describe("classifyGoVisit", () => {
     });
     expect(classifyGoVisit(CHROME, [null], "head").automated).toBe(true);
     expect(classifyGoVisit(CHROME, [null], "GET").automated).toBe(false);
+  });
+});
+
+/**
+ * The site beacon's page names.
+ *
+ * An allowlist, so the interesting cases are the ones it must refuse: the value
+ * arrives from a public endpoint and is written into a stored string.
+ */
+describe("beaconPage", () => {
+  it("names the pages the site actually has", () => {
+    expect(beaconPage("/")).toBe("home");
+    expect(beaconPage("/index.html")).toBe("home");
+    expect(beaconPage("/writing/license-server/")).toBe("writing_license_server");
+    expect(beaconPage("/writing/license-server")).toBe("writing_license_server");
+  });
+
+  it("ignores a query string and a fragment", () => {
+    expect(beaconPage("/?utm_source=hn")).toBe("home");
+    expect(beaconPage("/#pricing")).toBe("home");
+    expect(beaconPage("/writing/license-server/?ref=x#top")).toBe("writing_license_server");
+  });
+
+  it("buckets anything it does not recognise, rather than storing it", () => {
+    // A SQL fragment and an overlong path: both must collapse to one safe
+    // constant, because this value is written to the counter table.
+    const hostile = "'; delete from intent_events where 1=1; --";
+    for (const p of [
+      "/admin",
+      "/../etc/passwd",
+      hostile,
+      "/" + "a".repeat(5000),
+      "",
+      null,
+      undefined,
+      42 as unknown as string,
+    ]) {
+      expect(beaconPage(p as string)).toBe("other");
+    }
   });
 });

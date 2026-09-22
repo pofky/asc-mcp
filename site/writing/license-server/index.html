@@ -321,5 +321,17 @@ if (now &lt;= expiry + 4 days)  -> usable, in grace
   </div>
 </footer>
 
+
+<script>
+// One request, once per page load, to our own licence worker. It sends the
+// path and nothing else: no cookie, no identifier, no third party, no library.
+// It exists so the funnel has a denominator; see /privacy on that host.
+try {
+  fetch(
+    'https://asc-mcp-license.remewdy.workers.dev/b?p=' + encodeURIComponent(location.pathname),
+    { mode: 'no-cors', keepalive: true, cache: 'no-store' }
+  );
+} catch (e) { /* a counter must never be able to break the page */ }
+</script>
 </body>
 </html>

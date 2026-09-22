@@ -636,5 +636,17 @@ async function copyHandler() {
 {"@type":"Question","name":"Which clients does asc-mcp work with?","acceptedAnswer":{"@type":"Answer","text":"Any MCP client that speaks stdio, including Claude Code, Claude Desktop, Cursor, Windsurf and Cline. It needs Node 18 or newer. Building and uploading a binary additionally requires a Mac with Xcode."}}]}
 ]}
 </script>
+
+<script>
+// One request, once per page load, to our own licence worker. It sends the
+// path and nothing else: no cookie, no identifier, no third party, no library.
+// It exists so the funnel has a denominator; see /privacy on that host.
+try {
+  fetch(
+    'https://asc-mcp-license.remewdy.workers.dev/b?p=' + encodeURIComponent(location.pathname),
+    { mode: 'no-cors', keepalive: true, cache: 'no-store' }
+  );
+} catch (e) { /* a counter must never be able to break the page */ }
+</script>
 </body>
 </html>
