@@ -53,13 +53,50 @@ Committed as `e715072` and pushed.
 
 **Not deployed.** `npx wrangler deploy` is refused in this session by the
 sandbox classifier, twice, including with the override flag. The one-line
-command is in `deploy-go-bot-filter.txt`. Until it runs, `checkout_click`
+command is in `deploy-license-worker.txt`. Until it runs, `checkout_click`
 remains polluted, so treat the daily `site_pricing` count as noise when reading
 the table.
 
 Corollary once it is live: any `checkout_click` that survives is worth taking
 seriously, and the bot row is the first honest measure of how much of this
 traffic was never human.
+
+## Shipped autonomously the same day, after the audit
+
+**A denominator.** `GET /b` on the licence worker counts page views with the
+same discipline as the buy-link counter: a day, a page name from an allowlist, a
+number, and nothing else. No cookie, no identifier, no third party. Automated
+hits split into `page_view_bot` through the same classifier. The site fires it
+from every page. Cloudflare Web Analytics was the alternative and is not
+available: the site lives on `asc-mcp.pages.dev` rather than a zone we own, and
+the token has no RUM scope. Verified by loading the real page in Chrome against
+a local worker and watching `page_view/home` go from 1 to 2.
+
+**The privacy policy moved with the code**, rather than after it. It gains a
+paragraph for the beacon and a clause saying the buy link reads the user agent
+to tell a crawler from a person without storing it. Both dates bumped to
+22 September.
+
+**Three letters to the September trialists** in `Marketing/`, one per
+destination, paste-ready: `trial-followup-canmucahit942.txt` (lapsed 18th),
+`trial-followup-carter-thein.txt` (expires 24th),
+`trial-followup-atilihsan38.txt` (expires 26th). Each names the tool that person
+was actually using when the paywall stopped them and asks one question instead
+of selling. Nine trials, zero conversions, and nobody has ever asked one of them
+why. Sending is yours.
+
+**The API-limits page is live**:
+`https://asc-mcp.pages.dev/writing/app-store-connect-api-limits/`, deployed to
+Pages. Ten refusals with the error each returns, plus three calls that succeed
+and surprise you. This is the "save-earning format" DISTRIBUTION.md section 6
+names, and it is the first content asset aimed at search and answer engines
+rather than at people who already know the product. Linked from the homepage
+limits section, the footer, `sitemap.xml` and `llms.txt`.
+
+**Live and not live:** the site is deployed, the worker is not. Until
+`deploy-license-worker.txt` runs, `/b` returns 404 to every page load (silently,
+the beacon is `mode: "no-cors"`), so page views are not being counted yet and
+`checkout_click` is still polluted.
 
 ## What could not be verified from here
 
@@ -249,20 +286,24 @@ to null the email and key and keep the anchor. That is a conversion decision.
 
 ## Next in order
 
-1. **Deploy the /go bot filter** (`deploy-go-bot-filter.txt`, one line). Until
-   then the demand number stays fiction.
+1. **Deploy the licence worker** (`deploy-license-worker.txt`, one line). It
+   carries three things now: the /go bot filter, the `/b` page-view counter the
+   deployed site is already calling, and the privacy policy that describes both.
+   Until it runs, `checkout_click` stays fiction and no page view is counted.
 2. **Open Brevo's transactional log** and check delivery, spam and bounce for
    the four reminder mails of 8, 10, 18 and 19 September. If they landed in spam
    the reminder feature is built and worthless, and that is the cheapest
    remaining explanation for nine trials and no conversions.
-3. **Write to the three September trialists by hand.** `canmucahit942@gmail.com`
-   and `atilihsan38@gmail.com` have lapsed, `carter.thein@teamapex.com` expires
-   24 September. Nine trials, zero conversions, and nobody has ever asked one of
-   them why. One reply is worth more than another feature.
-4. **Give the site a visits number.** It still has no analytics of any kind, so
-   there is no denominator under the /go count and no way to tell a traffic
-   problem from a page problem. The Cloudflare token has no RUM scope; a
-   first-party beacon on the worker is the way round it and is not built.
+3. **Send the three trialist letters** in `Marketing/trial-followup-*.txt`.
+   They are written and the links are verified; they need your send button. One
+   reply is worth more than another feature.
+4. **Decide on a real domain.** The site is on `asc-mcp.pages.dev`, which is
+   also why the licence emails come from `license@brewist.app`: there is no
+   sending domain of our own. `asc-mcp.com` and `ascmcp.com` were both
+   unregistered on 22 September, and `asc-mcp.dev` has no nameservers either.
+   About $10 to $12 a year fixes the brand, the SEO and the email sender
+   together. Real money, so it is yours to spend, but it is the cheapest item on
+   this list by a distance.
 5. **Send the win-back** (`Marketing/failed-renewal-winback.txt`). One declined
    card is the entire difference between one paying customer and none, and
    nobody has spoken to them in our voice.
