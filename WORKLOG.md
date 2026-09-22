@@ -1,6 +1,32 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**The flows are fine. One of the numbers reading them was not (2026-09-22).**
+
+Re-audited production because Polar still shows zero active subscriptions. The machinery all
+works: the reminder cron has now mailed two real trials (`info@7stock.app` on 8 and
+10 September, `canmucahit942@gmail.com` on 18 and 19), stamps are written only on a Brevo 2xx,
+live trial keys still validate as Pro, and every trial row shows its key mailed. Trials are up,
+three since 11 September against about one a week before, each started from a different locked
+tool, which is the tier-aware instructions working. Polar holds two orders ever and $0 in
+30 days, so no payment path is failing: nobody has attempted one. Nine trials, zero conversions.
+
+What was wrong was the measurement. `/go` counted every GET as a checkout click and followed it
+to Polar, so crawlers and mail-gateway link scanners opening a plain `<a href>` produced one or
+two fake `site_pricing` clicks almost every day and 70 Polar checkout sessions against zero
+orders. `classifyGoVisit` now separates counting from redirecting: anything not browser-shaped
+is recorded as `checkout_click_bot` instead of being dropped, while the 302 is withheld only
+from an announced prefetch and a self-identifying crawler, which also stops them opening a
+checkout session. An unknown user-agent keeps the redirect and loses only the number, because a
+false positive there costs a sale. Driven against the real handler locally, four traffic shapes,
+72 worker tests, `tsc` clean, commit `e715072`.
+
+Deploy is refused by the sandbox classifier in this session, so it is not live:
+`deploy-go-bot-filter.txt`. Still unverifiable from here, and now the likeliest remaining
+explanation for nine trials and no conversions: whether those four reminder mails were delivered
+or spam-foldered. Brevo's event log needs a dashboard login.
+
+## Previously
 **Both funnel leaks shipped and live, and the cron proven in production (2026-09-03).**
 
 The fourth flow audit found nothing broken in any flow the product advertises. It found two

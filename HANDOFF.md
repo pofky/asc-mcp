@@ -1,8 +1,80 @@
 # Handoff: appstore-connect-mcp
 
-Updated 2026-09-07. Branch `master`.
+Updated 2026-09-22. Branch `master`.
 
 ## Where things stand
+
+**22 September: the flows work. The funnel does not, and one of the two numbers
+we were reading it by was fiction.**
+
+Re-audited in production today because the Polar dashboard still shows zero
+active subscriptions. Nothing in the machinery is broken:
+
+- **The reminder cron runs and mails.** Two trials have now been through it for
+  real. `info@7stock.app` was stamped `2026-09-08T15:00:33Z` (ending) and
+  `2026-09-10T15:00:46Z` (lapsed); `canmucahit942@gmail.com` on 18 and
+  19 September. Stamps are written only on a Brevo 2xx, so those four messages
+  were accepted for delivery.
+- **The tier-aware instructions moved the trial rate.** Three new trials since
+  11 September (`canmucahit942@gmail.com` 11th, `carter.thein@teamapex.com`
+  17th, `atilihsan38@gmail.com` 19th) against roughly one a week before, each
+  started from a different locked tool (`create_iap`, `submit_for_review`,
+  `update_version_metadata`). Nine trials ever.
+- **Trial keys still validate.** `POST /validate` on the live worker returns
+  `valid: true, tier: pro, trial: true` for the current rows. Every trial row
+  has `key_emailed = 1`.
+- **Polar is simply empty.** Two orders ever, both `kabrail.chamoun@gmail.com`
+  (August paid, September void), one canceled subscription, $0 in the last
+  30 days. Nobody has attempted a payment, so no payment path is failing.
+
+**Zero of nine trials have converted.** That is the whole problem, and it is a
+demand and follow-through problem, not a defect.
+
+## Fixed today: /go counted crawlers as buyers
+
+`checkout_click` showed one or two `site_pricing` hits almost every day through
+September while the site has no analytics and no campaign is running, and Polar
+holds 70 checkout sessions with zero orders. Every GET of `/go` was counted and
+followed, so a crawler or a mail gateway opening a plain `<a href>` produced
+fake buy intent and a real Polar checkout session.
+
+`classifyGoVisit` (`license-worker/src/logic.ts`) now splits the two decisions.
+Counting is aggressive: anything that does not look like a browser is recorded
+as `checkout_click_bot` rather than dropped, so the noise stays visible.
+Redirecting is conservative: withheld only from an announced prefetch and from a
+self-identifying crawler, both of which get a 204 that also stops them opening a
+Polar session. An unknown or stripped user-agent still gets the 302 and only
+loses the number, because a false positive there costs a sale.
+
+Driven against the real handler on a local worker: Chrome 302s and counts as
+`checkout_click`; Googlebot, an announced `Sec-Purpose: prefetch` and bare curl
+each get 204 and land in `checkout_click_bot`. 72 worker tests, `tsc` clean.
+Committed as `e715072` and pushed.
+
+**Not deployed.** `npx wrangler deploy` is refused in this session by the
+sandbox classifier, twice, including with the override flag. The one-line
+command is in `deploy-go-bot-filter.txt`. Until it runs, `checkout_click`
+remains polluted, so treat the daily `site_pricing` count as noise when reading
+the table.
+
+Corollary once it is live: any `checkout_click` that survives is worth taking
+seriously, and the bot row is the first honest measure of how much of this
+traffic was never human.
+
+## What could not be verified from here
+
+- **Whether the four reminder mails were delivered or spam-foldered.** Brevo
+  accepted them; that is all a 2xx proves. The Brevo dashboard needs a login and
+  the only key in Keychain is the SMTP one, not an `xkeysib` API key, so the
+  transactional event log is operator-only. Worth one look: zero of the two
+  mailed trials clicked through, and the `/go` tags would have recorded it.
+  DNS is at least not obviously wrong: `brevo1`/`brevo2` DKIM CNAMEs are live on
+  `brewist.app` and DMARC is `p=none`, though the SPF record covers Cloudflare
+  Email Routing only and does not include Brevo.
+- **A real payment through the live checkout.** Still never exercised end to
+  end, and it cannot be from here.
+
+## Superseded: where things stood on 7 September
 
 **Everything built today is live.** 1.9.9 is on npm, the MCP registry, the
 GitHub release and the site. The licence worker is deployed with a daily cron,
@@ -177,17 +249,27 @@ to null the email and key and keep the anchor. That is a conversion decision.
 
 ## Next in order
 
-1. **Send the win-back** (`Marketing/failed-renewal-winback.txt`). One declined
+1. **Deploy the /go bot filter** (`deploy-go-bot-filter.txt`, one line). Until
+   then the demand number stays fiction.
+2. **Open Brevo's transactional log** and check delivery, spam and bounce for
+   the four reminder mails of 8, 10, 18 and 19 September. If they landed in spam
+   the reminder feature is built and worthless, and that is the cheapest
+   remaining explanation for nine trials and no conversions.
+3. **Write to the three September trialists by hand.** `canmucahit942@gmail.com`
+   and `atilihsan38@gmail.com` have lapsed, `carter.thein@teamapex.com` expires
+   24 September. Nine trials, zero conversions, and nobody has ever asked one of
+   them why. One reply is worth more than another feature.
+4. **Give the site a visits number.** It still has no analytics of any kind, so
+   there is no denominator under the /go count and no way to tell a traffic
+   problem from a page problem. The Cloudflare token has no RUM scope; a
+   first-party beacon on the worker is the way round it and is not built.
+5. **Send the win-back** (`Marketing/failed-renewal-winback.txt`). One declined
    card is the entire difference between one paying customer and none, and
    nobody has spoken to them in our voice.
-2. **Watch 8 to 10 September.** The reminder mails fire for the 9 September
-   trial. Check `intent_events` for `trial_ending_email` / `trial_lapsed_email`
-   checkout clicks, and Polar for an order. That is the first real conversion
-   signal this product has ever had.
-3. **Distribution is now the binding constraint, and it needs the operator.**
+6. **Distribution is now the binding constraint, and it needs the operator.**
    See "Blocked on accounts" below. Nothing in this repo will produce more
    trials until more people arrive.
-4. **Glama: the build failure is theirs, the missing instructions are
+7. **Glama: the build failure is theirs, the missing instructions are
    mcp-proxy's.** Build `01a06aee` (4 September, 10m33s) never reached our code.
    It died in `load metadata for docker.io/library/debian:trixie-slim` with
    `no active session ... context deadline exceeded`, a Docker Hub metadata
@@ -207,12 +289,10 @@ to null the email and key and keep the anchor. That is a conversion decision.
    through the proxy, while `capabilities` and `serverInfo` survive. Every
    server Glama inspects loses its instructions this way, so no release of ours
    can fix it. Paste-ready issue: `launch/mcp-proxy-instructions-issue.txt`.
-5. Publish the improved registry description so PulseMCP stops mirroring the
+8. Publish the improved registry description so PulseMCP stops mirroring the
    April read-only copy (`launch/distribution-checklist.md` has the resync path,
    `launch/pulsemcp-listing-update.txt` is the email).
-6. Turn on Cloudflare Web Analytics for the site. It still has no analytics at
-   all, so its visit count is unknown and step 2 cannot be measured.
-7. The licence emails still come from `license@brewist.app`. The three reminder
+9. The licence emails still come from `license@brewist.app`. The three reminder
    mails inherit that sender, so this now touches more messages than before.
 
 ## Blocked on accounts, not on work

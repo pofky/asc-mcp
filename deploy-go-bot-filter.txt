@@ -1,0 +1,1 @@
+cd /Volumes/T7/Projects/appstore-connect-mcp/license-worker && npx wrangler deploy
