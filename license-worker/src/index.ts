@@ -24,6 +24,7 @@ import {
   trialExpiry,
   daysRemaining,
   classifyGoVisit,
+  beaconPage,
   buildCheckoutUrl,
   trialEmailContent,
   trialEndingEmailContent,
@@ -333,6 +334,10 @@ async function handleRequest(
         return await handleTrial(request, env, corsHeaders);
       }
 
+      if (url.pathname === "/b") {
+        return handleBeacon(request, url, ctx, env);
+      }
+
       if (url.pathname === "/go") {
         return handleGo(request, url, ctx, env);
       }
@@ -636,6 +641,48 @@ async function recordIntent(env: Env, kind: string, tool: string): Promise<void>
  * The redirect target is the CHECKOUT_URL constant with validated parameters
  * appended, so no input reaches the Location header.
  */
+/**
+ * The site's page-view counter. Same shape as the buy-link counter and the same
+ * discipline: a day, a page name, a number, and nothing else. No cookie, no
+ * identifier, no IP, no stored user agent, nothing that distinguishes one
+ * visitor from another or one visit from the next.
+ *
+ * It exists because every funnel number this product has is a numerator. Nine
+ * trials and zero conversions says nothing until it is known whether nine
+ * people arrived or nine hundred.
+ *
+ * Automated hits are separated by the same classifier the buy link uses, since
+ * a crawler renders and runs scripts now and would otherwise be counted as a
+ * reader.
+ */
+function handleBeacon(
+  request: Request,
+  url: URL,
+  ctx: ExecutionContext,
+  env: Env,
+): Response {
+  const page = beaconPage(url.searchParams.get("p"));
+  const visit = classifyGoVisit(
+    request.headers.get("User-Agent"),
+    [
+      request.headers.get("Sec-Purpose"),
+      request.headers.get("Purpose"),
+      request.headers.get("X-Moz"),
+      request.headers.get("X-Purpose"),
+    ],
+    request.method,
+  );
+
+  ctx.waitUntil(recordIntent(env, visit.automated ? "page_view_bot" : "page_view", page));
+
+  // 204 with no body: the page has nothing to do with the answer, and an empty
+  // response cannot be cached into a false count.
+  return new Response(null, {
+    status: 204,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
 function handleGo(
   request: Request,
   url: URL,
@@ -1411,7 +1458,7 @@ async function handleKeyLookup(
 function handlePrivacy(headers: Record<string, string>): Response {
   return html(`
     <h1>Privacy Policy</h1>
-    <p><em>Last updated: September 7, 2026</em></p>
+    <p><em>Last updated: September 22, 2026</em></p>
 
     <h2>What we collect</h2>
     <p>When you purchase a Pro license, we store:</p>
@@ -1449,7 +1496,8 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>A license key validation check, sending only the license key string. This happens on startup when you have a key set, and the result is cached for 24 hours.</li>
       <li>A trial request, sending the email you provided, the one-way fingerprint, and the tool name. This happens only when you call <code>asc_start_trial</code>.</li>
     </ul>
-    <p>Separately, when you click a subscribe link from inside your agent, it passes through a redirect on our server that increments a daily counter of the form "3 people clicked the buy link from the submit_for_review tool today". That counter holds a date, a tool name and a number. It records no identifier, no IP address, no user agent, and nothing that could be tied back to you. A link we email you may carry your address in it as a checkout prefill, so you do not have to retype it; that value is passed to the checkout and is not written to the counter.</p>
+    <p>Separately, when you click a subscribe link from inside your agent, it passes through a redirect on our server that increments a daily counter of the form "3 people clicked the buy link from the submit_for_review tool today". That counter holds a date, a tool name and a number. It records no identifier, no IP address, no user agent, and nothing that could be tied back to you. Your browser's user agent string is read at the moment of the request, and only to tell a crawler apart from a person so that the two are counted separately; it is not stored. A link we email you may carry your address in it as a checkout prefill, so you do not have to retype it; that value is passed to the checkout and is not written to the counter.</p>
+    <p>Our marketing site counts page views the same way. Each page asks our own server to add one to a daily count of the form "12 views of the home page today". That request carries the path of the page and nothing else: no cookie, no local storage, no advertising or device identifier, no third-party analytics service, and no stored IP address or user agent. It cannot distinguish you from any other visitor, or one of your visits from the next, and there is nothing in it to link back to a licence, a trial or an email address.</p>
 
     <h2>Data storage</h2>
     <p>License data is stored on Cloudflare D1 (EU region). Cloudflare acts as our infrastructure provider under their <a href="https://www.cloudflare.com/cloudflare-customer-dpa/">Data Processing Agreement</a>.</p>
@@ -1485,7 +1533,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
   `, headers, 200, {
     title: "Privacy Policy",
     canonical: "https://asc-mcp-license.remewdy.workers.dev/privacy",
-    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"asc-mcp","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Privacy Policy"}]},{"@type":"WebPage","name":"Privacy Policy","url":"https://asc-mcp-license.remewdy.workers.dev/privacy","dateModified":"2026-09-07","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
+    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"asc-mcp","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Privacy Policy"}]},{"@type":"WebPage","name":"Privacy Policy","url":"https://asc-mcp-license.remewdy.workers.dev/privacy","dateModified":"2026-09-22","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
   });
 }
 

@@ -598,6 +598,38 @@ export function classifyGoVisit(
   return { automated: false, redirect: true };
 }
 
+/**
+ * The pages the site beacon is allowed to name, and what each is counted as.
+ *
+ * An allowlist rather than a sanitiser because the value arrives from a public
+ * endpoint and ends up in a stored string. Anything not on it counts as
+ * `other`, so a new page is under-reported until it is added here, which is the
+ * safe direction: a typo or a probe cannot create rows.
+ */
+const BEACON_PATHS: Record<string, string> = {
+  "/": "home",
+  "/index.html": "home",
+  "/writing/license-server/": "writing_license_server",
+  "/writing/license-server": "writing_license_server",
+};
+
+/**
+ * Which page a beacon hit belongs to.
+ *
+ * The site has no analytics of any kind, which is why every conversation about
+ * the funnel since August has been about ratios with no denominator: 9 trials
+ * out of how many visitors is unanswerable, so there has never been a way to
+ * tell a traffic problem from a page problem. This is the smallest thing that
+ * answers it, and it deliberately stores no more than the /go counter does: a
+ * date, a page name and a number.
+ */
+export function beaconPage(path: string | null | undefined): string {
+  if (typeof path !== "string") return "other";
+  // A query string or fragment is never part of the identity of these pages.
+  const clean = path.split("?")[0].split("#")[0];
+  return BEACON_PATHS[clean] ?? "other";
+}
+
 /** The counted redirect to checkout, used by every link we control. */
 export const GO_URL = "https://asc-mcp-license.remewdy.workers.dev/go";
 
