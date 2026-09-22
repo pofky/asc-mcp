@@ -116,6 +116,30 @@ description missing the word the slug and the target query both use; and ten
 claims about Apple citing nothing of Apple's. All four fixed and redeployed, the
 four new citations checked for a 200 first.
 
+## What the legal gate found, again
+
+It found the same failure it found on 7 September, in the paragraph written this
+morning to avoid it. The beacon disclosure said the request "carries the path of
+the page and nothing else", which is a claim about transmission; a page-view
+request carries the IP and user agent every HTTP request carries, and the
+handler reads the user agent and prefetch headers to classify it. Fixed in
+`a75b2e3`, which now separates what the page sends, what the browser attaches
+anyway, and what is written down. The legal-basis list gained Article 6(1)(f)
+for those headers and for mailing our own trialists, naming the Article 21(2)
+objection right the three letters rely on; the telemetry bullet is scoped to the
+software; the counters' retention is stated.
+
+On the audit's blocking sequencing point: `/privacy` and `/b` are the same
+deployment artifact, so disclosure cannot lag collection. The live site calls
+`/b` today and gets a 404, which stores nothing.
+
+Left deliberately, both standing items rather than regressions: the trader
+identification gives "Lithuania" with no street address, here and in `/terms`
+and the site footer; and terminal-equipment complaints in Lithuania sit with
+RRT rather than VDAI, which is the only authority the policy names. The auditor
+would not assert the Lithuanian article number and neither will I, so that one
+needs checking before it is written down.
+
 ## What could not be verified from here
 
 - **Whether the four reminder mails were delivered or spam-foldered.** Brevo
