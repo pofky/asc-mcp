@@ -98,6 +98,24 @@ limits section, the footer, `sitemap.xml` and `llms.txt`.
 the beacon is `mode: "no-cors"`), so page views are not being counted yet and
 `checkout_click` is still polluted.
 
+## Two traps this work walked into, both now fixed
+
+**The site's own CSP silently killed the beacon.** `site/_headers` sets
+`default-src 'none'` with no `connect-src`, so `fetch()` from the page was
+refused by the browser and the counter would have reported a flat zero,
+indistinguishable from nobody visiting. Every local check passed because the
+test server sends no CSP at all. `connect-src` is now pinned to the licence
+worker's origin and nothing else, deployed, and the request was watched leaving
+Chrome on the live page.
+
+**The audit that follows a ship is not optional.** The SEO/CRO/AEO auditor found
+the homepage FAQ schema answering the new page's exact question in full from the
+root URL, which is a site competing with itself for a citation; the article's
+closing link going to the bare homepage rather than to the price; title and
+description missing the word the slug and the target query both use; and ten
+claims about Apple citing nothing of Apple's. All four fixed and redeployed, the
+four new citations checked for a 200 first.
+
 ## What could not be verified from here
 
 - **Whether the four reminder mails were delivered or spam-foldered.** Brevo
