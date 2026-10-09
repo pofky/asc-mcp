@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { releaseNotes } from "../src/tools/release-notes.js";
@@ -101,5 +102,20 @@ describe("release_notes input bounds", () => {
   it("says so when the directory is not a git repository", async () => {
     const out = await releaseNotes({ project_path: outside }, "pro");
     expect(out).toBe("Error: not a git repository. Run this tool from a git project directory.");
+  });
+});
+
+describe("no tool under src/ builds a shell command line", () => {
+  // The injection above existed because one call site used the shell form. A
+  // new one would be invisible to every other test here, so the source is read.
+  const sources = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? sources(join(dir, e.name)) : e.name.endsWith(".ts") ? [join(dir, e.name)] : [],
+    );
+
+  it("uses execFile with an argument vector, never exec or execSync", () => {
+    const src = fileURLToPath(new URL("../src", import.meta.url));
+    const offenders = sources(src).filter((file) => /(?<![.\w])exec(Sync)?\s*\(/.test(readFileSync(file, "utf-8")));
+    expect(offenders).toEqual([]);
   });
 });
