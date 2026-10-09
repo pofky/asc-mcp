@@ -89,6 +89,9 @@ if (!existsSync(licenseTo) || !readFileSync(licenseFrom).equals(readFileSync(lic
 // a stray file is something a person put there.
 const expected = (f) =>
   f === join(".claude-plugin", "plugin.json") ||
+  // The listing icon. The directory takes it once, the first time the plugin
+  // is saved or submitted in the portal, and ignores later changes.
+  f === join(".claude-plugin", "icon.png") ||
   f === "README.md" ||
   f === "LICENSE" ||
   f.startsWith("skills" + sep);
