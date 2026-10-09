@@ -4,6 +4,40 @@ Updated 2026-10-09. Branch `master`.
 
 ## Where things stand
 
+**9 October, late: the existing subscribers were checked after three releases
+and three worker deploys in one day. Nothing changed for them.**
+
+- **Production rows** (read without keys or emails): 4 active paid rows. Three
+  expire 29 October and 1 November (twice), so their September and October
+  renewals from the OLD Polar org were processed; one has no expiry (created
+  30 July, looks hand-issued). Polar shows 3 active subscriptions, so the
+  fourth row is not a Polar subscriber. The other 4 paid rows are long dead.
+- **The licensing code did not move today.** `git diff v1.9.11 HEAD` on
+  `license-worker/src`: no hunk in `handleValidate` or `handlePolarWebhook`,
+  and every `logic.ts` hunk is at line 458 or below (mail text, reminders,
+  unsubscribe, bot filter). `isLicenseUsable`, signature checking,
+  `shouldBeActive` and the product filter are untouched. Both webhook secrets
+  are still set on the worker.
+- **Replayed locally against today's code**, with rows shaped like the four
+  live ones: all four keys validate as Pro; a `subscription.cycled` and an
+  `updated` from the old org (old product id, old org's secret scheme) move the
+  expiry forward a month and the key stays valid; a `past_due` keeps access; a
+  bad signature gets 401.
+- **The client.** As a Pro user, published 1.9.14 is byte-identical to 1.9.13
+  (instructions, 41 tool definitions, seven replies; both captured at the same
+  moment, because one of the replies reads this repo's git log). Against
+  1.9.11, which they had a week ago: same 41 tools and descriptions, same Pro
+  instructions. What differs is 1.9.12's doing: every tool carries a title and
+  a read/write hint, `release_notes` restricts `since_tag` to ref-name
+  characters and caps `max_commits` at 500 (the injection fix), one line of the
+  playbook is reworded.
+- **Could not be checked from here:** a real subscriber key against the live
+  `/validate` (keys are not readable from a session), and the old org's webhook
+  delivery log (the token is scoped to the new org). The next real proof is the
+  renewal due **29 October**: that row's `expires_at` should move to 29
+  November. Check it on the 30th, and the two 1 November rows on the 2nd.
+
+
 **9 October, night: 1.9.14 gives the free tier a five-call look at the Pro read
 tools, then asks for $9. Released, deployed, verified.**
 
