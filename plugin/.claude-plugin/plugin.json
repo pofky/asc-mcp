@@ -1,7 +1,7 @@
 {
   "name": "asc-mcp",
   "displayName": "asc-mcp",
-  "version": "1.9.12",
+  "version": "1.9.13",
   "description": "Run an App Store release from a conversation: review status, reviews and sales, metadata, screenshots, builds, TestFlight, in-app purchases, submit and release. A local MCP server for App Store Connect plus a review-triage skill.",
   "author": {
     "name": "Povilas Konopackas",
@@ -45,7 +45,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@pofky/asc-mcp@1.9.12"
+        "@pofky/asc-mcp@1.9.13"
       ],
       "env": {
         "ASC_ISSUER_ID": "${user_config.asc_issuer_id}",
