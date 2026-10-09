@@ -45,6 +45,27 @@ Both fixes are committed and pushed, and both wait on an operator command:
 that both headers land in the DKIM `h=` list. Needs one real send read from raw
 headers. Nobody is due a reminder, so the next real trial is the first send.
 
+**Session ended 9 October with everything committed and pushed** (`e950fe8`
+injection, `d20d4d7` opt-out, `202222f` site copy plus a test that fails on any
+shell-form exec under `src/`). Completeness audit: three MEDIUM gaps, two closed
+in `202222f`, the third is the post-deploy check above. Report in
+`.autopilot/reports/completeness-2026-10-09-session.md`. Root 261 tests, worker
+94, `tsc` clean in both.
+
+**The stop hook was still blocking at session end, and not on this work.**
+`.autopilot/state/pricing_review_required` and `seo_review_required` are left
+over from 7 September. The substance checker cannot read their `_done` files
+because the noise-pattern hook blocks reads under `.autopilot/state/`. Needs the
+operator to pick one: exempt `*_done` from the noise patterns in
+`autopilot/hooks/pre_tool_use.py`, or delete the two stale `_required` flags.
+An agent should not do either on a hook's say-so.
+
+**Not started:** the connector directory listing prep (title plus
+readOnlyHint/destructiveHint on all 43 `server.tool` registrations in
+`src/index.ts`, `.claude-plugin/plugin.json`, README privacy section). It is the
+only queued item aimed at the actual problem, and it wants to ride in the same
+npm release if 1.9.12 has not gone out yet.
+
 **Open, the operator's call:** the footer and the policy identify the sender as
 "Lithuania" with no postal address. CAN-SPAM wants a physical postal address in
 a commercial mail and at least one trialist is in the US. A street address, a
@@ -378,11 +399,18 @@ to null the email and key and keep the anchor. That is a conversion decision.
 
 ## Next in order
 
-1. **Run `deploy-license-worker.txt`, then `release-npm.txt`**, in that order,
-   so the opt-out the new in-agent notice describes exists before 1.9.12 does.
-   The deploy applies migration 0004 first; without the column the cron,
-   `/unsubscribe` and `/admin/announce` all error. It also carries the 22
-   September work: the /go bot filter, the `/b` counter and its policy text.
+1. **Run three operator command files, in this order:**
+   `deploy-license-worker.txt`, `deploy-site.txt`, `release-npm.txt`. The worker
+   goes first so the opt-out that the site copy and the 1.9.12 in-agent notice
+   describe already exists. The worker file applies migration 0004 before the
+   deploy; without the column the cron, `/unsubscribe` and `/admin/announce`
+   all error. It also carries the 22 September work: the /go bot filter, the
+   `/b` counter and its policy text. The repo is public, so the injection fix
+   is readable while npm still serves the vulnerable 1.9.11: do not sit on
+   `release-npm.txt`.
+   After the deploy, still owed: one real reminder send read from raw headers
+   (does Brevo pass `List-Unsubscribe` through, are both headers in DKIM `h=`),
+   via `wrangler dev --remote --test-scheduled` on a synthetic row.
 2. **Open Brevo's transactional log** and check delivery, spam and bounce for
    the four reminder mails of 8, 10, 18 and 19 September. If they landed in spam
    the reminder feature is built and worthless, and that is the cheapest
