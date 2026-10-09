@@ -1,6 +1,19 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**Two critical findings fixed, and neither was the reason nobody is arriving (2026-10-09).**
+
+Asked whether the `release_notes` shell injection and the reminder mails with no opt-out were
+blocking new users. No: npm `latest` is at 53 installs a week, the repo had 4 unique visitors in
+14 days, and no trial has started since 19 September. Both fixed anyway. `e950fe8` takes the
+shell out of `release_notes` (red test first, exploit string driven against the build).
+`d20d4d7` gives every product mail a sender, a reason and a signed unsubscribe link, adds
+`/unsubscribe`, makes the cron and `/admin/announce` honour it, and corrects the policy and the
+in-agent notice; the legal gate ran on the diff and its three blockers are in. Driving a local
+worker caught an exported string that would have stopped the deployed worker from starting.
+Not live: `deploy-license-worker.txt` (migration 0004 then deploy), then `release-npm.txt`
+(1.9.12). Open for the operator: a postal address for the mail footer.
+
 **The flows are fine. One of the numbers reading them was not (2026-09-22).**
 
 Re-audited production because Polar still shows zero active subscriptions. The machinery all

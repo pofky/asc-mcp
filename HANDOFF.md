@@ -1,8 +1,58 @@
 # Handoff: appstore-connect-mcp
 
-Updated 2026-09-22. Branch `master`.
+Updated 2026-10-09. Branch `master`.
 
 ## Where things stand
+
+**9 October: two critical findings fixed in the repo, neither live yet, and
+neither was why nobody is arriving.**
+
+The operator asked whether the `release_notes` shell injection and the
+reminder mails with no opt-out were blocking new users. They were not. Neither
+is visible to someone who has not installed, and installs are the problem:
+
+- npm `latest` took **53 downloads last week** (66 on 31 August). Heimdall's
+  `latest` took 372.
+- The GitHub repo had **4 unique visitors in 14 days**, 0 stars. Heimdall has 52.
+- **No trial has started since 19 September.** Three weeks, zero. Nine ever.
+- Nothing has shipped to npm since 1.9.11 on 7 September.
+
+So the binding constraint is unchanged from 22 September: distribution. The
+directory listing in `.autopilot/queues/autonomous-backlog.md` is the only
+queued item aimed at it.
+
+Both fixes are committed and pushed, and both wait on an operator command:
+
+- **`release_notes` injection, fixed in `e950fe8`.** Argument-vector git calls,
+  a ref-name allowlist on `since_tag`, bounded `max_commits`, checked
+  `project_path`. `tests/release-notes.test.ts` drives the exploit string
+  against a temp repo and was red first; the built `dist/` was driven with the
+  same string. Reaches users only through an npm release: `release-npm.txt`.
+- **Reminder opt-out, fixed in `d20d4d7`.** Footer with sender, reason and a
+  signed unsubscribe link on every product mail; `GET`/`POST /unsubscribe`;
+  the cron and `/admin/announce` skip an opted-out address; the key mail
+  announces the two reminders and carries the link; policy and in-agent notice
+  corrected. Verified by `license-worker/tests/unsubscribe.test.ts`, which runs
+  the worker's own SQL against `schema.sql` in SQLite, and by driving a local
+  worker: GET 200 and no write, bad token 400, one-click POST 200 and the
+  column stamped, cron 200, `/b` 204, policy dated 9 October. Legal gate ran on
+  the diff and its three blocking findings are in the commit.
+  Reaches production through `deploy-license-worker.txt`, which now applies
+  migration 0004 first and then deploys. `DELETE_SECRET` is set in production,
+  so links will be signed with it and not with the admin token.
+
+**Implemented, not verified:** that Brevo passes `List-Unsubscribe` through and
+that both headers land in the DKIM `h=` list. Needs one real send read from raw
+headers. Nobody is due a reminder, so the next real trial is the first send.
+
+**Open, the operator's call:** the footer and the policy identify the sender as
+"Lithuania" with no postal address. CAN-SPAM wants a physical postal address in
+a commercial mail and at least one trialist is in the US. A street address, a
+registered PO box or a virtual-office address all qualify, and it is one
+constant: `CONTROLLER_IDENTITY` in `license-worker/src/logic.ts`. This does not
+hold the deploy, which strictly improves on what production sends today.
+
+## Superseded: where things stood on 22 September
 
 **22 September: the flows work. The funnel does not, and one of the two numbers
 we were reading it by was fiction.**
@@ -328,10 +378,11 @@ to null the email and key and keep the anchor. That is a conversion decision.
 
 ## Next in order
 
-1. **Deploy the licence worker** (`deploy-license-worker.txt`, one line). It
-   carries three things now: the /go bot filter, the `/b` page-view counter the
-   deployed site is already calling, and the privacy policy that describes both.
-   Until it runs, `checkout_click` stays fiction and no page view is counted.
+1. **Run `deploy-license-worker.txt`, then `release-npm.txt`**, in that order,
+   so the opt-out the new in-agent notice describes exists before 1.9.12 does.
+   The deploy applies migration 0004 first; without the column the cron,
+   `/unsubscribe` and `/admin/announce` all error. It also carries the 22
+   September work: the /go bot filter, the `/b` counter and its policy text.
 2. **Open Brevo's transactional log** and check delivery, spam and bounce for
    the four reminder mails of 8, 10, 18 and 19 September. If they landed in spam
    the reminder feature is built and worthless, and that is the cheapest
@@ -339,6 +390,9 @@ to null the email and key and keep the anchor. That is a conversion decision.
 3. **Send the three trialist letters** in `Marketing/trial-followup-*.txt`.
    They are written and the links are verified; they need your send button. One
    reply is worth more than another feature.
+   Before sending any `Marketing/` letter, check `marketing_opt_out_at` for the
+   address. The mails now call themselves the last *automated* one precisely so
+   these letters stay honest.
 4. **Decide on a real domain.** The site is on `asc-mcp.pages.dev`, which is
    also why the licence emails come from `license@brewist.app`: there is no
    sending domain of our own. `asc-mcp.com` and `ascmcp.com` were both
@@ -443,6 +497,23 @@ resolving to a payable Polar session.
   mirrors pull a new version hard, so treat it as inflated.
 
 ## Traps
+
+- **A "stop" reply is handled by hand.** Nothing reads the mailbox. On one, run
+  from the repo root: `npx wrangler d1 execute asc-mcp-licenses --remote
+  --command "UPDATE licenses SET marketing_opt_out_at =
+  COALESCE(marketing_opt_out_at, datetime('now')) WHERE lower(email) =
+  lower('<addr>')"`. The policy promises two working days.
+- **Do not rotate `DELETE_SECRET` casually.** It signs every unsubscribe link
+  already sent, and they do not expire. Rotating it kills them all.
+- **The worker's entry module may export only handlers and functions.**
+  workerd refuses to start on an exported string (`TRIAL_REMINDER_SQL` did it
+  on 9 October, with 93 tests green). Constants go in `logic.ts`. Start a local
+  worker before calling worker work done.
+- **`wrangler dev` exits at once in an agent shell** (`ERR_IPC_CHANNEL_CLOSED`).
+  Give it a terminal: `tail -f /dev/null | script -q /dev/null npx wrangler dev
+  -c license-worker/wrangler.toml --local --port 8799 --var DELETE_SECRET:x &`.
+- **`since_tag` is allowlisted** to `[A-Za-z0-9._/-]`. A tag with `+` or `@` is
+  refused; widen the pattern only with a test.
 
 - **The sandbox classifier blocks production writes, inconsistently.** Deploys,
   migrations, publishes and D1 writes all needed `dangerouslyDisableSandbox`,
