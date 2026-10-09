@@ -1484,7 +1484,7 @@ async function handleKeyLookup(
     <p><strong>Every other client</strong>, add this to your MCP server configuration:</p>
     <pre style="background:#1a1a2e;padding:15px;border-radius:8px;overflow-x:auto">${CONFIG_SNIPPET(escapeHtml(row.key))}</pre>
     <p>Not set up yet? Drop your <code>.p8</code> into <code>~/.appstoreconnect/private_keys/</code> and run <code>npx @pofky/asc-mcp init --write</code>, which asks for your Issuer ID and this key and writes the config for you.</p>
-    <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.) so it reloads with the key. Then ask it to "list my App Store Connect apps" to confirm Pro is active.</p>
+    <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.) so it reloads with the key. Then ask it to run asc_setup_check; the License line says Pro.</p>
     <p style="color:#888;font-size:14px">Keep this key private. It unlocks Pro tools on your machine.</p>
   `, headers, 200, { title: "Your license key", noindex: true });
 }
@@ -1511,7 +1511,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>The date the record was created, and the date each of the emails described below was sent, so that none is sent twice</li>
     </ul>
     <p>If you unsubscribe from our emails, we store the time you did, on the same record, so that the instruction is kept. It stays as long as the record does, and deleting the record deletes it too.</p>
-    <p>Using the free tier, or using Pro once your key is set, stores nothing. The server runs locally on your machine.</p>
+    <p>Using the free tier, or using Pro once your key is set, stores nothing with us. The server runs locally on your machine, and what it keeps there is listed under What is saved on your own machine.</p>
 
     <h2>The trial fingerprint, specifically</h2>
     <p>A trial gives away paid software, so we need to know that one person cannot take an unlimited number of them. The anchor we use is your App Store Connect Issuer ID, because it identifies an Apple developer account rather than a person.</p>
@@ -1534,6 +1534,15 @@ function handlePrivacy(headers: Record<string, string>): Response {
     </ul>
     <p>Separately, when you click a subscribe link from inside your agent, it passes through a redirect on our server that increments a daily counter of the form "3 people clicked the buy link from the submit_for_review tool today". That counter holds a date, a tool name and a number. It records no identifier, no IP address, no user agent, and nothing that could be tied back to you. Your browser's user agent string is read at the moment of the request, and only to tell a crawler apart from a person so that the two are counted separately; it is not stored. A link we email you may carry your address in it as a checkout prefill, so you do not have to retype it; that value is passed to the checkout and is not written to the counter.</p>
     <p>Our marketing site counts page views the same way. Each page asks our own server to add one to a daily count of the form "12 views of the home page today". The only thing the page puts in that request is the path you are on. It is an ordinary web request, so it also carries what your browser attaches to every request it makes, including your IP address and your user agent; we read the user agent and the browser's prefetch headers at that moment, for the same reason as above, to count a crawler separately from a person. Neither is stored, and neither reaches the counter. What is written down is a date, a page name and a number: no cookie, no local storage, no advertising or device identifier, and no third-party analytics service. The stored count cannot distinguish you from any other visitor, or one of your visits from the next, and there is nothing in it to link back to a licence, a trial or an email address.</p>
+
+    <h2>What is saved on your own machine</h2>
+    <p>None of this is sent to us. It is listed so you know what the software leaves on your disk.</p>
+    <ul>
+      <li><code>~/.asc-mcp/license.json</code>: your licence key, in plain text, written when you call <code>asc_start_trial</code> to start a trial or to fetch a paid key. On macOS and Linux it is given owner-only permissions. It is read on startup when no <code>ASC_LICENSE_KEY</code> is set in your client. Delete the file to remove it.</li>
+      <li><code>~/.asc-mcp/last-verdict.json</code>: the result of the last successful Pro licence check and a SHA-256 hash of the key, not the key, so a paid licence keeps working for up to 14 days if our server cannot be reached.</li>
+      <li>Your MCP client configs: the same call adds the key as <code>ASC_LICENSE_KEY</code> to every asc-mcp entry it finds in the Claude Desktop config, <code>~/.claude.json</code> (including per-project entries), <code>.mcp.json</code> in the current folder, and the Cursor, Windsurf and Cline configs. It changes nothing else in those files and does not touch a file that has no asc-mcp entry. The first time it edits a file it leaves a copy of the original beside it, named with <code>.bak</code>. That copy holds whatever the file held, including settings for your other servers.</li>
+    </ul>
+    <p>Deleting your record at <a href="/delete">/delete</a> removes it from our database. It cannot reach your machine: remove the file and the <code>ASC_LICENSE_KEY</code> lines yourself.</p>
 
     <h2>Data storage</h2>
     <p>License data is stored on Cloudflare D1 (EU region). Cloudflare acts as our infrastructure provider under their <a href="https://www.cloudflare.com/cloudflare-customer-dpa/">Data Processing Agreement</a>.</p>
@@ -1581,7 +1590,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
 function handleTerms(headers: Record<string, string>): Response {
   return html(`
     <h1>Terms of Service</h1>
-    <p><em>Last updated: August 6, 2026</em></p>
+    <p><em>Last updated: October 9, 2026</em></p>
 
     <h2>What this is</h2>
     <p>asc-mcp is an independent developer tool that connects AI coding agents to Apple's App Store Connect API. It runs locally on your machine. It is not affiliated with, endorsed by, or sponsored by Apple Inc.</p>
@@ -1594,7 +1603,7 @@ function handleTerms(headers: Record<string, string>): Response {
     </ul>
 
     <h2>Free and Pro tiers</h2>
-    <p>Six of the 41 tools are free with no subscription: <code>asc_setup_check</code>, <code>asc_guide</code>, <code>asc_start_trial</code>, <code>list_apps</code>, <code>app_details</code> and <code>review_status</code>. Three of those (the setup check, the playbook and the trial starter) need nothing at all; the other three read from App Store Connect, so they need your own Apple API key like every other tool here. The remaining 35, covering customer reviews, sales reports, preflight audits and the full write/control plane (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release), require either a running trial or a $9/month subscription managed through <a href="https://polar.sh">Polar.sh</a>.</p>
+    <p>Six of the 41 tools are free with no subscription: <code>asc_setup_check</code>, <code>asc_guide</code>, <code>asc_start_trial</code>, <code>list_apps</code>, <code>app_details</code> and <code>review_status</code>. Two of those (the setup check and the playbook) need nothing at all; the other four need your own Apple API key like every other tool here: the trial starter to tell one Apple developer account from another, the remaining three to read from App Store Connect. The remaining 35, covering customer reviews, sales reports, preflight audits and the full write/control plane (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release), require either a running trial or a $9/month subscription managed through <a href="https://polar.sh">Polar.sh</a>.</p>
 
     <h2>Free trial</h2>
     <p>You can unlock every Pro tool for 7 days at no cost by calling the <code>asc_start_trial</code> tool from your agent. No card is required, nothing renews, and there is nothing to cancel: the key simply stops working when the 7 days are up.</p>
