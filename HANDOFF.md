@@ -4,6 +4,50 @@ Updated 2026-10-09. Branch `master`.
 
 ## Where things stand
 
+**9 October, evening: the purchase flow was audited against production and is
+not broken; the trial was, and 1.9.13 fixes it.**
+
+The operator saw three subscribers on the old Polar org and nothing on the new
+one since 2 August, and asked whether the flow itself was wrong. Two independent
+audits (Fable model), told not to trust the earlier "it is traffic" conclusion:
+
+- **Money path: works, proven live.** The one sale into the new org, 5 August,
+  went end to end (payment $9, three webhooks 200, D1 row, `key_emailed=1`) and
+  ended with the declined card on 7 September. Every buy link lands on the new
+  org's checkout. Product active, webhook enabled, all 9 deliveries ever 200. Of
+  113 checkout sessions since 2 August, 1 paid and no other had an email typed
+  in: nobody tried to pay and failed. About 17 human clicks on the site CTA in
+  18 days. The three old-org subscribers are there because Polar cannot move
+  active subscriptions; that is expected.
+- **The trial did not survive a restart** for Claude Code's default
+  `claude mcp add` scope, Cursor, Windsurf and Cline: the key was only written
+  into three top-level config locations. Those users came back on the free tier
+  with no days-left line and no price at the end. 8 trials ever, 0 converted;
+  how many this cost is not knowable.
+- **Fixed in 1.9.13, released and verified.** The key is also saved in
+  `~/.asc-mcp/license.json` and read when the client supplies none
+  (`src/license.ts`, `src/index.ts`); the other clients' configs and
+  per-project blocks are found (`src/setup.ts`); `init --write` updates a
+  project-scoped block in place; a subscriber fetching a paid key over an older
+  one set in the client is told which wins. Driven against a local worker:
+  trial with no client config, restart, "Pro trial, 7 days left". 287 + 94
+  tests. npm serves 1.9.13 (41 tools; a saved key is validated at startup),
+  tag, GitHub release with `.mcpb`, MCP registry, site all at 1.9.13.
+- **Worker `7a66b11a` and site deployed** with it: the policy has a "What is
+  saved on your own machine" section, the Terms say two tools need no Apple
+  key, the licence mail gives the in-agent activation route with its real
+  limits. Legal report, FAIL then PASS on re-check:
+  `.autopilot/reports/legal-2026-10-09-trial-persistence.md`.
+- **Open product decision, the operator's:** the gate is hit on almost the
+  first useful call (reviews, sales, builds are Pro; the main free rival gives
+  them away). The audit suggests freeing `list_reviews`, `list_builds` and
+  `release_preflight`. Not done: it changes what is sold.
+- **Queued:** `.autopilot/queues/bug-queue.md` (gateway clicks counted as
+  human, `handlePolarWebhook` untested, no local copy of `ADMIN_TOKEN`).
+- **The directory listing** tracks master, so it picks 1.9.13 up as a new
+  version to scan; the review of 1.9.12 was still pending when this was written.
+
+
 **9 October, evening: the worker and the site are live. The npm release is the
 one thing left, and it is blocked on a login only the operator can do.**
 
@@ -551,7 +595,7 @@ to null the email and key and keep the anchor. That is a conversion decision.
    a security-key approval in the browser, so the script stops at the publish
    with a commit and no tag. Either publish by hand with
    `npm publish --access public --auth-type=web` and finish the script's steps,
-   or teach the script the web flow before 1.9.13.
+   or teach the script the web flow. 1.9.13 went out the same way. The approval link dies within about two minutes, so start it only when the operator is at the keyboard.
    After the deploy, still owed: one real reminder send read from raw headers
    (does Brevo pass `List-Unsubscribe` through, are both headers in DKIM `h=`),
    via `wrangler dev --remote --test-scheduled` on a synthetic row.

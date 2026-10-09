@@ -1,6 +1,17 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**The flow was audited end to end: the money path works, the trial did not survive a restart (2026-10-09).**
+
+Asked whether the move to the new Polar org broke buying. Two independent audits on production
+say no: the one sale into it went through every step, every link lands on the right checkout,
+and no one since has typed an email into a checkout. What was broken is the trial, for Claude
+Code's default scope and for Cursor, Windsurf and Cline: the key lived only as long as the
+session. 1.9.13 saves it on the machine, finds those clients' configs, and warns a subscriber
+whose client still holds an older key. An independent tester found `init --write` adding a
+shadowed duplicate block; the legal gate failed the first pass on an undisclosed key file and a
+licence mail that promised more than the server does, then passed. Released, deployed, verified.
+
 **1.9.12 is out and the plugin is submitted to Anthropic's directory (2026-10-09).**
 
 Worker and site deployed, then npm 1.9.12: the release script stopped at the publish with a
