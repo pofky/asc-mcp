@@ -1,8 +1,37 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
+import { statSync } from "fs";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
 
 const WHATS_NEW_MAX = 4000;
+const DEFAULT_MAX_COMMITS = 50;
+// Upper bound on one call's output; a release rarely spans more commits than this.
+const MAX_COMMITS_CEILING = 500;
+// since_tag comes from the model, which may be relaying text it read in a review
+// or a README. A ref name that cannot start with "-" cannot be read as a git option.
+const SAFE_TAG = /^[A-Za-z0-9][A-Za-z0-9._\/-]{0,99}$/;
+
+/** Runs git with an argument vector. No shell, so no argument is ever parsed as one. */
+function git(cwd: string, args: string[]): string {
+  return execFileSync("git", args, {
+    cwd,
+    encoding: "utf-8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+}
+
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function clampMaxCommits(value: number | undefined): number {
+  if (value === undefined || !Number.isInteger(value) || value < 1) return DEFAULT_MAX_COMMITS;
+  return Math.min(value, MAX_COMMITS_CEILING);
+}
 
 export const releaseNotesDefinition = {
   name: "release_notes",
@@ -23,7 +52,7 @@ export const releaseNotesDefinition = {
       },
       max_commits: {
         type: "number",
-        description: "Maximum number of commits to include (default 50).",
+        description: "Maximum number of commits to include (default 50, at most 500).",
       },
     },
     required: [] as string[],
@@ -38,15 +67,18 @@ export async function releaseNotes(args: {
   const gate = requirePro(tier, "Release notes generation", "release_notes");
   if (gate) return gate;
   const cwd = args.project_path || process.cwd();
-  const maxCommits = args.max_commits || 50;
+  if (!isDirectory(cwd)) {
+    return `Error: project_path is not a directory: ${cwd}`;
+  }
+  const maxCommits = clampMaxCommits(args.max_commits);
+
+  if (args.since_tag && !SAFE_TAG.test(args.since_tag)) {
+    return "Error: since_tag must be a plain git tag or ref name (letters, digits, '.', '_', '/', '-', not starting with '-').";
+  }
 
   // Check if this is a git repo
   try {
-    execSync("git rev-parse --is-inside-work-tree", {
-      cwd,
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    git(cwd, ["rev-parse", "--is-inside-work-tree"]);
   } catch {
     return "Error: not a git repository. Run this tool from a git project directory.";
   }
@@ -55,11 +87,7 @@ export async function releaseNotes(args: {
   let sinceTag = args.since_tag || "";
   if (!sinceTag) {
     try {
-      sinceTag = execSync("git describe --tags --abbrev=0 HEAD 2>/dev/null", {
-        cwd,
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-      }).trim();
+      sinceTag = git(cwd, ["describe", "--tags", "--abbrev=0", "HEAD"]).trim();
     } catch {
       // No tags exist, use first commit
       sinceTag = "";
@@ -67,20 +95,12 @@ export async function releaseNotes(args: {
   }
 
   // Get commits
-  let gitLogCmd: string;
-  if (sinceTag) {
-    gitLogCmd = `git log ${sinceTag}..HEAD --oneline --no-merges --max-count=${maxCommits}`;
-  } else {
-    gitLogCmd = `git log --oneline --no-merges --max-count=${maxCommits}`;
-  }
+  const logArgs = ["log", "--oneline", "--no-merges", `--max-count=${maxCommits}`];
+  if (sinceTag) logArgs.push(`${sinceTag}..HEAD`);
 
   let commits: string;
   try {
-    commits = execSync(gitLogCmd, {
-      cwd,
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim();
+    commits = git(cwd, logArgs).trim();
   } catch {
     return "Error: could not read git log.";
   }
