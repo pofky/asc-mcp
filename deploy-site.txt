@@ -1,0 +1,1 @@
+cd /Volumes/T7/Projects/appstore-connect-mcp && npx wrangler pages deploy site --project-name asc-mcp --branch master
