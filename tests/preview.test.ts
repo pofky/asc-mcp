@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createServer, type Server } from "node:http";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -192,6 +192,23 @@ describe("the preview as a client sees it", () => {
   let server: Server | undefined;
   afterEach(() => server?.close());
 
+  /**
+   * A repository with one commit of known wording. Reading this project's own
+   * history made the assertions depend on what the latest commit message said.
+   */
+  let repo: string | undefined;
+  function fixtureRepo(): string {
+    if (repo) return repo;
+    repo = mkdtempSync(join(tmpdir(), "asc-fixture-repo-"));
+    const git = (...args: string[]) =>
+      execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.com", ...args], { cwd: repo, stdio: "ignore" });
+    git("init", "-q");
+    writeFileSync(join(repo, "a.txt"), "a");
+    git("add", "a.txt");
+    git("commit", "-q", "-m", "fix: the fixture commit");
+    return repo;
+  }
+
   async function releaseNotesReplies(calls: number, licence: "none" | "pro"): Promise<{ replies: string[]; home: string }> {
     server = createServer((req, res) => {
       req.on("data", () => {});
@@ -251,7 +268,7 @@ describe("the preview as a client sees it", () => {
         jsonrpc: "2.0",
         id: 10 + call,
         method: "tools/call",
-        params: { name: "release_notes", arguments: { project_path: ROOT, max_commits: 1 } },
+        params: { name: "release_notes", arguments: { project_path: fixtureRepo(), max_commits: 1 } },
       });
     }
     await done;
