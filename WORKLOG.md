@@ -1,7 +1,7 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
-**1.9.12 is out, and the directory submission waits on four ticks (2026-10-09).**
+**1.9.12 is out and the plugin is submitted to Anthropic's directory (2026-10-09).**
 
 Worker and site deployed, then npm 1.9.12: the release script stopped at the publish with a
 403, because npm now requires 2FA to publish and the account had none. The operator turned it
@@ -10,6 +10,8 @@ workflow followed by hand in the script's order. Verified from a clean folder: v
 41 tools, all titled, 20 read, 21 write; the MCP registry lists it; the site says 1.9.12. The
 directory form at `claude.ai/directory/manage` validates clean at `45a1f7b` and is filled to
 the Compliance step, where the terms are the operator's to accept.
+The operator accepted them and submitted: status "Waiting for review", held for a human
+reviewer on five expected policy holds. Push webhook added to the repo, ping 200.
 
 **The directory listing prep, the one queued item aimed at arrivals (2026-10-09).**
 

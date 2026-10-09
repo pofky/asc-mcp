@@ -34,18 +34,21 @@ The operator said to ship everything autonomously. What happened:
   turned it on (security key); recovery codes are in Keychain, see
   `/Volumes/T7/Projects/CREDENTIALS.md`. The publish, tag, push and GitHub
   release were then done by hand in the script's order.
-- **Directory portal: draft filled to the Compliance step, not submitted.**
-  `claude.ai/directory/manage`, Plugin bundle, `pofky/asc-mcp`, path `plugin`,
-  `master @ 45a1f7b`: validation passed, 5 warnings, 5 policy holds (the pinned
-  `npx`, two on "uses a credential from the user's machine", two name
-  look-alikes), all expected and all go to a human reviewer. Surfaces: Claude
-  Code and Cowork ticked, Claude apps unticked (a local server cannot run
-  there). The portal says Cowork cannot collect the plugin's settings, so there
-  the server starts without an Issuer ID. Data handling: reads and stores, yes
-  listed in README, longer, not for under 18s. What is left is the operator's:
-  four ticks on Compliance (the terms among them), then Review and submit. The
-  draft is saved "in this tab" only; if the tab is gone, redo the steps above,
-  it takes two minutes.
+- **Directory: submitted for review, 9 October.** The operator accepted the
+  terms and submitted; the plugin page is
+  `claude.ai/directory/manage/plugins/55b975dd-735d-4854-be5b-ddae3f30e542`,
+  status "Waiting for review", security scan first, then a human reviewer for
+  the five policy holds (the pinned `npx`, two on "uses a credential from the
+  user's machine", two name look-alikes). Nothing goes live without that
+  reviewer. Submitted at `master @ 67c5ee3`, version 1.9.12, path `plugin`.
+  Listed, once approved, on Claude Code and Cowork; Claude apps unticked (a
+  local server cannot run there). The portal says Cowork cannot collect the
+  plugin's settings, so there the server starts without an Issuer ID: not
+  tested in Cowork. Data handling: reads and stores, yes listed in README,
+  longer, not for under 18s. Push updates: GitHub webhook `694764382` on
+  `pofky/asc-mcp`, push events, ping answered 200, the page says "Webhook
+  connected"; the secret is in Keychain (`CREDENTIALS.md`). Review questions
+  go to the operator's Gmail.
 - **The stale stop-hook blocker: fixed at the source**, autopilot `6bf46c3`.
   `autopilot/hooks/pre_tool_use.py` lets `Read` through for
   `.autopilot/state/*_done`, `*_required` and `substance_check_pending`, which
@@ -528,10 +531,12 @@ to null the email and key and keep the anchor. That is a conversion decision.
 
 ## Next in order
 
-0. **Finish the directory submission.** Everything before the Compliance step
-   is filled (see Where things stand). The operator ticks the four boxes and
-   submits; then watch the plugin's page for the reviewer's decision on the
-   five policy holds. Fix anything they ask for on master and re-validate.
+0. **Watch the directory review.** Open the plugin page (Where things stand)
+   and read the Review tab and the operator's inbox for the reviewer's
+   decision. Fix what they ask for on master; the webhook picks the push up in
+   minutes. A push that changes `plugin/` is a new version and is scanned
+   again. Once approved, publish from the plugin page, then load the plugin in
+   a real Claude Code session: that has still not been driven end to end.
 1. **Done 9 October:** worker deploy with migration 0004, site deploy, npm
    1.9.12. **The next release needs the operator at the keyboard:**
    `scripts/release.mjs` runs `npm publish` with stdin closed, and npm now wants
