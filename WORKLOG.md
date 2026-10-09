@@ -1,6 +1,25 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**The directory listing prep, the one queued item aimed at arrivals (2026-10-09).**
+
+Read Anthropic's current submission docs first-hand: local servers go in as a plugin from a
+GitHub repo, every tool needs a title and a read-only or destructive hint, the launcher must be
+pinned to an exact version, and the README needs a Privacy Policy section. Built all of it.
+`src/tool-meta.ts` is one table that annotates all 41 tools (20 read, 21 write; 1.9.11 on npm
+has none). `plugin/` is the installable folder, `.claude-plugin/marketplace.json` makes the repo
+installable from Claude Code today, `scripts/sync-plugin.mjs` keeps the pin in step and the
+release script runs it. The architect review, before code, caught that a blank plugin field
+would have told every free user their key failed, and that the release pushed master before npm
+served the version. The independent tester diffed every schema against npm (no change) and
+found the release could strand a tag, the drift check ignored stray files and the README
+omitted the signing-profile writes; all three fixed. The legal gate failed the first README: the Key ID is not "never transmitted"
+(it is in every token sent to Apple), a claim that was also in the policy and on the site, and
+the README left out six data flows; all corrected, and the price and checkout link came out of
+the bundled skill. The completeness gate caught release notes still at 1.9.11. 270 tests, `tsc`
+clean. Not live: rides in
+1.9.12 via `release-npm.txt`, then the operator submits at `claude.ai/directory/manage`.
+
 **Two critical findings fixed, and neither was the reason nobody is arriving (2026-10-09).**
 
 Asked whether the `release_notes` shell injection and the reminder mails with no opt-out were
