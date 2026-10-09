@@ -18,6 +18,13 @@ The operator said to ship everything autonomously. What happened:
   active, none opted out. **Not checked:** that a real active key still
   validates, because reading keys out of production was refused in the session.
 - **Site: live** (`c90cca3a`), serving the corrected copy.
+- **Brevo header check: not run.** Inserting the synthetic trial row into
+  production was refused in the session. `test-reminder-headers.txt` does it in
+  one line: inserts a row for `povkonop+ascheadertest@gmail.com`, fires the cron
+  once, prints the stamp and deletes the row. Then open the mail in Gmail, "Show
+  original", and look for `List-Unsubscribe` and `List-Unsubscribe-Post`, and
+  for both names in the DKIM `h=` list. It runs the cron over every due row, so
+  check no real trial is due first (none was on 9 October).
 - **npm 1.9.12: NOT released.** `npm whoami` answers 401: the token in
   `~/.npmrc` is dead, there is no other npm credential in Keychain,
   `CREDENTIALS.md` or CI, and Chrome is not signed in to npmjs.com. It needs
