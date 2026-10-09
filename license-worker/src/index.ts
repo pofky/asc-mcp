@@ -1520,9 +1520,9 @@ function handlePrivacy(headers: Record<string, string>): Response {
 
     <h2>What we don't collect</h2>
     <ul>
-      <li>Your Apple API credentials never leave your machine. The .p8 private key and Key ID are never transmitted anywhere by this software, and your Issuer ID is only ever sent as the one-way digest described above, only when you call <code>asc_start_trial</code></li>
+      <li>Your .p8 private key never leaves your machine. It signs a short-lived token there; that token names your Key ID and Issuer ID and goes to Apple only. None of them is sent to us, and your Issuer ID reaches us only as the one-way digest described above, only when you call <code>asc_start_trial</code></li>
       <li>No App Store Connect data passes through our servers</li>
-      <li>No usage analytics or telemetry from the software. The MCP server does not report which tools you run, or when, or how often. Our marketing site does count page views, in the aggregate form described below</li>
+      <li>No usage analytics or telemetry from the software. The MCP server does not report which tools you run, or when, or how often, apart from the one tool name a trial request may carry, listed above. Our marketing site does count page views, in the aggregate form described below</li>
       <li>No cookies, no advertising identifiers, no third-party trackers</li>
     </ul>
 
@@ -1546,7 +1546,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
 
     <h2>Data retention</h2>
     <p>We keep your email, license key and subscription id for as long as the record exists, including after a subscription is cancelled or a trial ends. Two honest reasons: a cancelled subscriber who resubscribes should get their history back rather than a support ticket, and deleting a finished trial record is the same as handing out a second free trial.</p>
-    <p>The two counters described above, the buy-link clicks and the page views, are kept indefinitely, because a date, a page name and a number are not about anyone and there is nothing in them to delete.</p>
+    <p>The counters described above, the buy-link clicks and the page views, and a third of the same shape that counts trials started per tool per day, are kept indefinitely, because a date, a page or tool name and a number are not about anyone and there is nothing in them to delete.</p>
     <p>You can delete all of it whenever you like at <a href="/delete">/delete</a>. We email you a confirmation link first, so that nobody can remove your license by typing your address into a form, and the deletion runs when you click it. This is the only deletion mechanism: there is no automatic purge on a timer, and we would rather say so than publish a promise no code keeps.</p>
 
     <h2>Who controls this data</h2>
@@ -1560,6 +1560,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>The user agent, prefetch headers and IP address that reach our server while a page view or a buy-link click is being counted: our legitimate interest in knowing how many real people arrive, and in keeping automated traffic out of a payment funnel (Article 6(1)(f)). None of it is stored, and what is stored is a count that identifies nobody.</li>
       <li>An email to someone who has started a trial or held a subscription, about that product: our legitimate interest in asking a small number of our own users what they thought and whether they want to continue (Article 6(1)(f)). For a trial that is two automated messages, one shortly before it ends and one shortly after, and occasionally one personal note from the developer. Every such message names us, says why you are receiving it and carries a free opt-out, and you can object at any time under Article 21(2) by using the unsubscribe link where the message has one, by replying with the word stop, or by writing to the address below. The link takes effect immediately. A reply is read and acted on by hand, normally within two working days, and a message already scheduled inside that time may still arrive. After that we will not email you about the product again. The emails a licence needs in order to work, the key itself and a deletion confirmation link, are not affected.</li>
       <li>The time you opted out of product email: our legitimate interest, and yours, in keeping that instruction (Article 6(1)(f)).</li>
+      <li>The name of the tool you started a trial from: our legitimate interest in knowing which features lead people to try the product (Article 6(1)(f)).</li>
     </ul>
 
     <h2>Your rights (GDPR)</h2>
@@ -1569,7 +1570,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <h2>Contact</h2>
     <p>For privacy questions: povkonop@gmail.com</p>
 
-    <p style="color:#888;font-size:13px;margin-top:40px">This project is not affiliated with, endorsed by, or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, iOS, and macOS are trademarks of Apple Inc.</p>
+    <p style="color:#888;font-size:13px;margin-top:40px">This project is not affiliated with, endorsed by, or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, Xcode, iOS, and macOS are trademarks of Apple Inc.</p>
   `, headers, 200, {
     title: "Privacy Policy",
     canonical: "https://asc-mcp-license.remewdy.workers.dev/privacy",
@@ -1621,7 +1622,7 @@ function handleTerms(headers: Record<string, string>): Response {
     <h2>Contact</h2>
     <p>Questions: povkonop@gmail.com</p>
 
-    <p style="color:#888;font-size:13px;margin-top:40px">This project is not affiliated with, endorsed by, or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, iOS, and macOS are trademarks of Apple Inc.</p>
+    <p style="color:#888;font-size:13px;margin-top:40px">This project is not affiliated with, endorsed by, or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, Xcode, iOS, and macOS are trademarks of Apple Inc.</p>
   `, headers, 200, {
     title: "Terms of Service",
     canonical: "https://asc-mcp-license.remewdy.workers.dev/terms",

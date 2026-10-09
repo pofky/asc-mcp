@@ -384,12 +384,11 @@ When the trial ends, Pro is $9/month.</code></pre>
     <div class="q">
       <h3>Where does my API key go?</h3>
       <p><span class="fact">Nowhere.</span> The .p8 stays on your machine, JWTs are signed locally, and calls go
-      straight from your computer to api.appstoreconnect.apple.com. Nothing proxies through this project. The only
-      network call it makes elsewhere is a license check that sends your license key, not your credentials.</p>
+      straight from your computer to api.appstoreconnect.apple.com. Nothing proxies through this project. The only call it makes to us is a license check that sends your license key, not your credentials.</p>
       <p>One narrow exception, and only when you call <code>asc_start_trial</code>: that request sends the email
       address you give it, which gets the key, one reminder before the trial ends and one note after it, each with an unsubscribe link, and a SHA-256 hash of your Issuer ID computed on your machine,
       so one Apple developer account cannot take unlimited trials. The Issuer ID itself, the Key ID and the .p8 are
-      never transmitted. Both values are covered by the
+      never sent to us. Both values are covered by the
       <a href="https://asc-mcp-license.remewdy.workers.dev/privacy">privacy policy</a>, and you can delete them at any
       time.</p>
     </div>
