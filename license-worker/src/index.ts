@@ -50,6 +50,13 @@ import {
   signDeleteToken,
   verifyDeleteToken,
   DELETE_TOKEN_TTL_MS,
+  verifyUnsubscribeToken,
+  buildUnsubscribeUrl,
+  marketingFooter,
+  unsubscribeHeaders,
+  TRIAL_REMINDER_SQL,
+  CONTROLLER_IDENTITY,
+  CONTACT_EMAIL,
   type LookupRow,
 } from "./logic.js";
 import type { EmailContent, TrialRow } from "./logic.js";
@@ -201,20 +208,7 @@ export async function runTrialReminders(
   // trial has ended, $9 turns it back on" by someone who had already paid it.
   // Matched on lowercased address because the trial endpoint normalises and the
   // Polar payload is taken as it arrives.
-  const { results } = await env.DB.prepare(
-    `SELECT id, email, key, expires_at, source, revoked_at, canceled_at,
-            trial_ending_emailed_at, trial_lapsed_emailed_at
-       FROM licenses t
-      WHERE source = 'trial'
-        AND replace(expires_at, ' ', 'T') >= ?
-        AND replace(expires_at, ' ', 'T') <= ?
-        AND NOT EXISTS (
-              SELECT 1 FROM licenses p
-               WHERE p.source = 'polar'
-                 AND p.revoked_at IS NULL
-                 AND lower(p.email) = lower(t.email)
-            )`,
-  )
+  const { results } = await env.DB.prepare(TRIAL_REMINDER_SQL)
     .bind(from, to)
     .all<TrialRow>();
 
@@ -223,9 +217,12 @@ export async function runTrialReminders(
   let ending = 0;
   let lapsed = 0;
 
+  const secret = deleteSecret(env);
+
   for (const row of due.ending) {
-    const content = trialEndingEmailContent(row.key, row.expires_at, row.email!);
-    if (!(await sendTransactional(env, row.email!, content))) continue;
+    const unsubscribe = await buildUnsubscribeUrl(secret, row.email!);
+    const content = trialEndingEmailContent(row.key, row.expires_at, row.email!, unsubscribe);
+    if (!(await sendTransactional(env, row.email!, content, unsubscribeHeaders(unsubscribe)))) continue;
     await env.DB.prepare("UPDATE licenses SET trial_ending_emailed_at = ? WHERE id = ?")
       .bind(stamp, row.id)
       .run();
@@ -233,8 +230,9 @@ export async function runTrialReminders(
   }
 
   for (const row of due.lapsed) {
-    const content = trialLapsedEmailContent(row.email!);
-    if (!(await sendTransactional(env, row.email!, content))) continue;
+    const unsubscribe = await buildUnsubscribeUrl(secret, row.email!);
+    const content = trialLapsedEmailContent(row.email!, unsubscribe);
+    if (!(await sendTransactional(env, row.email!, content, unsubscribeHeaders(unsubscribe)))) continue;
     await env.DB.prepare("UPDATE licenses SET trial_lapsed_emailed_at = ? WHERE id = ?")
       .bind(stamp, row.id)
       .run();
@@ -254,6 +252,7 @@ async function sendTransactional(
   env: Env,
   email: string,
   content: EmailContent,
+  headers?: Record<string, string>,
 ): Promise<boolean> {
   if (!env.BREVO_API_KEY) return false;
 
@@ -271,9 +270,13 @@ async function sendTransactional(
           email: env.BREVO_SENDER_EMAIL || "license@brewist.app",
         },
         to: [{ email }],
+        // These mails ask for a reply and take "stop" as an opt-out, so a reply
+        // has to land in the mailbox the policy names, not at the sender.
+        replyTo: { email: CONTACT_EMAIL },
         subject: content.subject,
         htmlContent: content.html,
         textContent: content.text,
+        ...(headers ? { headers } : {}),
       }),
     });
     if (!res.ok) {
@@ -384,6 +387,10 @@ async function handleRequest(
 
       if (url.pathname === "/delete" && request.method === "GET") {
         return handleDeletePage(corsHeaders);
+      }
+
+      if (url.pathname === "/unsubscribe" && (request.method === "GET" || request.method === "POST")) {
+        return await handleUnsubscribe(request.method, url, env, corsHeaders);
       }
 
       return json({ error: "Not found" }, corsHeaders, 404);
@@ -1185,9 +1192,26 @@ async function handleAdminAnnounce(
     return json({ error: "Not a known customer" }, headers, 404);
   }
 
+  const optedOut = await env.DB.prepare(
+    "SELECT 1 AS hit FROM licenses WHERE lower(email) = lower(?) AND marketing_opt_out_at IS NOT NULL LIMIT 1",
+  )
+    .bind(body.email)
+    .first<{ hit: number }>();
+  if (optedOut) {
+    return json({ error: "Recipient has opted out of product email" }, headers, 409);
+  }
+
   if (!env.BREVO_API_KEY) {
     return json({ error: "Email not configured" }, headers, 503);
   }
+
+  // Appended here, not left to whoever writes the announcement: the policy
+  // promises the sender, the reason and the opt-out on every product mail.
+  const unsubscribe = await buildUnsubscribeUrl(deleteSecret(env), body.email);
+  const footer = marketingFooter(
+    "You are getting this because you have an asc-mcp licence or trial.",
+    unsubscribe,
+  );
 
   const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
@@ -1202,8 +1226,10 @@ async function handleAdminAnnounce(
         email: env.BREVO_SENDER_EMAIL || "license@brewist.app",
       },
       to: [{ email: body.email }],
+      replyTo: { email: CONTACT_EMAIL },
       subject: body.subject,
-      htmlContent: body.html,
+      htmlContent: body.html + footer.html,
+      headers: unsubscribeHeaders(unsubscribe),
     }),
   });
 
@@ -1289,7 +1315,12 @@ async function sendTrialEmail(
 ): Promise<boolean> {
   if (!env.BREVO_API_KEY) return false;
 
-  const content = trialEmailContent(key, expires, email);
+  const content = trialEmailContent(
+    key,
+    expires,
+    email,
+    await buildUnsubscribeUrl(deleteSecret(env), email),
+  );
 
   try {
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -1305,6 +1336,8 @@ async function sendTrialEmail(
           email: env.BREVO_SENDER_EMAIL || "license@brewist.app",
         },
         to: [{ email }],
+        // "Reply stop" is offered in this mail, so a reply has to reach a person.
+        replyTo: { email: CONTACT_EMAIL },
         subject: content.subject,
         htmlContent: content.html,
         // A plain-text alternative, because an HTML-only message scores worse
@@ -1459,7 +1492,7 @@ async function handleKeyLookup(
 function handlePrivacy(headers: Record<string, string>): Response {
   return html(`
     <h1>Privacy Policy</h1>
-    <p><em>Last updated: September 22, 2026</em></p>
+    <p><em>Last updated: October 9, 2026</em></p>
 
     <h2>What we collect</h2>
     <p>When you purchase a Pro license, we store:</p>
@@ -1475,7 +1508,9 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>A generated license key and its expiry date</li>
       <li>A one-way SHA-256 fingerprint of your App Store Connect Issuer ID (see below)</li>
       <li>The name of the tool you were trying to use when you started the trial, if any</li>
+      <li>The date the record was created, and the date each of the emails described below was sent, so that none is sent twice</li>
     </ul>
+    <p>If you unsubscribe from our emails, we store the time you did, on the same record, so that the instruction is kept. It stays as long as the record does, and deleting the record deletes it too.</p>
     <p>Using the free tier, or using Pro once your key is set, stores nothing. The server runs locally on your machine.</p>
 
     <h2>The trial fingerprint, specifically</h2>
@@ -1504,7 +1539,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <p>License data is stored on Cloudflare D1 (EU region). Cloudflare acts as our infrastructure provider under their <a href="https://www.cloudflare.com/cloudflare-customer-dpa/">Data Processing Agreement</a>.</p>
 
     <h2>Email delivery</h2>
-    <p>Licence keys, deletion confirmation links and the occasional product notice are sent through <a href="https://www.brevo.com/">Brevo</a>, a French email provider acting as our processor under their data processing agreement. They receive your email address and the contents of the message, and nothing else.</p>
+    <p>Licence keys, a reminder shortly before a trial ends and one note shortly after it, deletion confirmation links and the occasional product notice are sent through <a href="https://www.brevo.com/">Brevo</a>, a French email provider acting as our processor under their data processing agreement. They receive your email address and the message, and they keep their own delivery records for it.</p>
 
     <h2>Payment processing</h2>
     <p>Payments are handled by <a href="https://polar.sh">Polar.sh</a>, who acts as Merchant of Record. We never see your credit card details. Polar's privacy policy applies to the checkout process.</p>
@@ -1515,7 +1550,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <p>You can delete all of it whenever you like at <a href="/delete">/delete</a>. We email you a confirmation link first, so that nobody can remove your license by typing your address into a form, and the deletion runs when you click it. This is the only deletion mechanism: there is no automatic purge on a timer, and we would rather say so than publish a promise no code keeps.</p>
 
     <h2>Who controls this data</h2>
-    <p>The data controller is Povilas Konopackas, sole trader, Lithuania, reachable at povkonop@gmail.com.</p>
+    <p>The data controller is ${CONTROLLER_IDENTITY}, reachable at ${CONTACT_EMAIL}.</p>
 
     <h2>Why we are allowed to hold it</h2>
     <ul>
@@ -1523,7 +1558,8 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>Your email and licence key, for a free trial: taking steps at your request before entering a contract (Article 6(1)(b)).</li>
       <li>The one-way Issuer ID fingerprint: our legitimate interest in not giving the same person an unlimited number of free trials, and in not reading a paying customer's key out to a stranger who guessed their email address (Article 6(1)(f)). We considered doing this with the email alone and rejected it, because that would let anyone burn a stranger's trial by typing their address.</li>
       <li>The user agent, prefetch headers and IP address that reach our server while a page view or a buy-link click is being counted: our legitimate interest in knowing how many real people arrive, and in keeping automated traffic out of a payment funnel (Article 6(1)(f)). None of it is stored, and what is stored is a count that identifies nobody.</li>
-      <li>An email to someone who has started a trial or held a subscription, about that product: our legitimate interest in asking a small number of our own users what they thought and whether they want to continue (Article 6(1)(f)). Every such message names us, says why you are receiving it and carries a free opt-out, and you can object at any time under Article 21(2) by replying with the word stop or writing to the address below, after which we will not email you about the product again.</li>
+      <li>An email to someone who has started a trial or held a subscription, about that product: our legitimate interest in asking a small number of our own users what they thought and whether they want to continue (Article 6(1)(f)). For a trial that is two automated messages, one shortly before it ends and one shortly after, and occasionally one personal note from the developer. Every such message names us, says why you are receiving it and carries a free opt-out, and you can object at any time under Article 21(2) by using the unsubscribe link where the message has one, by replying with the word stop, or by writing to the address below. The link takes effect immediately. A reply is read and acted on by hand, normally within two working days, and a message already scheduled inside that time may still arrive. After that we will not email you about the product again. The emails a licence needs in order to work, the key itself and a deletion confirmation link, are not affected.</li>
+      <li>The time you opted out of product email: our legitimate interest, and yours, in keeping that instruction (Article 6(1)(f)).</li>
     </ul>
 
     <h2>Your rights (GDPR)</h2>
@@ -1537,7 +1573,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
   `, headers, 200, {
     title: "Privacy Policy",
     canonical: "https://asc-mcp-license.remewdy.workers.dev/privacy",
-    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"asc-mcp","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Privacy Policy"}]},{"@type":"WebPage","name":"Privacy Policy","url":"https://asc-mcp-license.remewdy.workers.dev/privacy","dateModified":"2026-09-22","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
+    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"asc-mcp","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Privacy Policy"}]},{"@type":"WebPage","name":"Privacy Policy","url":"https://asc-mcp-license.remewdy.workers.dev/privacy","dateModified":"2026-10-09","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
   });
 }
 
@@ -1736,6 +1772,63 @@ async function handleDeleteConfirm(
     <p>All license data associated with <strong>${escapeHtml(email)}</strong> has been removed from our systems.</p>
     <p>If you have an active Polar subscription, please cancel it separately at <a href="https://polar.sh">polar.sh</a>, otherwise it will keep billing and issue you a new key.</p>
   `, headers, 200, { title: "Data deleted", noindex: true });
+}
+
+/**
+ * Stop product mail to one address.
+ *
+ * GET shows a button and changes nothing, because mail gateways and link
+ * previewers open every link in a message and would otherwise unsubscribe
+ * people who never asked. POST does it, which is also the request a mail
+ * client's own unsubscribe button sends (RFC 8058).
+ *
+ * The link can only ever stop mail. It never deletes, revokes or reveals
+ * anything, which is what makes a token that does not expire acceptable.
+ */
+async function handleUnsubscribe(
+  method: string,
+  url: URL,
+  env: Env,
+  headers: Record<string, string>,
+): Promise<Response> {
+  const email = (url.searchParams.get("email") || "").trim().toLowerCase();
+  const token = url.searchParams.get("token") || "";
+  const secret = deleteSecret(env);
+  const page = { title: "Unsubscribe", noindex: true };
+
+  if (!secret || !isValidEmail(email) || !(await verifyUnsubscribeToken(secret, email, token))) {
+    return html(
+      `<h1>This link is not valid</h1><p>Email ${CONTACT_EMAIL} with the word stop and you will be taken off by hand, within two working days.</p>`,
+      headers,
+      400,
+      page,
+    );
+  }
+
+  if (method === "GET") {
+    const action = `/unsubscribe?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+    return html(
+      `<h1>Stop asc-mcp emails?</h1>
+    <p>This stops reminders and product notes to <strong>${escapeHtml(email)}</strong>. Your licence keeps working, and you would still get a key or a deletion link if you ask for one.</p>
+    <form method="POST" action="${escapeHtml(action)}"><button type="submit">Yes, stop emailing me</button></form>`,
+      headers,
+      200,
+      page,
+    );
+  }
+
+  await env.DB.prepare(
+    "UPDATE licenses SET marketing_opt_out_at = COALESCE(marketing_opt_out_at, ?) WHERE lower(email) = ?",
+  )
+    .bind(new Date().toISOString(), email)
+    .run();
+
+  return html(
+    `<h1>Done</h1><p>No more reminders or product notes will go to <strong>${escapeHtml(email)}</strong>. Your licence is untouched.</p>`,
+    headers,
+    200,
+    page,
+  );
 }
 
 function escapeHtml(s: string): string {

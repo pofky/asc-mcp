@@ -455,11 +455,7 @@ export function timingSafeEqual(a: string, b: string): boolean {
 /** How long a deletion confirmation link stays valid. */
 export const DELETE_TOKEN_TTL_MS = 60 * 60 * 1000;
 
-export async function signDeleteToken(
-  secret: string,
-  email: string,
-  expiresAt: number,
-): Promise<string> {
+async function hmacHex(secret: string, message: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -467,13 +463,16 @@ export async function signDeleteToken(
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(`${email}.${expiresAt}`),
-  );
-  const hex = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return `${expiresAt}.${hex}`;
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function signDeleteToken(
+  secret: string,
+  email: string,
+  expiresAt: number,
+): Promise<string> {
+  return `${expiresAt}.${await hmacHex(secret, `${email}.${expiresAt}`)}`;
 }
 
 export async function verifyDeleteToken(
@@ -488,6 +487,38 @@ export async function verifyDeleteToken(
   if (!Number.isFinite(expiresAt) || expiresAt < now) return false;
   const expected = await signDeleteToken(secret, email, expiresAt);
   return timingSafeEqual(token, expected);
+}
+
+/**
+ * The token in an unsubscribe link. Signed with the same secret as a deletion
+ * link and deliberately not interchangeable with one: the message starts with a
+ * purpose and a newline, and no address that passes `isValidEmail` contains a
+ * newline, so no deletion signature can ever equal an unsubscribe one.
+ *
+ * It does not expire. A reminder read three months late must still be
+ * refusable, and the only thing the link can do is stop mail.
+ */
+export async function signUnsubscribeToken(secret: string, email: string): Promise<string> {
+  return hmacHex(secret, `unsubscribe\n${email.trim().toLowerCase()}`);
+}
+
+export async function verifyUnsubscribeToken(
+  secret: string,
+  email: string,
+  token: string,
+): Promise<boolean> {
+  return timingSafeEqual(token, await signUnsubscribeToken(secret, email));
+}
+
+/** The link for one address, or null when no signing secret is configured. */
+export async function buildUnsubscribeUrl(
+  secret: string | null,
+  email: string,
+): Promise<string | null> {
+  if (!secret) return null;
+  const address = email.trim().toLowerCase();
+  const token = await signUnsubscribeToken(secret, address);
+  return `${UNSUBSCRIBE_URL}?email=${encodeURIComponent(address)}&token=${token}`;
 }
 
 
@@ -638,6 +669,12 @@ export const GO_URL = "https://asc-mcp-license.remewdy.workers.dev/go";
 /** The licence page, linked from every email so a lost key is self-serve. */
 export const KEY_PAGE_URL = "https://asc-mcp-license.remewdy.workers.dev/key";
 
+export const UNSUBSCRIBE_URL = "https://asc-mcp-license.remewdy.workers.dev/unsubscribe";
+
+/** Who sends the mail and who controls the data. The policy prints the same two. */
+export const CONTROLLER_IDENTITY = "Povilas Konopackas, sole trader, Lithuania";
+export const CONTACT_EMAIL = "povkonop@gmail.com";
+
 const escapeHtml = (s: string): string =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -662,6 +699,48 @@ export interface EmailContent {
 }
 
 /**
+ * The closing block of any mail that is about the product rather than part of
+ * delivering it: who is writing, why this person is getting it, and how to make
+ * it stop. The privacy policy promises all three on every such message, so they
+ * are built in one place and a new sender cannot leave one out.
+ *
+ * `unsubscribeUrl` is null only when no signing secret is configured. The reply
+ * route still works then, which is why it is always named.
+ */
+export function marketingFooter(
+  reason: string,
+  unsubscribeUrl: string | null,
+): { html: string; text: string } {
+  const optOutHtml = unsubscribeUrl
+    ? `<a href="${escapeHtml(unsubscribeUrl)}" style="color:#888">Unsubscribe</a>, or reply with the word stop.`
+    : "To stop these, reply with the word stop.";
+  const optOutText = unsubscribeUrl
+    ? `Unsubscribe: ${unsubscribeUrl} , or reply with the word stop.`
+    : "To stop these, reply with the word stop.";
+
+  return {
+    html: `<p style="color:#888;font-size:12px;border-top:1px solid #eee;margin-top:24px;padding-top:12px">${CONTROLLER_IDENTITY}. ${CONTACT_EMAIL}. ${escapeHtml(reason)} ${optOutHtml}</p>`,
+    text: ["", "--", `${CONTROLLER_IDENTITY}. ${CONTACT_EMAIL}.`, reason, optOutText].join("\n"),
+  };
+}
+
+/** Why a trialist is getting a reminder. Stated in the mail, per the policy. */
+export const TRIAL_MAIL_REASON = "You are getting this because you started a free trial of asc-mcp.";
+
+/**
+ * Headers that give a mail client its own unsubscribe button. With a link, the
+ * POST form is RFC 8058 one-click; without one, the mailbox is the only route.
+ */
+export function unsubscribeHeaders(unsubscribeUrl: string | null): Record<string, string> {
+  const mailto = `<mailto:${CONTACT_EMAIL}?subject=stop>`;
+  if (!unsubscribeUrl) return { "List-Unsubscribe": mailto };
+  return {
+    "List-Unsubscribe": `<${unsubscribeUrl}>, ${mailto}`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}
+
+/**
  * The trial key email.
  *
  * Pure, and in this file, so what a customer actually receives can be asserted
@@ -672,8 +751,23 @@ export interface EmailContent {
  * URL, so the one click that matters most, a trial user deciding to pay, was
  * the only one not counted, and it made them retype the address we already had.
  */
-export function trialEmailContent(key: string, expires: string | null, email: string): EmailContent {
+export function trialEmailContent(
+  key: string,
+  expires: string | null,
+  email: string,
+  unsubscribeUrl: string | null,
+): EmailContent {
   const safeKey = escapeHtml(key);
+  // Said here because this is the first thing the address ever receives: the
+  // chance to refuse the two reminders has to exist before the first of them,
+  // and this mail reaches every client version, which the tool's own notice
+  // does not.
+  const optOutHtml = unsubscribeUrl
+    ? `<a href="${escapeHtml(unsubscribeUrl)}">unsubscribe here</a>, or reply with the word stop`
+    : "reply with the word stop";
+  const optOutText = unsubscribeUrl
+    ? `${unsubscribeUrl} , or reply with the word stop`
+    : "reply with the word stop";
   const ends = expires ? new Date(expires).toUTCString() : `${TRIAL_DAYS} days from now`;
   // Through the counted redirect, not the raw Polar link: a trial user deciding
   // to pay is the single most valuable click this product has, and it was the
@@ -692,6 +786,7 @@ export function trialEmailContent(key: string, expires: string | null, email: st
       <p>When the trial ends, Pro is $9 per month: <a href="${checkout}">subscribe here</a>. Cancel any time.</p>
       <p style="color:#666;font-size:14px">Lost this key? Retrieve it any time at <a href="${KEY_PAGE_URL}">the license page</a>.</p>
       <p style="color:#666;font-size:14px">Hit a bug, or something did not work? Just reply to this email. A person reads it.</p>
+      <p style="color:#666;font-size:14px">You will get one reminder shortly before the trial ends and one note after it. To get neither: ${optOutHtml}.</p>
     </div>`;
 
   const text = [
@@ -719,6 +814,9 @@ export function trialEmailContent(key: string, expires: string | null, email: st
     `Lost this key? Retrieve it any time at ${KEY_PAGE_URL}`,
     "",
     "Hit a bug, or something did not work? Just reply to this email. A person reads it.",
+    "",
+    "You will get one reminder shortly before the trial ends and one note after it.",
+    `To get neither: ${optOutText}.`,
   ].join("\n");
 
   return { subject: `Your ${TRIAL_DAYS}-day asc-mcp Pro trial key`, html, text };
@@ -801,6 +899,35 @@ export interface TrialRow {
 }
 
 /**
+ * The rows the reminder run may mail. Here rather than beside its one caller
+ * because workerd refuses to start an entry module that exports anything but a
+ * handler, and a test has to be able to run this exact statement against a real
+ * SQLite table instead of a description of it.
+ *
+ * The first NOT EXISTS keeps a buyer out; the comment at the call site in index.ts
+ * says why. The second keeps out anyone who has opted out, on any row sharing the
+ * address in any case, because the opt-out is a fact about a mailbox and not
+ * about one licence.
+ */
+export const TRIAL_REMINDER_SQL = `SELECT id, email, key, expires_at, source, revoked_at, canceled_at,
+            trial_ending_emailed_at, trial_lapsed_emailed_at
+       FROM licenses t
+      WHERE source = 'trial'
+        AND replace(expires_at, ' ', 'T') >= ?
+        AND replace(expires_at, ' ', 'T') <= ?
+        AND NOT EXISTS (
+              SELECT 1 FROM licenses p
+               WHERE p.source = 'polar'
+                 AND p.revoked_at IS NULL
+                 AND lower(p.email) = lower(t.email)
+            )
+        AND NOT EXISTS (
+              SELECT 1 FROM licenses o
+               WHERE o.marketing_opt_out_at IS NOT NULL
+                 AND lower(o.email) = lower(t.email)
+            )`;
+
+/**
  * Which trial rows are due which reminder, decided in one pure pass so the
  * rules can be tested without a database or an email provider.
  *
@@ -855,10 +982,12 @@ export function trialEndingEmailContent(
   key: string,
   expires: string | null,
   email: string,
+  unsubscribeUrl: string | null,
 ): EmailContent {
   const safeKey = escapeHtml(key);
   const ends = expires ? new Date(expires).toUTCString() : "tomorrow";
   const checkout = `${GO_URL}?tool=trial_ending_email&email=${encodeURIComponent(email)}`;
+  const footer = marketingFooter(TRIAL_MAIL_REASON, unsubscribeUrl);
 
   const html = `
     <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
@@ -871,8 +1000,9 @@ export function trialEndingEmailContent(
         <li>Ask it for a <code>daily_briefing</code>. One answer across every app: version states, what is waiting on you, new reviews.</li>
       </ul>
       <p>To keep everything, Pro is $9 per month, cancel any time: <a href="${checkout}">subscribe here</a>. Your existing config keeps working; the key in it is replaced by the one you get back.</p>
-      <p style="color:#666;font-size:14px">Not for you? Nothing happens, nothing to cancel, and you will not hear from us again about it.</p>
+      <p style="color:#666;font-size:14px">Not for you? Nothing to cancel. One short automated note goes out after the trial ends. To get neither that nor anything else from me, use the unsubscribe link below or reply with the word stop.</p>
       <p style="color:#666;font-size:14px">Something did not work during the trial? Reply to this email and tell me. A person reads it, and a bug report is worth more to me than the $9.</p>
+      ${footer.html}
     </div>`;
 
   const text = [
@@ -893,11 +1023,13 @@ export function trialEndingEmailContent(
     `To keep everything, Pro is $9 per month, cancel any time: ${checkout}`,
     "Your existing config keeps working; the key in it is replaced by the one you get back.",
     "",
-    "Not for you? Nothing happens, nothing to cancel, and you will not hear from us again",
-    "about it.",
+    "Not for you? Nothing to cancel. One short automated note goes out after the trial ends.",
+    "To get neither that nor anything else from me, use the unsubscribe link below or reply",
+    "with the word stop.",
     "",
     "Something did not work during the trial? Reply to this email and tell me. A person reads",
     "it, and a bug report is worth more to me than the $9.",
+    footer.text,
   ].join("\n");
 
   return { subject: "Your asc-mcp Pro trial ends tomorrow", html, text };
@@ -908,8 +1040,12 @@ export function trialEndingEmailContent(
  * working, because the failure a lapsed user sees is a tool refusing inside an
  * agent transcript they may not read carefully, and to make the ask once.
  */
-export function trialLapsedEmailContent(email: string): EmailContent {
+export function trialLapsedEmailContent(
+  email: string,
+  unsubscribeUrl: string | null,
+): EmailContent {
   const checkout = `${GO_URL}?tool=trial_lapsed_email&email=${encodeURIComponent(email)}`;
+  const footer = marketingFooter(TRIAL_MAIL_REASON, unsubscribeUrl);
 
   const html = `
     <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
@@ -917,7 +1053,8 @@ export function trialLapsedEmailContent(email: string): EmailContent {
       <p>Your 7 days are up. <code>list_apps</code>, <code>app_details</code> and <code>review_status</code> still work on the same key and always will. Everything that writes to App Store Connect, and the intelligence tools, now refuse.</p>
       <p>Pro is $9 per month, cancel any time: <a href="${checkout}">subscribe here</a>. You get a new key by email in seconds; swap it into the same <code>ASC_LICENSE_KEY</code> line and nothing else changes.</p>
       <p><strong>If you decided against it, that is useful to me.</strong> Reply with one line saying why: it did not do what you needed, it broke, it is too expensive, you ship too rarely to care. I read every reply, and that answer is worth more than the subscription.</p>
-      <p style="color:#666;font-size:14px">This is the last email about the trial.</p>
+      <p style="color:#666;font-size:14px">This is the last automated email about the trial.</p>
+      ${footer.html}
     </div>`;
 
   const text = [
@@ -935,7 +1072,8 @@ export function trialLapsedEmailContent(email: string): EmailContent {
     "do what you needed, it broke, it is too expensive, you ship too rarely to care. I read every",
     "reply, and that answer is worth more than the subscription.",
     "",
-    "This is the last email about the trial.",
+    "This is the last automated email about the trial.",
+    footer.text,
   ].join("\n");
 
   return { subject: "Your asc-mcp trial has ended", html, text };
