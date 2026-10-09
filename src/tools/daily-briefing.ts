@@ -129,8 +129,10 @@ export async function dailyBriefing(
       result += `- Could not fetch version info\n`;
     }
 
-    // Get recent reviews (Pro only, but show count for free)
-    if (tier === "pro") {
+    // Recent reviews. Not conditional on the tier: the gate above is the one
+    // place that decides who gets a briefing, and a previewed call that got
+    // this far is owed the whole of it, not a briefing with the reviews cut.
+    {
       try {
         const reviewsResponse = await client.get<ReviewAttributes>(
           `/v1/apps/${appId}/customerReviews`,
@@ -176,8 +178,6 @@ export async function dailyBriefing(
       } catch {
         result += `- Could not fetch reviews\n`;
       }
-    } else {
-      result += `- Reviews: upgrade to Pro to see review details in briefings\n`;
     }
 
     result += "\n";

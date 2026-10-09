@@ -1,17 +1,15 @@
-v1.9.13: a trial now survives a restart in every client
+v1.9.14: try the Pro read tools on your own app before deciding
 
-Download **asc-mcp-1.9.13.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Claude Code: `/plugin install asc-mcp --marketplace pofky/asc-mcp`. Every other client: `npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>`.
+Download **asc-mcp-1.9.14.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Claude Code: `/plugin install asc-mcp --marketplace pofky/asc-mcp`. Every other client: `npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>`.
 
-**Update if you started a trial and it vanished**
+**Nothing changes if you subscribe or are on a trial.** No tool, argument or reply is different for you.
 
-A trial key was kept after a restart only when asc-mcp found its own server block at the top level of the Claude Desktop config, `~/.claude.json` or a local `.mcp.json`. A server added with `claude mcp add` at its default scope sits under a project instead, and Cursor, Windsurf and Cline keep their configs elsewhere, so for those installs the key lasted until the client closed. The next session was back on the free tier, with no days-left line and nothing to say a trial had ever started.
+**What is new on the free tier**
 
-The key is now also saved on your machine, in `~/.asc-mcp/license.json`, with owner-only permissions on macOS and Linux, and read at startup when your client config carries no key. A key in your config always wins over it. Delete the file to remove it. asc-mcp also finds Cursor, Windsurf and Cline configs and Claude Code's per-project blocks, for the trial key and for `init --write`.
+The Pro tools that only read now work five times in total with no licence and no email: customer reviews, sales, builds, TestFlight groups, the preflight audit, the daily briefing, keyword insights, competitor snapshot, metadata diff and release notes. That is one allowance of five across those ten tools, not five each. Until now the free tier stopped at listing your apps, so the first thing most people asked for, their reviews or their sales, was refused before they had seen the product do anything.
 
-If your trial ended this way, ask your agent to run `asc_start_trial` with the same email. It will tell you where you stand, and if you have subscribed it fetches your paid key.
+Each of those replies ends with a line saying how many calls are left. A call that ends in an error is not counted; one that runs and has nothing to show is. Tools that change anything in your App Store account are not part of it and stay Pro, as do review triage, reply drafting and waiting on a build. The preview is not offered on a machine where a trial or subscription has already ended.
 
-**What else changed**
+After the five, Pro is $9 a month, and the 7-day trial with no card is still there. The message at the gate now leads with the price and offers the trial second.
 
-`init --write` updates a server Claude Code keeps under a project in place. It used to add a second block beside it that the client never ran, and report success. When none of the configs it knows exists, it now lists the paths it looked for.
-
-The playbook said the free tier included the intelligence tools. It does not: the free tools are `list_apps`, `app_details` and `review_status`, plus the setup check, the playbook and the trial starter. The README said three tools need no Apple key; it is two, the setup check and the playbook.
+The count is one number in `~/.asc-mcp/preview.json` on your machine. It is never sent anywhere.

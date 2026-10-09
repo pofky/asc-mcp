@@ -34,9 +34,6 @@ export async function salesReport(
   args: { vendor_number?: string; frequency?: string; report_date?: string },
   tier: Tier,
 ): Promise<string> {
-  const gate = requirePro(tier, "Sales reports", "sales_report");
-  if (gate) return gate;
-
   // An agent cannot discover the vendor number: it is only shown in the ASC
   // website. Say where it is instead of failing schema validation, which used to
   // surface as a raw zod dump.
@@ -49,6 +46,9 @@ export async function salesReport(
       "Then call sales_report again with vendor_number set."
     );
   }
+
+  const gate = requirePro(tier, "Sales reports", "sales_report");
+  if (gate) return gate;
 
   const frequency = args.frequency || "DAILY";
   const reportDate =

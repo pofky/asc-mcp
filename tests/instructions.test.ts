@@ -32,7 +32,7 @@ describe("server instructions", () => {
     ]) {
       expect(FREE).toContain(tool);
     }
-    expect(FREE).toContain("the free ones are complete");
+    expect(FREE).toContain("The six free tools are complete");
   });
 
   it("says the trial takes effect without a restart, which is the whole offer", () => {
@@ -40,7 +40,7 @@ describe("server instructions", () => {
   });
 
   it("tells the model to offer once and stop", () => {
-    expect(FREE).toContain("Offer once per conversation");
+    expect(FREE).toContain("once per conversation");
     expect(FREE).toContain("never invent one");
   });
 

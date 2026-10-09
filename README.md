@@ -12,7 +12,7 @@
 npx @pofky/asc-mcp init --write   # finds your .p8, asks for your Issuer ID, writes your MCP config
 ```
 
-Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 41 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month. Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node.
+Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 41 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month. Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no licence, as a preview.
 
 | You say | What happens |
 |---------|-------------|
@@ -298,6 +298,7 @@ Your `.p8` private key never leaves your machine:
 - The `.p8` private key is read locally. JWT tokens are generated on your computer, and name your Key ID and Issuer ID to Apple, as Apple's API requires.
 - API calls go directly from your machine to `api.appstoreconnect.apple.com`.
 - The license server is sent your license key string when one is set and, if you start a trial, your email address, a one-way hash of your Issuer ID and the name of the tool you started from. No Apple data and no credentials.
+- `~/.asc-mcp/preview.json` holds one number, how many of the 5 free preview calls have been used on this machine. It is never sent anywhere.
 - Starting a trial, or fetching a paid key with `asc_start_trial`, saves the license key in plain text in `~/.asc-mcp/license.json` (owner-only permissions on macOS and Linux) and adds it as `ASC_LICENSE_KEY` to every asc-mcp entry found in your Claude Desktop, Claude Code (`~/.claude.json`, including per-project entries), `./.mcp.json`, Cursor, Windsurf and Cline configs. Nothing else in those files is changed, and each edited file gets a one-time `.bak` copy beside it, which holds whatever the file held. `~/.asc-mcp/last-verdict.json` holds the last license check and a hash of the key. Delete the file and the `ASC_LICENSE_KEY` lines to remove the key.
 - Fully open source. [Read the code.](https://github.com/pofky/asc-mcp)
 
