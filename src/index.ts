@@ -391,7 +391,7 @@ async function main() {
     {
       project_path: z.string().optional().describe("Path to git project (default: current directory)"),
       since_tag: z.string().optional().describe("Git tag to diff from (default: latest tag)"),
-      max_commits: z.number().optional().describe("Max commits to include (default 50)"),
+      max_commits: z.number().optional().describe("Max commits to include (default 50, at most 500)"),
     },
     safe((args) => releaseNotes(args, tier)),
   );
