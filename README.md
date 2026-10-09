@@ -58,6 +58,14 @@ npx @pofky/asc-mcp init --write     # auto-detects the key, asks for your Issuer
 
 `init --write` finds your Claude Desktop / Claude Code config, backs it up, and merges in the server block, so there's no JSON editing. The server also auto-discovers the `.p8` path at runtime, so you only ever need `ASC_ISSUER_ID` (and `ASC_LICENSE_KEY` for Pro).
 
+**As a Claude Code plugin.** One line installs the server and the review-triage skill together, and Claude Code asks for your Issuer ID when it enables the plugin:
+
+```
+/plugin install asc-mcp --marketplace pofky/asc-mcp
+```
+
+The plugin lives in [`plugin/`](plugin/), and its README says what it runs and sends.
+
 **Running it from an agent, or any pipe.** There is no terminal to answer questions in, so pass what would have been asked:
 
 ```bash
@@ -285,11 +293,11 @@ Raw wrappers give you endpoints. This gives you answers.
 
 ## Security
 
-Your credentials never leave your machine:
+Your `.p8` private key never leaves your machine:
 
-- The `.p8` private key is read locally. JWT tokens are generated on your computer.
+- The `.p8` private key is read locally. JWT tokens are generated on your computer, and name your Key ID and Issuer ID to Apple, as Apple's API requires.
 - API calls go directly from your machine to `api.appstoreconnect.apple.com`.
-- The license server sees only your license key string. Zero Apple data, zero credentials.
+- The license server is sent your license key string when one is set and, if you start a trial, your email address, a one-way hash of your Issuer ID and the name of the tool you started from. No Apple data and no credentials.
 - Fully open source. [Read the code.](https://github.com/pofky/asc-mcp)
 
 ## Works With
@@ -309,9 +317,10 @@ Your credentials never leave your machine:
 ## Legal
 
 - [Privacy Policy](https://asc-mcp-license.remewdy.workers.dev/privacy)
+- [What the server sends, and to whom](plugin/README.md#privacy-policy): the short version
 - [Terms of Service](https://asc-mcp-license.remewdy.workers.dev/terms)
 
-This project is not affiliated with, endorsed by, or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, iOS, and macOS are trademarks of Apple Inc.
+This project is not affiliated with, endorsed by, or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, Xcode, iOS, and macOS are trademarks of Apple Inc.
 
 ## License
 

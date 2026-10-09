@@ -97,5 +97,7 @@ function keyAdvice(): string {
   // the two populations apart from inside the process.
   return process.env.ASC_INSTALL === "mcpb"
     ? "Already have a key? Paste it into Claude Settings > Extensions > asc-mcp > Configure > License key, then Save."
-    : "Already have a key? Set ASC_LICENSE_KEY in your MCP server config.";
+    : process.env.ASC_INSTALL === "plugin"
+      ? "Already have a key? Set it as the License key option in the asc-mcp plugin's settings."
+      : "Already have a key? Set ASC_LICENSE_KEY in your MCP server config.";
 }

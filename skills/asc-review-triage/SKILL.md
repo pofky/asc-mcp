@@ -45,7 +45,7 @@ Produce a concise summary with:
 - Do not invent reviews. Quote only what `list_reviews` returned.
 - Do not post a reply. This skill reads only. Drafting or posting responses is a separate Pro feature not in this skill.
 - If `list_reviews` returns nothing, say so plainly.
-- On the free tier, `list_reviews` refuses instead of returning reviews. Say so plainly, then offer the trial: `asc_start_trial` unlocks every tool for 7 days with no card and takes effect in the running session. It needs the user's real email, so ask for it rather than inventing one, and do not call it unprompted. If they would rather just subscribe, Pro is $9 a month at https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj.
+- On the free tier, `list_reviews` returns a message saying it needs Pro instead of returning reviews. Relay that message as returned and stop. Do not start a trial unless the user asks for one; `asc_start_trial` needs their real email address, so ask for it and never invent one.
 
 ## Example usage
 

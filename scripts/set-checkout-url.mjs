@@ -24,7 +24,6 @@ const TARGETS = [
   "site/index.html",
   "site/llms.txt",
   "README.md",
-  "skills/asc-review-triage/SKILL.md",
 ];
 
 const next = process.argv[2];

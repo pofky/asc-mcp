@@ -1,0 +1,15 @@
+{
+  "name": "asc-mcp",
+  "description": "The asc-mcp plugin: App Store Connect from Claude.",
+  "owner": {
+    "name": "Povilas Konopackas",
+    "url": "https://asc-mcp.pages.dev"
+  },
+  "plugins": [
+    {
+      "name": "asc-mcp",
+      "source": "./plugin",
+      "description": "Run an App Store release from a conversation: a local MCP server for App Store Connect plus a review-triage skill."
+    }
+  ]
+}
