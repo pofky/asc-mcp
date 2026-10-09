@@ -25,21 +25,27 @@ The operator said to ship everything autonomously. What happened:
   original", and look for `List-Unsubscribe` and `List-Unsubscribe-Post`, and
   for both names in the DKIM `h=` list. It runs the cron over every due row, so
   check no real trial is due first (none was on 9 October).
-- **npm 1.9.12: NOT released.** `npm whoami` answers 401: the token in
-  `~/.npmrc` is dead, there is no other npm credential in Keychain,
-  `CREDENTIALS.md` or CI, and Chrome is not signed in to npmjs.com. It needs
-  `npm login` by the operator, then `release-npm.txt`. npm still serves 1.9.11
-  with the `release_notes` injection.
-- **Directory portal: validated, not submitted.** The operator's Chrome is
-  signed in to `claude.ai/directory/manage`. Its Validate step on
-  `pofky/asc-mcp`, path `plugin`, `master @ 9ed2847` **passed with nothing
-  blocking**. The name is free: the only name finding is a "may be confused"
-  hold against two unrelated listings. Five policy holds go to a human reviewer,
-  all expected: the pinned `npx`, two on "uses a credential from the user's
-  machine" (the README names appstoreconnect.apple.com beside the key path),
-  and the two name look-alikes. It warned that a listing icon can be set only
-  once, at first save or submit, so `plugin/.claude-plugin/icon.png` now exists
-  (the site favicon mark at 1024 px). No draft was saved.
+- **npm 1.9.12: released and verified, 9 October.** npm serves 1.9.12; run from
+  a clean folder it reports version 1.9.12 and 41 tools, all titled, 20 read and
+  21 write. Tag `v1.9.12` on `110d35e`, GitHub release with the `.mcpb`, the
+  registry workflow succeeded and the MCP registry lists 1.9.12. The site says
+  1.9.12 (`45a1f7b`, deployed). The release script got as far as the commit and
+  then npm answered 403: **npm now requires 2FA to publish.** The operator
+  turned it on (security key); recovery codes are in Keychain, see
+  `/Volumes/T7/Projects/CREDENTIALS.md`. The publish, tag, push and GitHub
+  release were then done by hand in the script's order.
+- **Directory portal: draft filled to the Compliance step, not submitted.**
+  `claude.ai/directory/manage`, Plugin bundle, `pofky/asc-mcp`, path `plugin`,
+  `master @ 45a1f7b`: validation passed, 5 warnings, 5 policy holds (the pinned
+  `npx`, two on "uses a credential from the user's machine", two name
+  look-alikes), all expected and all go to a human reviewer. Surfaces: Claude
+  Code and Cowork ticked, Claude apps unticked (a local server cannot run
+  there). The portal says Cowork cannot collect the plugin's settings, so there
+  the server starts without an Issuer ID. Data handling: reads and stores, yes
+  listed in README, longer, not for under 18s. What is left is the operator's:
+  four ticks on Compliance (the terms among them), then Review and submit. The
+  draft is saved "in this tab" only; if the tab is gone, redo the steps above,
+  it takes two minutes.
 - **The stale stop-hook blocker: fixed at the source**, autopilot `6bf46c3`.
   `autopilot/hooks/pre_tool_use.py` lets `Read` through for
   `.autopilot/state/*_done`, `*_required` and `substance_check_pending`, which
@@ -69,8 +75,7 @@ directory. PRD, with the architect's findings: `tasks/prd-claude-directory-plugi
 - **The pin.** The directory blocks an unpinned launcher, so the plugin runs
   `npx -y @pofky/asc-mcp@<exact>`. `scripts/sync-plugin.mjs` writes the pin from
   `package.json`; `scripts/release.mjs` runs it, and now tags and pushes master
-  only after npm serves the version. **Until 1.9.12 is published the pin is
-  1.9.11, which works but has no annotations. Do not submit before the release.**
+  only after npm serves the version. The pin is 1.9.12 since the release.
 - **Blank settings.** `src/index.ts` drops any blank or unexpanded `ASC_*` value
   before dispatch, so a plugin user who leaves the licence field empty is on the
   free tier in the server, in `doctor` and at the Pro gate alike.
@@ -523,28 +528,17 @@ to null the email and key and keep the anchor. That is a conversion decision.
 
 ## Next in order
 
-0. **After the three command files in item 1 have run, submit the plugin.** It
-   is the only item here aimed at arrivals, and it must come last: the listing
-   links the policy, and the policy it describes is live only after the worker
-   deploy. At `claude.ai/directory/manage`: Submit new, Plugin bundle,
-   repository `pofky/asc-mcp`, plugin path `plugin`, branch `master`, Validate.
-   Data handling answers, all from the policy: it stores personal data only on
-   a trial or purchase (email, licence key, a hashed Issuer ID, the tool name);
-   **yes**, it sends data to services other than declared connectors (Apple's
-   APIs and our licence server, both named in the README); records are kept
-   until deleted at `/delete`; not intended for under 18s. Fix anything the
-   portal marks Blocking on master and re-validate. Check first that
-   `plugin/.claude-plugin/plugin.json` pins 1.9.12 and that `/privacy` says
-   "Last updated: October 9, 2026".
-1. **Run three operator command files, in this order:**
-   `deploy-license-worker.txt`, `deploy-site.txt`, `release-npm.txt`. The worker
-   goes first so the opt-out that the site copy and the 1.9.12 in-agent notice
-   describe already exists. The worker file applies migration 0004 before the
-   deploy; without the column the cron, `/unsubscribe` and `/admin/announce`
-   all error. It also carries the 22 September work: the /go bot filter, the
-   `/b` counter and its policy text. The repo is public, so the injection fix
-   is readable while npm still serves the vulnerable 1.9.11: do not sit on
-   `release-npm.txt`.
+0. **Finish the directory submission.** Everything before the Compliance step
+   is filled (see Where things stand). The operator ticks the four boxes and
+   submits; then watch the plugin's page for the reviewer's decision on the
+   five policy holds. Fix anything they ask for on master and re-validate.
+1. **Done 9 October:** worker deploy with migration 0004, site deploy, npm
+   1.9.12. **The next release needs the operator at the keyboard:**
+   `scripts/release.mjs` runs `npm publish` with stdin closed, and npm now wants
+   a security-key approval in the browser, so the script stops at the publish
+   with a commit and no tag. Either publish by hand with
+   `npm publish --access public --auth-type=web` and finish the script's steps,
+   or teach the script the web flow before 1.9.13.
    After the deploy, still owed: one real reminder send read from raw headers
    (does Brevo pass `List-Unsubscribe` through, are both headers in DKIM `h=`),
    via `wrangler dev --remote --test-scheduled` on a synthetic row.
