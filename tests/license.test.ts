@@ -154,3 +154,23 @@ describe("offline grace when the license server cannot answer", () => {
     expect(await validateLicense(never)).toBe("free");
   });
 });
+
+/**
+ * The server matches a key exactly, and the key was sent as it sat in the
+ * config, so one pasted with a trailing space or newline never validated.
+ */
+describe("a key with stray whitespace around it", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    clearLicenseCache();
+  });
+
+  it("is sent trimmed", async () => {
+    clearLicenseCache();
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ valid: true, tier: "pro" }), { status: 200 }));
+    expect(await validateLicense("  ASC-PADDED-KEY\n")).toBe("pro");
+    expect(JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))).toEqual({ key: "ASC-PADDED-KEY" });
+  });
+});

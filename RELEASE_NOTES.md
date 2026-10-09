@@ -1,15 +1,15 @@
-v1.9.14: try the Pro read tools on your own app before deciding
+v1.9.15: release_notes accepts revisions and build tags again
 
-Download **asc-mcp-1.9.14.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Claude Code: `/plugin install asc-mcp --marketplace pofky/asc-mcp`. Every other client: `npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>`.
+Download **asc-mcp-1.9.15.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Claude Code: `/plugin install asc-mcp --marketplace pofky/asc-mcp`. Every other client: `npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>`.
 
-**Nothing changes if you subscribe or are on a trial.** No tool, argument or reply is different for you.
+**Update if you pass a revision or a build tag to `release_notes`**
 
-**What is new on the free tier**
+The security fix in 1.9.12 restricted `since_tag` to letters, digits and `. _ / -`. That also refused values that had always worked: a relative revision such as `HEAD~1` or `HEAD^`, and a build tag with a plus sign such as `v1.2.3+45`. They are accepted again. The fix itself stands: git is run without a shell, and a value still cannot start with a dash.
 
-The Pro tools that only read now work five times in total with no licence and no email: customer reviews, sales, builds, TestFlight groups, the preflight audit, the daily briefing, keyword insights, competitor snapshot, metadata diff and release notes. That is one allowance of five across those ten tools, not five each. Until now the free tier stopped at listing your apps, so the first thing most people asked for, their reviews or their sales, was refused before they had seen the product do anything.
+**What else changed**
 
-Each of those replies ends with a line saying how many calls are left. A call that ends in an error is not counted; one that runs and has nothing to show is. Tools that change anything in your App Store account are not part of it and stay Pro, as do review triage, reply drafting and waiting on a build. The preview is not offered on a machine where a trial or subscription has already ended.
+If the licence server cannot be reached and this machine has never confirmed your key, the reply now says only that: your key could not be checked, it is fine, retry in a moment. Since 1.9.14 a subscriber in that position was counted through the free preview and then shown the price.
 
-After the five, Pro is $9 a month, and the 7-day trial with no card is still there. The message at the gate now leads with the price and offers the trial second.
+A licence key pasted with a stray space or newline around it now validates. It was sent exactly as it sat in the config and never matched.
 
-The count is one number in `~/.asc-mcp/preview.json` on your machine. It is never sent anywhere.
+Nothing else changes for subscribers: every other tool, argument and reply is identical to 1.9.14.

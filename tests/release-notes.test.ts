@@ -46,6 +46,31 @@ describe("release_notes shell safety", () => {
     expect(out).toMatch(/^Error: since_tag/);
   });
 
+  /**
+   * 1.9.12 allowed only letters, digits and . _ / -, which also refused the
+   * revisions and build tags people had been passing all along.
+   */
+  it.each([
+    ["a relative revision", "HEAD~1"],
+    ["a parent", "HEAD^"],
+    ["a reflog entry", "HEAD@{0}"],
+  ])("accepts %s, which git understands and no shell ever sees", async (_label, tag) => {
+    const out = await releaseNotes({ project_path: repo, since_tag: tag }, "pro");
+    expect(out).not.toMatch(/^Error: since_tag/);
+  });
+
+  it("accepts a build tag with a plus sign", async () => {
+    // Tagged for this test only: the other tests rely on v1.0.0 being the latest tag.
+    execFileSync("git", ["tag", "v1.0.0+45", "v1.0.0"], { cwd: repo });
+    try {
+      const out = await releaseNotes({ project_path: repo, since_tag: "v1.0.0+45" }, "pro");
+      expect(out).not.toMatch(/^Error/);
+      expect(out).toContain("v1.0.0+45");
+    } finally {
+      execFileSync("git", ["tag", "-d", "v1.0.0+45"], { cwd: repo, stdio: "ignore" });
+    }
+  });
+
   it.each([
     ["command substitution", "$(touch x)"],
     ["backticks", "`touch x`"],

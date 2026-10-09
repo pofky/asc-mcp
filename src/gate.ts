@@ -163,8 +163,16 @@ export function requirePro(
   let previewSpent = false;
   // Only inside a call the wrapper is tracking: a preview that could not be
   // reported back, or refunded on failure, is not granted.
+  //
+  // Nor is it for someone who has a key that could not be checked. That is a
+  // paying customer in an outage of ours; counting down "free calls" at them
+  // and then naming a price would tell them their key had stopped working.
+  // They get the unreachable-server line below, as they always have.
+  const uncheckedKey = Boolean(process.env.ASC_LICENSE_KEY) && lastLicenseStatus() === null;
+  // And they are not sold to either: no price, no trial, only what happened.
+  if (uncheckedKey) return `${capability} requires Pro.\n\n${keyAdvice()}`;
   const call = previewScope.getStore();
-  if (call && !spent && !lapsedPaid && previewable(tool)) {
+  if (call && !spent && !lapsedPaid && !uncheckedKey && previewable(tool)) {
     const used = previewUsed();
     if (used < PREVIEW_CALLS && setPreviewUsed(used + 1)) {
       call.grant = { tool, left: PREVIEW_CALLS - used - 1 };

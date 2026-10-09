@@ -44,7 +44,9 @@ export async function validateLicense(licenseKey?: string): Promise<Tier> {
     const response = await fetch(`${LICENSE_API_URL}/validate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: licenseKey }),
+      // Trimmed: a key pasted with a trailing space or newline is still the
+      // key, and the server matches it exactly.
+      body: JSON.stringify({ key: licenseKey.trim() }),
     });
 
     // A 5xx is our server failing, not a verdict on their key. Treating it as

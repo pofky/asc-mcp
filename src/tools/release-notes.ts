@@ -9,7 +9,10 @@ const DEFAULT_MAX_COMMITS = 50;
 const MAX_COMMITS_CEILING = 500;
 // since_tag comes from the model, which may be relaying text it read in a review
 // or a README. A ref name that cannot start with "-" cannot be read as a git option.
-const SAFE_TAG = /^[A-Za-z0-9][A-Za-z0-9._\/-]{0,99}$/;
+// git runs without a shell, so the characters git itself gives meaning to are
+// allowed: "+" for a build tag like v1.2.3+45, and "~", "^", "@{...}" for a
+// revision such as HEAD~1. Refusing those broke calls that had always worked.
+const SAFE_TAG = /^[A-Za-z0-9][A-Za-z0-9._\/+~^@{}-]{0,99}$/;
 
 /** Runs git with an argument vector. No shell, so no argument is ever parsed as one. */
 function git(cwd: string, args: string[]): string {
@@ -73,7 +76,7 @@ export async function releaseNotes(args: {
   const maxCommits = clampMaxCommits(args.max_commits);
 
   if (args.since_tag && !SAFE_TAG.test(args.since_tag)) {
-    return "Error: since_tag must be a plain git tag or ref name (letters, digits, '.', '_', '/', '-', not starting with '-').";
+    return "Error: since_tag must be a git tag or revision (letters, digits and . _ / - + ~ ^ @ { }, starting with a letter or digit).";
   }
 
   // Check if this is a git repo

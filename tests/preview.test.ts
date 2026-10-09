@@ -130,6 +130,27 @@ describe("the free preview of Pro read tools", () => {
   }
 
   /**
+   * A subscriber on a machine that has never validated, while our licence
+   * server is down: tier falls back to free, but this is not a free user.
+   */
+  it("gives no preview, and names no price, to a key that could not be checked", () => {
+    const home = freshHome();
+    process.env.ASC_LICENSE_KEY = "ASC-PAID-KEY";
+    try {
+      const { refusal, notice } = gated("free", "Listing builds", "list_builds");
+      expect(refusal).toContain("could not be checked");
+      expect(refusal).toContain("Your key is fine");
+      expect(refusal).not.toContain("free Pro calls");
+      expect(refusal).not.toContain("$9");
+      expect(refusal).not.toContain("asc_start_trial");
+      expect(notice).toBeNull();
+      expect(existsSync(countFile(home))).toBe(false);
+    } finally {
+      delete process.env.ASC_LICENSE_KEY;
+    }
+  });
+
+  /**
    * An agent runs tool calls side by side. With one shared list of grants,
    * whichever call finished first took the notice: a free tool announced the
    * preview count and a failed call's refund went to a different call.
