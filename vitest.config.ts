@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -7,6 +8,9 @@ export default defineConfig({
     // would silently execute several copies of the suite at once and report a
     // test count that has nothing to do with this checkout.
     include: ["tests/**/*.test.ts"],
+    // Absolute, because the licence worker runs its own suite from its own
+    // folder under this same config.
+    setupFiles: [fileURLToPath(new URL("./tests/setup-home.ts", import.meta.url))],
     exclude: ["**/node_modules/**", "**/dist/**", "**/.claude/**", "**/.wrangler/**"],
   },
 });

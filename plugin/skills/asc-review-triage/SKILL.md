@@ -45,7 +45,7 @@ Produce a concise summary with:
 - Do not invent reviews. Quote only what `list_reviews` returned.
 - Do not post a reply. This skill reads only. Drafting or posting responses is a separate Pro feature not in this skill.
 - If `list_reviews` returns nothing, say so plainly.
-- On the free tier, `list_reviews` returns a message saying it needs Pro instead of returning reviews. Relay that message as returned and stop. Do not start a trial unless the user asks for one; `asc_start_trial` needs their real email address, so ask for it and never invent one.
+- On the free tier, `list_reviews` works as a preview, 5 calls in total per machine shared with the other Pro read tools, and the last line of the reply says how many are left: tell the user. `triage_reviews` is not part of the preview. Once the preview is used, `list_reviews` returns a message saying it needs Pro: relay that message as returned and stop. Do not start a trial unless the user asks for one; `asc_start_trial` needs their real email address, so ask for it and never invent one.
 
 ## Example usage
 

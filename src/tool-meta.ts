@@ -84,3 +84,8 @@ export function toolMeta(name: ToolName): { title: string; annotations: ToolAnno
         : { title, readOnlyHint: false, destructiveHint: true },
   };
 }
+
+/** Whether a tool only reads. False for a name that is not a tool. */
+export function isReadTool(name: string): boolean {
+  return name in TOOL_META && TOOL_META[name as ToolName][1] === "read";
+}

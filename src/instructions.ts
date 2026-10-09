@@ -28,14 +28,18 @@ export const BASE_INSTRUCTIONS =
  * trust that makes the trial worth offering at all.
  */
 export const FREE_TIER_INSTRUCTIONS =
-  "\n\nTIER: free. Six tools work now (asc_setup_check, asc_guide, asc_start_trial, list_apps, " +
-  "app_details, review_status). The other 35 are locked: everything that writes to App Store " +
-  "Connect (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release) and " +
-  "the intelligence tools (release_preflight, daily_briefing, keyword_insights, metadata_diff, " +
-  "competitor_snapshot, sales_report, list_reviews, triage_reviews, draft_review_response, " +
-  "release_notes). `asc_start_trial` unlocks " +
-  "all of them for 7 days with no credit card, and it takes effect in the running session, so a " +
-  "blocked call can simply be retried. When the user asks for something in that locked set, or " +
-  "says what they are trying to ship, tell them the trial exists and offer to start it; you need " +
-  "their email address and must never invent one. Offer once per conversation and drop it if they " +
-  "decline. Never imply a read tool is limited: the free ones are complete.";
+  "\n\nTIER: free. Six tools work now with no limit (asc_setup_check, asc_guide, asc_start_trial, " +
+  "list_apps, app_details, review_status). The other 35 need Pro. Ten of those only read " +
+  "(list_reviews, sales_report, release_preflight, daily_briefing, release_notes, keyword_insights, " +
+  "competitor_snapshot, metadata_diff, list_builds, list_beta_groups) and work 5 times in total on " +
+  "this machine as a free preview with no licence and no email: when the user asks for one, just " +
+  "call it, and tell them how many preview calls are left, which the last line of the reply " +
+  "states. The preview is not offered once a trial or subscription has ended on this machine. " +
+  "Everything that writes to App Store Connect (metadata, screenshots, builds, TestFlight, in-app " +
+  "purchases, submit, release), and triage_reviews, draft_review_response and wait_for_build, are " +
+  "not part of the preview. `asc_start_trial` unlocks all 41 tools for 7 days with no credit card, " +
+  "and it takes effect in the running session, so a refused call can simply be retried. When a " +
+  "call is refused, tell the user the price and that the trial exists, and offer to start it; you " +
+  "need their email address and must never invent one. Mention the price or the trial once per " +
+  "conversation and drop it if they decline. The six free tools are complete; never describe them " +
+  "as limited.";

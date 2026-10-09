@@ -271,10 +271,10 @@ describe("requestTrial sends a digest, never the issuer id", () => {
 });
 
 describe("the gate message", () => {
-  it("leads with the trial, then the attributed buy link", () => {
+  it("leads with the price and the attributed buy link, then the trial", () => {
     const msg = requirePro("free", "Submitting for review", "submit_for_review")!;
     expect(msg).toContain("Submitting for review requires Pro");
-    expect(msg.indexOf("asc_start_trial")).toBeLessThan(msg.indexOf("$9/month"));
+    expect(msg.indexOf("$9/month")).toBeLessThan(msg.indexOf("asc_start_trial"));
     expect(msg).toContain("/go?tool=submit_for_review");
     // The direct link survives a licence-server outage.
     expect(msg).toContain(CHECKOUT_URL);
@@ -413,7 +413,7 @@ describe("the gate adapts to a trial that has already been spent", () => {
   it("offers the trial to someone who has never had one", () => {
     clearLicenseCache();
     const msg = requirePro("free", "Submitting for review", "submit_for_review")!;
-    expect(msg).toContain("Free for 7 days");
+    expect(msg).toContain("free for 7 days");
     expect(msg).not.toContain("has ended");
   });
 

@@ -43,7 +43,7 @@ import { runDoctor, formatDoctor, trialDaysLeft } from "./doctor.js";
 import { discoverPrivateKey, keyIdFromPath, runInit, parseInitArgs, injectLicenseKey } from "./setup.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { UPGRADE_URL } from "./gate.js";
+import { UPGRADE_URL, takePreviewNotice, previewScope } from "./gate.js";
 import { BASE_INSTRUCTIONS, FREE_TIER_INSTRUCTIONS } from "./instructions.js";
 import { toolMeta, type ToolName } from "./tool-meta.js";
 
@@ -230,14 +230,33 @@ async function main() {
 
   /** Wrap a tool handler so API errors return messages instead of crashing. */
   function safe(fn: (...a: any[]) => Promise<string>) {
-    return async (...a: any[]) => {
-      try {
-        return { content: [{ type: "text" as const, text: await fn(...a) }] };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return { content: [{ type: "text" as const, text: `Error: ${msg}` }] };
-      }
-    };
+    // Each call runs in its own preview scope, so a preview the gate grants
+    // inside it is reported on this reply and no other.
+    return (...a: any[]) =>
+      previewScope.run({ grant: null }, async () => {
+        try {
+          const body = await fn(...a);
+          // Only ever non-null for a free-tier call the gate let through as a
+          // preview. A Pro reply is returned exactly as the tool produced it.
+          const preview = takePreviewNotice();
+          // Tools report a bad argument or a failed fetch as an "Error ..."
+          // reply, not a throw. That is not a look at the product either, so
+          // it is given back too.
+          // The two other prefixes are failure replies whose wording is left
+          // as it is, so nothing a Pro user reads changes.
+          const failed = /^(Error\b|Invalid vendor number|Could not fetch |No app with id )/.test(body);
+          if (preview && failed) preview.refund();
+          return {
+            content: [{ type: "text" as const, text: preview && !failed ? body + preview.footer : body }],
+          };
+        } catch (err) {
+          // A preview call that failed is given back: a wrong app id or an
+          // Apple outage should not spend it.
+          takePreviewNotice()?.refund();
+          const msg = err instanceof Error ? err.message : String(err);
+          return { content: [{ type: "text" as const, text: `Error: ${msg}` }] };
+        }
+      });
   }
 
   tool(
