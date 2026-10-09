@@ -541,7 +541,9 @@ describe("client config candidates per platform", () => {
 
     for (const list of [win, mac, linux]) {
       expect(list.some((c) => c.label.includes("Claude Code"))).toBe(true);
-      expect(list).toHaveLength(3);
+      for (const client of ["Cursor", "Windsurf", "Cline"]) {
+        expect(list.some((c) => c.label === client), `${client} is not offered`).toBe(true);
+      }
     }
   });
 });

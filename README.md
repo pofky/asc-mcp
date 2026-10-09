@@ -12,7 +12,7 @@
 npx @pofky/asc-mcp init --write   # finds your .p8, asks for your Issuer ID, writes your MCP config
 ```
 
-Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 41 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month. Six tools stay free, and three of those need nothing but Node.
+Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 41 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month. Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node.
 
 | You say | What happens |
 |---------|-------------|
@@ -96,7 +96,7 @@ With the `.p8` in `~/.appstoreconnect/private_keys/`, `ASC_ISSUER_ID` is the onl
 
 **Step 3.** Ask your agent: "List my App Store Connect apps"
 
-**Step 4, to try the paid half.** Ask your agent: "start my asc-mcp trial, my email is you@example.com". It calls `asc_start_trial`, which unlocks all 41 tools for 7 days with no card and nothing to cancel. The key activates in the running session, so whatever you were blocked on works on the very next call, and it is written into your MCP config so it survives a restart. One trial per Apple developer account.
+**Step 4, to try the paid half.** Ask your agent: "start my asc-mcp trial, my email is you@example.com". It calls `asc_start_trial`, which unlocks all 41 tools for 7 days with no card and nothing to cancel. The key activates in the running session, so whatever you were blocked on works on the very next call, and it is saved on your machine, in `~/.asc-mcp/license.json` and in any MCP client config that already has an asc-mcp entry, so it survives a restart. One trial per Apple developer account.
 
 Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-compatible client.
 
@@ -286,7 +286,7 @@ Lead with the most impactful change. Keep under 4000 chars.
 | **Git-aware release notes** | No | Yes, reads your project's commit history |
 | **Smart review summaries** | No | Yes, theme clustering, action items |
 | **Setup** | Build from source (Swift or Node) | One command, `init --write` writes your config |
-| **Free tier** | Some | Yes, 6 tools, no signup. Three of them need nothing but Node |
+| **Free tier** | Some | Yes, 6 tools, no signup. Two of them need nothing but Node |
 | **Try the paid half** | n/a | 7 days, no card, started from inside your agent |
 
 Raw wrappers give you endpoints. This gives you answers.
@@ -298,6 +298,7 @@ Your `.p8` private key never leaves your machine:
 - The `.p8` private key is read locally. JWT tokens are generated on your computer, and name your Key ID and Issuer ID to Apple, as Apple's API requires.
 - API calls go directly from your machine to `api.appstoreconnect.apple.com`.
 - The license server is sent your license key string when one is set and, if you start a trial, your email address, a one-way hash of your Issuer ID and the name of the tool you started from. No Apple data and no credentials.
+- Starting a trial, or fetching a paid key with `asc_start_trial`, saves the license key in plain text in `~/.asc-mcp/license.json` (owner-only permissions on macOS and Linux) and adds it as `ASC_LICENSE_KEY` to every asc-mcp entry found in your Claude Desktop, Claude Code (`~/.claude.json`, including per-project entries), `./.mcp.json`, Cursor, Windsurf and Cline configs. Nothing else in those files is changed, and each edited file gets a one-time `.bak` copy beside it, which holds whatever the file held. `~/.asc-mcp/last-verdict.json` holds the last license check and a hash of the key. Delete the file and the `ASC_LICENSE_KEY` lines to remove the key.
 - Fully open source. [Read the code.](https://github.com/pofky/asc-mcp)
 
 ## Works With

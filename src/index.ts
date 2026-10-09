@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { ASCClient } from "./client.js";
-import { validateLicense, clearLicenseCache, lastLicenseStatus } from "./license.js";
+import { validateLicense, clearLicenseCache, lastLicenseStatus, saveLicenseKey, savedLicenseKey, savedLicenseKeyPath } from "./license.js";
 import { requestTrial } from "./trial.js";
 import { registerPrompts } from "./prompts.js";
 import { installSkill, uninstallSkill } from "./skill-installer.js";
@@ -73,6 +73,23 @@ for (const name of Object.keys(process.env)) {
   if (!name.startsWith("ASC_")) continue;
   const value = process.env[name] ?? "";
   if (!value.trim() || value.includes("${")) delete process.env[name];
+}
+
+// The key the client itself handed over, before a saved one can stand in for
+// it. `asc_start_trial` needs to know the difference: a key set in the client's
+// own settings is the one that will be used after a restart, whatever this
+// server saves, so a subscriber who fetches a paid key while an old one is
+// still set there has to be told to replace it.
+const licenseKeyFromClient = process.env.ASC_LICENSE_KEY;
+
+// A key this server saved on this machine stands in when the client config
+// carries none. The config always wins, so someone who sets a paid key by hand
+// is never overruled by an older trial key on disk. Not for `init`: that
+// writes whatever key it is given into a client config and announces Pro, and
+// it should only do that with a key the person supplied on this run.
+if (!process.env.ASC_LICENSE_KEY && process.argv[2] !== "init") {
+  const saved = savedLicenseKey();
+  if (saved) process.env.ASC_LICENSE_KEY = saved;
 }
 
 /**
@@ -264,7 +281,7 @@ async function main() {
         email: z
           .string()
           .describe(
-            "The user's email address. Required: the trial key is sent there so they still have it later. Ask the user for it; never invent one. Tell them what the request stores: this address, a one-way hash of their Issuer ID, the trial key with its start and end dates, and which tool they started from. Tell them the address gets the key, one reminder shortly before the trial ends and one note after it, and that each has an unsubscribe link or they can reply stop. All of it is deletable at https://asc-mcp-license.remewdy.workers.dev/delete (policy: https://asc-mcp-license.remewdy.workers.dev/privacy).",
+            "The user's email address. Required: the trial key is sent there so they still have it later. Ask the user for it; never invent one. Tell them what the request stores: this address, a one-way hash of their Issuer ID, the trial key with its start and end dates, and which tool they started from. Tell them the address gets the key, one reminder shortly before the trial ends and one note after it, and that each has an unsubscribe link or they can reply stop. Tell them it also saves the key on this machine (~/.asc-mcp/license.json) and adds it to any existing asc-mcp entry in their MCP client configs, leaving a .bak copy of each file it edits. All of it is deletable at https://asc-mcp-license.remewdy.workers.dev/delete (policy: https://asc-mcp-license.remewdy.workers.dev/privacy).",
           ),
         tool: z
           .string()
@@ -303,26 +320,52 @@ async function main() {
       process.env.ASC_LICENSE_KEY = result.key;
       clearLicenseCache();
 
+      // Two places, on purpose. The client config is where someone looks for
+      // the key and what carries it to a reinstall; the file in ~/.asc-mcp is
+      // what makes it survive a restart in a client whose config this cannot
+      // find or edit. Either alone has left people on the free tier.
       const { updated, skipped } = injectLicenseKey(result.key);
-      const persistence = updated.length
-        ? `Saved to ${updated.join(", ")} (backup alongside), so it survives a restart.`
-        : // A one-click install has no server block in any client config file:
-          // Claude Desktop keeps an extension's settings in its own registry, and
-          // the key belongs in the extension's own License key field. Telling a
-          // bundle user to hand-edit JSON sends them looking for a file that does
-          // not exist, right after they chose the install path that exists to
-          // avoid JSON entirely. The manifest sets ASC_INSTALL so this branch can
-          // tell the two populations apart.
-          process.env.ASC_INSTALL === "mcpb"
-          ? "To keep it after a restart, paste it into the extension's own settings: " +
-            "Claude Settings > Extensions > asc-mcp > Configure > License key, then Save."
+      const savedLocally = saveLicenseKey(result.key);
+      // Where the key goes by hand, for this kind of install. A one-click
+      // install has no server block in any client config file: Claude Desktop
+      // keeps an extension's settings in its own registry, and a plugin keeps
+      // them in the plugin's options. Telling either to hand-edit JSON sends
+      // them looking for a file that does not exist. The manifests set
+      // ASC_INSTALL so the populations can be told apart.
+      const whereByHand =
+        process.env.ASC_INSTALL === "mcpb"
+          ? "Claude Settings > Extensions > asc-mcp > Configure > License key, then Save."
           : process.env.ASC_INSTALL === "plugin"
-            ? // A plugin install keeps its settings in the plugin's own options,
-              // and its server block lives inside the plugin, not in a client
-              // config this process could edit.
-              "To keep it after a restart, set it as the License key option in the asc-mcp plugin's settings."
-            : "Could not find an asc-mcp block in a known client config, so add ASC_LICENSE_KEY yourself to keep it after a restart:\n" +
-            `  "ASC_LICENSE_KEY": "${result.key}"`;
+            ? "the License key option in the asc-mcp plugin's settings."
+            : "the ASC_LICENSE_KEY line in your client's MCP config.";
+      // A key the client supplies always wins over the saved file. If one is
+      // set there, is not this key, and no config was rewritten, the next
+      // session starts on the old key: for a subscriber replacing a trial key,
+      // that is the free tier, after being told the key was saved.
+      // A bundle or a plugin keeps its key where no config edit reaches, so for
+      // those a rewritten config elsewhere (a Cursor file, say) changes nothing
+      // about which key this client starts with.
+      const clientKeyOutOfReach =
+        process.env.ASC_INSTALL === "mcpb" || process.env.ASC_INSTALL === "plugin";
+      const staleClientKey =
+        Boolean(licenseKeyFromClient) &&
+        licenseKeyFromClient !== result.key &&
+        (clientKeyOutOfReach || !updated.length);
+      const staleWarning = `A different key is set in your client's own settings, and that one is used after a restart. Replace it with the key above: ${whereByHand}`;
+      const inWorkingDir = updated.filter((path) => path === join(process.cwd(), ".mcp.json"));
+      const persistence = updated.length
+        ? `Saved to ${updated.join(", ")} (backup alongside)` +
+          (savedLocally ? ` and to ${savedLicenseKeyPath()}` : "") +
+          (staleClientKey ? `. ${staleWarning}` : ", so it survives a restart.") +
+          (inWorkingDir.length
+            ? ` ${inWorkingDir.join(", ")} is in this project folder and is often committed: keep the key and the .bak out of version control.`
+            : "")
+        : savedLocally
+          ? `Saved on this machine in ${savedLicenseKeyPath()}` +
+            (staleClientKey
+              ? `. ${staleWarning}`
+              : ", so it survives a restart. To use it on another machine, set ASC_LICENSE_KEY there.")
+          : "It could not be saved on this machine. To keep it after a restart, set it in " + whereByHand;
 
       return text(
         [
@@ -331,8 +374,7 @@ async function main() {
               // subscribers never trialled at all (every live subscription has
               // a null trial_fingerprint), and telling those people their trial
               // key was swapped out describes a key they never had.
-              "You already subscribed, so this is your paid license key, not a trial. " +
-              "It is now in your config, replacing whatever key was there."
+              "You already subscribed, so this is your paid license key, not a trial."
             : result.already_started
               ? `Trial already running: ${result.days_remaining} day(s) left.`
               : `Pro trial started. ${result.days_remaining} day(s), no card, nothing to cancel.`,
