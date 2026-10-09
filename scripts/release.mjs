@@ -107,9 +107,28 @@ for (const file of ["package.json", "server.json"]) {
 }
 console.log(`\nVersion set to ${version} in package.json and server.json`);
 
+// The plugin pins the npm package to an exact version, because Anthropic's
+// directory blocks a launcher that is not pinned. Moved here, before the tests,
+// so the drift test sees the new pin and the release commit carries it.
+if (!dry) run("node", ["scripts/sync-plugin.mjs"]);
+
 // --- gates ------------------------------------------------------------------
 
+// The notes are checked here, before anything is published, and against the
+// version: the check further down only asks whether the file exists, and that
+// would let a release go out under the previous version's title and body.
+{
+  const notesFile = join(root, "RELEASE_NOTES.md");
+  const firstLine = existsSync(notesFile) ? readFileSync(notesFile, "utf8").split("\n")[0] : "";
+  if (!firstLine.includes(`v${version}`)) {
+    fail(`RELEASE_NOTES.md does not start with v${version}. Write this version's notes before releasing.`);
+  }
+}
+
 run("npm", ["run", "lint"]);
+// Build first: several tests drive dist/ over stdio, and a stale build would
+// let them pass against the previous release.
+run("npm", ["run", "build"]);
 run("npm", ["test"]);
 run("npm", ["run", "docs"]);
 run("npm", ["run", "mcpb"]);
@@ -164,8 +183,6 @@ if (!dry) {
 
 run("git", ["add", "-A"], { mutating: true });
 run("git", ["commit", "-m", `release: v${version}`], { mutating: true });
-run("git", ["tag", "-a", `v${version}`, "-m", `v${version}`], { mutating: true });
-run("git", ["push", "origin", "master"], { mutating: true });
 
 /**
  * npm first, then the tag.
@@ -252,6 +269,13 @@ async function publishToNpm() {
 
 await publishToNpm();
 
+// The tag is created only once npm serves the version, so a failed publish
+// leaves a local commit and nothing else to clean up by hand.
+run("git", ["tag", "-a", `v${version}`, "-m", `v${version}`], { mutating: true });
+// master goes up only now. plugin/ on master pins this exact version, and the
+// directory installs whatever master pins, so pushing before npm serves it
+// would point every new install at a version that does not exist yet.
+run("git", ["push", "origin", "master"], { mutating: true });
 run("git", ["push", "origin", `v${version}`], { mutating: true });
 
 /**

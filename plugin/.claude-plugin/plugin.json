@@ -1,0 +1,58 @@
+{
+  "name": "asc-mcp",
+  "displayName": "asc-mcp",
+  "version": "1.9.11",
+  "description": "Run an App Store release from a conversation: review status, reviews and sales, metadata, screenshots, builds, TestFlight, in-app purchases, submit and release. A local MCP server for App Store Connect plus a review-triage skill.",
+  "author": {
+    "name": "Povilas Konopackas",
+    "url": "https://asc-mcp.pages.dev"
+  },
+  "homepage": "https://asc-mcp.pages.dev",
+  "repository": "https://github.com/pofky/asc-mcp",
+  "license": "MIT",
+  "keywords": [
+    "app-store-connect",
+    "ios",
+    "testflight",
+    "app-store",
+    "release"
+  ],
+  "documentationUrl": "https://github.com/pofky/asc-mcp/blob/master/USER_GUIDE.md",
+  "supportUrl": "https://github.com/pofky/asc-mcp/issues",
+  "privacyPolicyUrl": "https://asc-mcp-license.remewdy.workers.dev/privacy",
+  "termsOfServiceUrl": "https://asc-mcp-license.remewdy.workers.dev/terms",
+  "userConfig": {
+    "asc_issuer_id": {
+      "type": "string",
+      "title": "Issuer ID",
+      "description": "The UUID from App Store Connect > Users and Access > Integrations > Keys",
+      "required": true
+    },
+    "asc_private_key": {
+      "type": "file",
+      "title": "API private key (.p8)",
+      "description": "Your AuthKey_XXXXXXXXXX.p8 from Apple. Leave empty if it is in ~/.appstoreconnect/private_keys. Read on this machine only, never transmitted."
+    },
+    "asc_license_key": {
+      "type": "string",
+      "title": "License key (optional)",
+      "description": "Leave empty for the free tier. A free 7-day trial is available by asking Claude, and needs your email address.",
+      "sensitive": true
+    }
+  },
+  "mcpServers": {
+    "asc-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@pofky/asc-mcp@1.9.11"
+      ],
+      "env": {
+        "ASC_ISSUER_ID": "${user_config.asc_issuer_id}",
+        "ASC_PRIVATE_KEY_PATH": "${user_config.asc_private_key}",
+        "ASC_LICENSE_KEY": "${user_config.asc_license_key}",
+        "ASC_INSTALL": "plugin"
+      }
+    }
+  }
+}

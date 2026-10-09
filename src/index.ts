@@ -45,6 +45,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { UPGRADE_URL } from "./gate.js";
 import { BASE_INSTRUCTIONS, FREE_TIER_INSTRUCTIONS } from "./instructions.js";
+import { toolMeta, type ToolName } from "./tool-meta.js";
 
 /**
  * Read from package.json rather than a literal. A hand-maintained constant
@@ -59,6 +60,33 @@ export const SERVER_VERSION: string = (() => {
     return "0.0.0";
   }
 })();
+
+/**
+ * A plugin or bundle declares its settings as template fields, and an optional
+ * field the user leaves blank can reach the process as an empty string or as
+ * the literal `${user_config.asc_license_key}`. Neither is a value. Dropping
+ * them here, once, before anything dispatches, means the server, `doctor` and
+ * the Pro gate all see "not set" instead of a key that will not validate or a
+ * path that does not exist.
+ */
+for (const name of Object.keys(process.env)) {
+  if (!name.startsWith("ASC_")) continue;
+  const value = process.env[name] ?? "";
+  if (!value.trim() || value.includes("${")) delete process.env[name];
+}
+
+/**
+ * Register a tool with the title and read/write hints tool-meta.ts holds for
+ * it. The name is typed, so a tool with no row there does not compile.
+ */
+function annotated(server: McpServer) {
+  return (
+    name: ToolName,
+    description: string,
+    inputSchema: z.ZodRawShape,
+    handler: (...a: any[]) => any,
+  ) => server.registerTool(name, { ...toolMeta(name), description, inputSchema }, handler);
+}
 
 const MISSING_CREDS_MESSAGE =
   "Missing App Store Connect credentials.\n\n" +
@@ -117,15 +145,16 @@ async function runSetupMode() {
   );
 
   const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
+  const tool = annotated(server);
 
-  server.tool(
+  tool(
     "asc_setup_check",
     "Diagnose your setup: checks the .p8 key, Key ID, Issuer ID, a LIVE authenticated connection to App Store Connect, and your license tier. For anything wrong, returns the exact fix. Run this first if something isn't working. Free.",
     {},
     async () => text(formatDoctor(await runDoctor())),
   );
 
-  server.tool(
+  tool(
     "asc_guide",
     "START HERE. Returns the exact end-to-end playbook for an App Store task, with every manual ASC-website/Xcode step that no API can do flagged inline. Free.",
     { topic: z.string().optional().describe("Which playbook. Omit for the overview + topic list.") },
@@ -180,6 +209,8 @@ async function main() {
 
   // --- Free tools ---
 
+  const tool = annotated(server);
+
   /** Wrap a tool handler so API errors return messages instead of crashing. */
   function safe(fn: (...a: any[]) => Promise<string>) {
     return async (...a: any[]) => {
@@ -192,7 +223,7 @@ async function main() {
     };
   }
 
-  server.tool(
+  tool(
     "asc_guide",
     "START HERE. Returns the exact end-to-end playbook for an App Store task, with every manual ASC-website/Xcode step that no API can do flagged inline. Call with topic to orient before any multi-step flow. Free.",
     {
@@ -216,7 +247,7 @@ async function main() {
     safe((args) => ascGuide(args)),
   );
 
-  server.tool(
+  tool(
     "asc_setup_check",
     "Diagnose your setup: checks the .p8 key, Key ID, Issuer ID, a LIVE authenticated connection to App Store Connect, and your license tier. For anything wrong, returns the exact fix. Run this first if something isn't working. Free.",
     {},
@@ -226,7 +257,7 @@ async function main() {
   server.registerTool(
     "asc_start_trial",
     {
-      title: "Start a free 7-day Pro trial",
+      ...toolMeta("asc_start_trial"),
       description:
         "Start a free 7-day Pro trial, no credit card, unlocking all 41 tools including the full write/control plane. Call this when a Pro tool is refused and the user wants to proceed, and also when they ask for something only a Pro tool can do (editing metadata, screenshots, builds, TestFlight, IAP, submitting, releasing, preflight, briefings, keyword or review intelligence) before you hit the refusal. Either way, ask for their email address first and never invent one. The trial activates in THIS session immediately, so you can retry the tool that was blocked without any restart. Free.",
       inputSchema: {
@@ -285,7 +316,12 @@ async function main() {
           process.env.ASC_INSTALL === "mcpb"
           ? "To keep it after a restart, paste it into the extension's own settings: " +
             "Claude Settings > Extensions > asc-mcp > Configure > License key, then Save."
-          : "Could not find an asc-mcp block in a known client config, so add ASC_LICENSE_KEY yourself to keep it after a restart:\n" +
+          : process.env.ASC_INSTALL === "plugin"
+            ? // A plugin install keeps its settings in the plugin's own options,
+              // and its server block lives inside the plugin, not in a client
+              // config this process could edit.
+              "To keep it after a restart, set it as the License key option in the asc-mcp plugin's settings."
+            : "Could not find an asc-mcp block in a known client config, so add ASC_LICENSE_KEY yourself to keep it after a restart:\n" +
             `  "ASC_LICENSE_KEY": "${result.key}"`;
 
       return text(
@@ -324,21 +360,21 @@ async function main() {
     },
   );
 
-  server.tool(
+  tool(
     "list_apps",
     "List all apps in your App Store Connect account with name, bundle ID, SKU and App ID.",
     { limit: z.number().optional().describe("Max apps to return (default 50, max 200)") },
     safe((args) => listApps(client, args)),
   );
 
-  server.tool(
+  tool(
     "app_details",
     "Get detailed info about an app including versions, build status, and release state.",
     { app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID (use list_apps to find it)") },
     safe((args) => appDetails(client, args)),
   );
 
-  server.tool(
+  tool(
     "review_status",
     "Check the current App Store review status - in review, waiting, approved, or rejected.",
     { app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID") },
@@ -347,7 +383,7 @@ async function main() {
 
   // --- Pro tools (gated) ---
 
-  server.tool(
+  tool(
     "list_reviews",
     "List customer reviews for an app. Filter by rating. Pro feature.",
     {
@@ -360,7 +396,7 @@ async function main() {
     safe((args) => listReviews(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "sales_report",
     "Download sales/downloads summary. Shows units, proceeds, territory. Pro feature.",
     {
@@ -376,21 +412,21 @@ async function main() {
 
   // --- Intelligence tools (Pro) ---
 
-  server.tool(
+  tool(
     "release_preflight",
     "Pre-submission audit: checks metadata, character limits, screenshots, build status. Catches rejection causes before you submit. Pro feature.",
     { app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID") },
     safe((args) => releasePreflight(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "daily_briefing",
     "Morning briefing across all apps: version status, recent reviews, rejections, action items. One call for full situational awareness. Pro feature.",
     { days: z.number().optional().describe("Look back N days for reviews (default 3)") },
     safe((args) => dailyBriefing(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "release_notes",
     "Extract git commits since last tag and return structured data for writing App Store 'What's New' text. Categorizes changes and provides writing guidelines. Pro feature.",
     {
@@ -401,7 +437,7 @@ async function main() {
     safe((args) => releaseNotes(args, tier)),
   );
 
-  server.tool(
+  tool(
     "keyword_insights",
     "Analyze your app's keywords against search competition. Shows difficulty, competing apps, and budget usage. Uses iTunes Search API. Pro feature.",
     {
@@ -411,7 +447,7 @@ async function main() {
     safe((args) => keywordInsights(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "competitor_snapshot",
     "Look up any app on the App Store: ratings, reviews, version, price, category, release notes. Search by name or App Store ID. Pro feature.",
     {
@@ -421,7 +457,7 @@ async function main() {
     safe((args) => competitorSnapshot(args, tier)),
   );
 
-  server.tool(
+  tool(
     "metadata_diff",
     "Compare metadata between your live and pending app versions. Shows what changed in descriptions, keywords, and release notes across locales. Pro feature.",
     {
@@ -434,7 +470,7 @@ async function main() {
   server.registerTool(
     "triage_reviews",
     {
-      title: "Triage reviews into themes (Sampling)",
+      ...toolMeta("triage_reviews"),
       description:
         "Pull recent App Store reviews and use MCP Sampling to cluster them into 3 to 5 themes with counts, representative quotes, and action buckets (bug, missing_feature, pricing, ux, content). Sampling uses your own MCP client's model, so there is no extra cost from this server. Pro feature.",
       inputSchema: {
@@ -461,7 +497,7 @@ async function main() {
   server.registerTool(
     "draft_review_response",
     {
-      title: "Draft a public response to a review (Sampling + Elicitation)",
+      ...toolMeta("draft_review_response"),
       description:
         "Draft a public reply to a single App Store review via MCP Sampling, in the review's locale. Uses Elicitation (if your client supports it) to ask for tone. NEVER auto-posts. Always returns a draft that you must post via App Store Connect yourself. Pro feature.",
       inputSchema: {
@@ -491,7 +527,7 @@ async function main() {
 
   // --- Control / write tools (Pro, gated) ---
 
-  server.tool(
+  tool(
     "update_version_metadata",
     "Edit App Store metadata on the editable version: description, keywords, what's-new, promotional text, marketing/support/privacy-policy URLs, plus app name and subtitle. Validates Apple character limits before writing. Pro feature.",
     {
@@ -510,7 +546,7 @@ async function main() {
     safe((args) => updateVersionMetadata(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "create_version",
     "Create a new editable App Store version to prepare your next release. Needs confirm:true, because Apple only allows deleting an app's very first version, so this cannot be undone. Pro feature.",
     {
@@ -523,7 +559,7 @@ async function main() {
     safe((args) => createVersion(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "submit_for_review",
     "Submit the editable version to Apple App Review. First submits any READY_TO_SUBMIT in-app purchases/subscriptions, then the version. If the app's FIRST in-app purchase is detected (which Apple requires be bundled with the version in the website), it ABORTS without submitting and returns the manual steps, so nothing is orphaned. Outward-facing action: requires confirm:true. Pro feature.",
     {
@@ -534,7 +570,7 @@ async function main() {
     safe((args) => submitForReview(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "list_builds",
     "List recent builds for an app with processing state (VALID = ready to use). Pro feature.",
     {
@@ -544,7 +580,7 @@ async function main() {
     safe((args) => listBuilds(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "wait_for_build",
     "Poll until the newest uploaded build finishes processing (VALID), so the ship flow is one call. Blocks for up to 30 minutes by default; if you should not hold the session that long, call list_builds yourself instead. Pro feature.",
     {
@@ -555,7 +591,7 @@ async function main() {
     safe((args) => waitForBuild(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "attach_build",
     "Attach a build to the editable version (defaults to the newest processed build). Pro feature.",
     {
@@ -565,7 +601,7 @@ async function main() {
     safe((args) => attachBuild(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "upload_screenshots",
     "Upload screenshots to a version localization for a device display type (e.g. APP_IPHONE_67). Handles Apple's reserve/upload/commit flow. Pro feature.",
     {
@@ -577,7 +613,7 @@ async function main() {
     safe((args) => uploadScreenshots(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "release_version",
     "Release an approved version (state PENDING_DEVELOPER_RELEASE) to the public App Store. Outward-facing: requires confirm:true. Pro feature.",
     {
@@ -587,7 +623,7 @@ async function main() {
     safe((args) => releaseVersion(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "manage_phased_release",
     "Control the 7-day phased rollout: start, pause, resume, or complete (release to 100%). Pro feature.",
     {
@@ -598,14 +634,14 @@ async function main() {
     safe((args) => managePhasedRelease(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "list_beta_groups",
     "List TestFlight beta groups for an app. Pro feature.",
     { app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID") },
     safe((args) => listBetaGroups(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "assign_build_to_group",
     "Assign a build to a TestFlight beta group so testers can install it (defaults to newest processed build). Needs confirm:true: Apple notifies every tester immediately and the notification cannot be recalled. Pro feature.",
     {
@@ -617,7 +653,7 @@ async function main() {
     safe((args) => assignBuildToGroup(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "invite_beta_tester",
     "Invite an external tester by email and add them to a beta group. Needs confirm:true: Apple emails a real person from your account and it cannot be recalled. Pro feature.",
     {
@@ -630,7 +666,7 @@ async function main() {
     safe((args) => inviteBetaTester(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "build_and_archive",
     "Build, archive, and export a signed .ipa via xcodebuild (requires Xcode on this Mac). Needs a scheme and an ExportOptions.plist. Pro feature.",
     {
@@ -644,7 +680,7 @@ async function main() {
     safe((args) => buildAndArchive(args, tier)),
   );
 
-  server.tool(
+  tool(
     "upload_binary",
     "Upload a signed .ipa to App Store Connect via altool, using your API key. Outward-facing: requires confirm:true. Pro feature.",
     {
@@ -655,7 +691,7 @@ async function main() {
     safe((args) => uploadBinary({ keyId: config.keyId, issuerId: config.issuerId }, args, tier)),
   );
 
-  server.tool(
+  tool(
     "set_age_rating",
     "Set the app's age-rating content declarations (Apple computes 4+/9+/12+/17+). Pass a declarations map, e.g. { medicalOrTreatmentInformation: \"INFREQUENT_OR_MILD\" }. Pro feature.",
     {
@@ -667,7 +703,7 @@ async function main() {
     safe((args) => setAgeRating(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "set_privacy_nutrition",
     "Configure the App Privacy nutrition label. Apple does not expose this via API; returns the exact steps + deep link. Pass data_not_collected:true for the 'Data Not Collected' path. Pro feature.",
     {
@@ -677,7 +713,7 @@ async function main() {
     safe((args) => setPrivacyNutrition(args, tier)),
   );
 
-  server.tool(
+  tool(
     "set_eu_trader_status",
     "Declare EU Digital Services Act trader status. Not API-addressable; returns the exact steps + deep link. Pro feature.",
     {
@@ -686,7 +722,7 @@ async function main() {
     safe((args) => setEUTraderStatus(args, tier)),
   );
 
-  server.tool(
+  tool(
     "create_subscription",
     "Create (idempotently) an auto-renewable subscription inside a group, with USA price and an optional free trial. Sets territory availability automatically. Pro feature.",
     {
@@ -711,7 +747,7 @@ async function main() {
     safe((args) => createSubscription(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "create_iap",
     "Create (idempotently) a one-time in-app purchase (non-consumable or consumable) with USA price. Pro feature.",
     {
@@ -729,7 +765,7 @@ async function main() {
     safe((args) => createIAP(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "set_iap_review_screenshot",
     "Upload the App Review screenshot a subscription or in-app purchase needs to leave MISSING_METADATA. Resolves the product by product_id automatically. Pro feature.",
     {
@@ -740,7 +776,7 @@ async function main() {
     safe((args) => setIapReviewScreenshot(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "set_app_metadata",
     "Set submission-required app basics: primary/secondary category (appCategory ids like HEALTH_AND_FITNESS), copyright, content-rights declaration, and export compliance (encryption). Each applied only if provided. Pro feature.",
     {
@@ -760,7 +796,7 @@ async function main() {
     safe((args) => setAppMetadata(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "set_app_price",
     "Set the app's base price by creating its price schedule (USA base, auto-equalized). price_usd: 0 for free. Required before submission. Pro feature.",
     {
@@ -770,7 +806,7 @@ async function main() {
     safe((args) => setAppPrice(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "set_review_contact",
     "Set the App Review contact and optional demo account on the editable version. Required before submission. Pro feature.",
     {
@@ -790,7 +826,7 @@ async function main() {
     safe((args) => setReviewContact(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "set_app_availability",
     "Set the app's country/region availability. Requires an explicit choice: a territories list, or all_territories:true, or [] to take the app off sale worldwide. Pro feature.",
     {
@@ -811,7 +847,7 @@ async function main() {
     safe((args) => setAppAvailability(client, args, tier)),
   );
 
-  server.tool(
+  tool(
     "setup_app_store_signing",
     "Prepare App Store binary signing without the cloud-signing permission many API keys lack: downloads the app's IOS_APP_STORE provisioning profiles (app + extensions), installs them, and writes a manual-signing ExportOptions.plist for build_and_archive. Needs an Apple Distribution certificate already in the keychain. Pro feature.",
     {
