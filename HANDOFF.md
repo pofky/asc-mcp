@@ -535,8 +535,16 @@ to null the email and key and keep the anchor. That is a conversion decision.
    and read the Review tab and the operator's inbox for the reviewer's
    decision. Fix what they ask for on master; the webhook picks the push up in
    minutes. A push that changes `plugin/` is a new version and is scanned
-   again. Once approved, publish from the plugin page, then load the plugin in
-   a real Claude Code session: that has still not been driven end to end.
+   again. Once approved, publish from the plugin page. **Claude Code is
+   verified, 9 October:** `claude plugin marketplace add pofky/asc-mcp`, then
+   `claude plugin install asc-mcp@asc-mcp -s local --config asc_issuer_id=...`
+   in a scratch project (CLI 2.1.295): `claude mcp list` showed the server
+   Connected on `npx -y @pofky/asc-mcp@1.9.12`, and a real session saw 41
+   tools, a passing setup check on the free tier with the licence field left
+   blank, and 10 apps listed with no error. The key was found by discovery in
+   `~/.appstoreconnect/private_keys`. The test install and marketplace were
+   removed afterwards. **Cowork is not verified**, and neither is the install
+   through the directory itself, which exists only after approval.
 1. **Done 9 October:** worker deploy with migration 0004, site deploy, npm
    1.9.12. **The next release needs the operator at the keyboard:**
    `scripts/release.mjs` runs `npm publish` with stdin closed, and npm now wants
