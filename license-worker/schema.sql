@@ -23,7 +23,14 @@ CREATE TABLE IF NOT EXISTS licenses (
   canceled_at TEXT,
   -- Which machine claimed this paid licence through /trial. See
   -- migrations/0002-claim-fingerprint.sql.
-  claim_fingerprint TEXT
+  claim_fingerprint TEXT,
+  -- When a trial user was last written to about their trial ending. See
+  -- migrations/0003-trial-reminders.sql.
+  trial_ending_emailed_at TEXT,
+  trial_lapsed_emailed_at TEXT,
+  -- When this address opted out of product email. See
+  -- migrations/0004-marketing-opt-out.sql.
+  marketing_opt_out_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_licenses_key ON licenses(key);

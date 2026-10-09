@@ -32,6 +32,9 @@ import {
   trialEmailContent,
   trialEndingEmailContent,
   trialLapsedEmailContent,
+  unsubscribeHeaders,
+  CONTROLLER_IDENTITY,
+  CONTACT_EMAIL,
   selectTrialReminders,
   type TrialRow,
   licenseEmailContent,
@@ -410,7 +413,16 @@ describe("buildCheckoutUrl", () => {
  * which is the only way these two defects were ever going to be found.
  */
 describe("emails", () => {
-  const trial = trialEmailContent("ASC-AAAAA-BBBBB-CCCCC-DDDDD", "2026-09-07T09:06:17.000Z", "buyer@example.com");
+  const trial = trialEmailContent("ASC-AAAAA-BBBBB-CCCCC-DDDDD", "2026-09-07T09:06:17.000Z", "buyer@example.com", "https://asc-mcp-license.remewdy.workers.dev/unsubscribe?email=buyer%40example.com&token=abc");
+
+  it("offers the way out of the reminders in the first mail, before either is sent", () => {
+    for (const body of [trial.html, trial.text]) {
+      expect(body).toContain("one reminder shortly before the trial ends and one note after it");
+      expect(body).toContain("token=abc");
+      expect(body).toContain("reply with the word stop");
+    }
+  });
+
 
   it("does not claim the key is already in a config it may never have written", () => {
     // False for a one-click bundle install, and false whenever the tool itself
@@ -440,7 +452,7 @@ describe("emails", () => {
   });
 
   it("escapes the key into the HTML rather than interpolating it raw", () => {
-    expect(trialEmailContent('"><script>', null, "a@b.com").html).not.toContain("<script>");
+    expect(trialEmailContent('"><script>', null, "a@b.com", null).html).not.toContain("<script>");
   });
 });
 
@@ -524,8 +536,44 @@ describe("trial reminder selection", () => {
 });
 
 describe("trial reminder emails", () => {
-  const ending = trialEndingEmailContent("ASC-AAAAA-BBBBB-CCCCC-DDDDD", "2026-08-07T12:00:00.000Z", "buyer@example.com");
-  const lapsed = trialLapsedEmailContent("buyer@example.com");
+  const UNSUB = "https://asc-mcp-license.remewdy.workers.dev/unsubscribe?email=buyer%40example.com&token=abc";
+  const ending = trialEndingEmailContent("ASC-AAAAA-BBBBB-CCCCC-DDDDD", "2026-08-07T12:00:00.000Z", "buyer@example.com", UNSUB);
+  const lapsed = trialLapsedEmailContent("buyer@example.com", UNSUB);
+
+  it("says who is writing, why, and how to make it stop, in both bodies of both mails", () => {
+    for (const mail of [ending, lapsed]) {
+      for (const body of [mail.html, mail.text]) {
+        expect(body).toContain(CONTROLLER_IDENTITY);
+        expect(body).toContain(CONTACT_EMAIL);
+        expect(body).toContain("because you started a free trial");
+        expect(body).toContain("reply with the word stop");
+      }
+      expect(mail.text).toContain(UNSUB);
+      expect(mail.html).toContain("token=abc");
+    }
+  });
+
+  it("does not promise silence the day before it sends another mail", () => {
+    for (const body of [ending.html, ending.text]) {
+      expect(body).not.toMatch(/not hear from us again/);
+      expect(body.replace(/\s+/g, " ")).toContain("One short automated note goes out after the trial ends");
+      expect(body).not.toMatch(/nothing more about the trial/);
+    }
+  });
+
+  it("still names the reply route when there is no link to give", () => {
+    const bare = trialLapsedEmailContent("buyer@example.com", null);
+    expect(bare.text).toContain("reply with the word stop");
+    expect(bare.text).not.toContain("/unsubscribe");
+    expect(unsubscribeHeaders(null)["List-Unsubscribe"]).toBe(`<mailto:${CONTACT_EMAIL}?subject=stop>`);
+  });
+
+  it("offers a mail client the one-click form only when there is a link to post to", () => {
+    const headers = unsubscribeHeaders(UNSUB);
+    expect(headers["List-Unsubscribe"]).toContain(`<${UNSUB}>`);
+    expect(headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+    expect(unsubscribeHeaders(null)["List-Unsubscribe-Post"]).toBeUndefined();
+  });
 
   it("counts the click and prefills the address, like every other upgrade link", () => {
     expect(ending.html).toContain("/go?tool=trial_ending_email");
@@ -556,6 +604,6 @@ describe("trial reminder emails", () => {
   });
 
   it("escapes the key into the HTML rather than interpolating it raw", () => {
-    expect(trialEndingEmailContent('"><script>', null, "a@b.com").html).not.toContain("<script>");
+    expect(trialEndingEmailContent('"><script>', null, "a@b.com", null).html).not.toContain("<script>");
   });
 });

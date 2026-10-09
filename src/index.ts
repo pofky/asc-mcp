@@ -233,7 +233,7 @@ async function main() {
         email: z
           .string()
           .describe(
-            "The user's email address. Required: the trial key is sent there so they still have it later. Ask the user for it; never invent one. Tell them what the request stores: this address and a one-way hash of their Issuer ID, nothing else, and both are deletable at https://asc-mcp-license.remewdy.workers.dev/delete (policy: https://asc-mcp-license.remewdy.workers.dev/privacy).",
+            "The user's email address. Required: the trial key is sent there so they still have it later. Ask the user for it; never invent one. Tell them what the request stores: this address, a one-way hash of their Issuer ID, the trial key with its start and end dates, and which tool they started from. Tell them the address gets the key, one reminder shortly before the trial ends and one note after it, and that each has an unsubscribe link or they can reply stop. All of it is deletable at https://asc-mcp-license.remewdy.workers.dev/delete (policy: https://asc-mcp-license.remewdy.workers.dev/privacy).",
           ),
         tool: z
           .string()
@@ -306,9 +306,14 @@ async function main() {
           skipped.length ? `Left untouched: ${skipped.join(", ")}` : "",
           "",
           "All 41 tools are unlocked in this session right now. Retry what you were doing.",
-          "Stored: your email and a one-way hash of your Issuer ID. Nothing else. " +
-            "Delete both at https://asc-mcp-license.remewdy.workers.dev/delete , policy at " +
-            "https://asc-mcp-license.remewdy.workers.dev/privacy",
+          result.subscription
+            ? "Stored: a one-way hash of your Issuer ID against your subscription, so nobody else can " +
+              "fetch this key with your email. Policy at https://asc-mcp-license.remewdy.workers.dev/privacy"
+            : "Stored: your email, a one-way hash of your Issuer ID, the trial key with its start and " +
+              "end dates, and the tool you started from. Your email is used to send the key, one " +
+              "reminder shortly before the trial ends and one note after it; each has an unsubscribe " +
+              "link, or reply stop. Delete everything at https://asc-mcp-license.remewdy.workers.dev/delete , " +
+              "policy at https://asc-mcp-license.remewdy.workers.dev/privacy",
           result.subscription || !result.checkout_url
             ? ""
             : `When the trial ends, Pro is $9/month: ${result.checkout_url}`,

@@ -1,0 +1,12 @@
+-- When someone told us to stop mailing them about the product.
+--
+-- The two trial reminders went out with no way to refuse them, while the
+-- privacy policy said every such message carried a free opt-out. This column
+-- is what makes that sentence true: the unsubscribe link stamps it, and the
+-- reminder cron and /admin/announce both skip any address that has it set.
+--
+-- Stamped on every row sharing the address, compared lowercased, because one
+-- person can hold a trial row and a paid row and the two arrive in different
+-- cases. Nullable and never cleared by code. It does not stop the mails a
+-- licence needs to work: the key itself and a deletion confirmation link.
+ALTER TABLE licenses ADD COLUMN marketing_opt_out_at TEXT;

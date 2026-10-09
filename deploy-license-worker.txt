@@ -1,1 +1,1 @@
-cd /Volumes/T7/Projects/appstore-connect-mcp/license-worker && npx wrangler deploy
+cd /Volumes/T7/Projects/appstore-connect-mcp && npx wrangler d1 execute asc-mcp-licenses --remote --file license-worker/migrations/0004-marketing-opt-out.sql && cd license-worker && npx wrangler deploy && curl -s -o /dev/null -w "b %{http_code}\n" "https://asc-mcp-license.remewdy.workers.dev/b?p=/" && curl -s https://asc-mcp-license.remewdy.workers.dev/privacy | grep -o "Last updated: [A-Za-z0-9 ,]*"
