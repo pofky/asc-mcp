@@ -1,6 +1,16 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**1.9.14: a five-call look at the Pro read tools, then the price (2026-10-09).**
+
+The operator chose a short free explore followed by $9 first and the trial second, on condition
+that subscribers notice nothing. Ten read tools work five times in total per machine with no
+email; each reply counts down; a failed call is given back. Pro output was compared byte for byte
+with 1.9.13 and is identical. The tester found the footer and refund landing on the wrong call
+when calls overlapped (now scoped per call); the legal gate failed twice, the second time on a
+previewed briefing that printed an upgrade line instead of reviews. Released, deployed, and the
+published package driven as a free user through all five calls and the refusal.
+
 **The flow was audited end to end: the money path works, the trial did not survive a restart (2026-10-09).**
 
 Asked whether the move to the new Polar org broke buying. Two independent audits on production

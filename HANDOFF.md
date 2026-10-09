@@ -4,6 +4,58 @@ Updated 2026-10-09. Branch `master`.
 
 ## Where things stand
 
+**9 October, night: 1.9.14 gives the free tier a five-call look at the Pro read
+tools, then asks for $9. Released, deployed, verified.**
+
+The operator's decision after the audit: allow a short explore, then take the
+$9 straight away, with the trial as the second option, and subscribers must
+notice nothing.
+
+- **What it is.** Ten Pro tools that only read (`list_reviews`, `sales_report`,
+  `release_preflight`, `daily_briefing`, `release_notes`, `keyword_insights`,
+  `competitor_snapshot`, `metadata_diff`, `list_builds`, `list_beta_groups`)
+  work 5 times in total per machine with no licence and no email.
+  `PREVIEW_CALLS` and `NOT_PREVIEWED` in `src/gate.ts`; the count is one number
+  in `~/.asc-mcp/preview.json`. Each previewed reply ends with the calls left;
+  the price rides on the first and last only. A call that ends in an error is
+  given back (`safe` in `src/index.ts`). Not previewed: every write,
+  `triage_reviews`, `draft_review_response`, the two manual-step checklists,
+  `wait_for_build`. No preview once a trial or subscription has ended. After
+  the five, and for any write, the gate leads with $9 and offers the trial
+  second.
+- **Subscribers see no difference: proven.** `requirePro` returns for a Pro
+  tier before any of it runs. As a Pro user, the new build was compared byte
+  for byte with the published 1.9.13 (instructions, 41 tool definitions, seven
+  replies) by an independent tester and again after the last fix: identical,
+  no file written. For that reason the playbook text (`src/tools/guide.ts`),
+  the tools' failure strings and the `asc_start_trial` description were left
+  exactly as they were.
+- **What the gates found.** Tester: grants sat in one shared list, so with
+  calls running side by side the footer and the refund landed on the wrong
+  call; now scoped per call with `AsyncLocalStorage` (`previewScope`).
+  Legal, FAIL twice: Terms contradicted themselves, a previewed briefing
+  printed an upgrade line in place of reviews (`src/tools/daily-briefing.ts`
+  branched on tier after the gate), asking for the vendor number spent a call.
+  All fixed; the last two fixes follow the re-check's wording and were not
+  audited a third time. Report:
+  `.autopilot/reports/legal-2026-10-09-free-preview.md`.
+- **Verified on the published package.** npm 1.9.14 from a clean folder as a
+  free user: five `release_notes` replies counting 4, 3, 2, 1, last; the sixth
+  refused with the price; `sales_report` with no vendor number answered
+  without spending; a write refused. 304 + 94 tests. Tag, GitHub release with
+  `.mcpb`, MCP registry, worker `a418b1ad` (Terms and policy name the preview
+  and `preview.json`), site at 1.9.14.
+- **Left with the operator.** (1) Tax: "$9/month" is stated without "plus
+  tax" everywhere; whether that is right depends on the Polar price being
+  tax-inclusive, not checked. (2) The `asc_start_trial` description still
+  tells the model to offer the trial "before you hit the refusal", which now
+  works against the preview for read tools; changing it alters a tool
+  description while the plugin is in directory review and would make a
+  subscriber's tool list differ.
+- **Not measured yet:** whether the preview converts. Read `checkout_click`
+  by tool (the footer link carries `?tool=`) against trial starts in a week.
+
+
 **9 October, evening: the purchase flow was audited against production and is
 not broken; the trial was, and 1.9.13 fixes it.**
 
