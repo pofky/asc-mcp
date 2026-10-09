@@ -86,11 +86,67 @@ export function clientConfigCandidatesForTest(
         ? join(home, "Library", "Application Support", "Claude", "claude_desktop_config.json")
         : join(home, ".config", "Claude", "claude_desktop_config.json");
 
+  // VS Code keeps an extension's files under its own per-platform user folder,
+  // and Cline's server list is one of them.
+  const vscodeUser =
+    platform === "win32"
+      ? join(appData, "Code", "User")
+      : platform === "darwin"
+        ? join(home, "Library", "Application Support", "Code", "User")
+        : join(home, ".config", "Code", "User");
+
   return [
     { label: "Claude Desktop", path: desktop },
     { label: "Claude Code (global)", path: join(home, ".claude.json") },
     { label: "Project-local (.mcp.json in this folder)", path: join(process.cwd(), ".mcp.json") },
+    { label: "Cursor", path: join(home, ".cursor", "mcp.json") },
+    { label: "Windsurf", path: join(home, ".codeium", "windsurf", "mcp_config.json") },
+    {
+      label: "Cline",
+      path: join(vscodeUser, "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"),
+    },
   ];
+}
+
+/**
+ * Every `mcpServers` map in a parsed client config.
+ *
+ * Most clients keep one, at the top level. Claude Code also keeps one per
+ * project, under `projects.<path>.mcpServers`, and that is where
+ * `claude mcp add` puts a server unless told otherwise. Reading only the top
+ * level missed the default install of the client this is most used with.
+ */
+function serverMaps(parsed: Record<string, unknown>): Record<string, any>[] {
+  const maps: Record<string, any>[] = [];
+  const add = (value: unknown) => {
+    if (value && typeof value === "object") maps.push(value as Record<string, any>);
+  };
+  add(parsed.mcpServers);
+  const projects = parsed.projects;
+  if (projects && typeof projects === "object") {
+    for (const project of Object.values(projects as Record<string, unknown>)) {
+      if (project && typeof project === "object") add((project as Record<string, unknown>).mcpServers);
+    }
+  }
+  return maps;
+}
+
+/**
+ * Whether a server block starts this package.
+ *
+ * Matches the command exactly, or as the final path segment. A substring test
+ * matched any unrelated server whose binary path merely contained "asc-mcp" (a
+ * wrapper, a proxy, a local checkout).
+ */
+function launchesThisServer(block: any): boolean {
+  if (!block || typeof block !== "object") return false;
+  const binary = String(block.command ?? "").split(/[\\/]/).pop() ?? "";
+  const args: unknown[] = Array.isArray(block.args) ? block.args : [];
+  return (
+    args.some((arg) => arg === "@pofky/asc-mcp" || (typeof arg === "string" && arg.startsWith("@pofky/asc-mcp@"))) ||
+    binary === "asc-mcp" ||
+    binary === "appstore-connect-mcp"
+  );
 }
 
 /**
@@ -122,6 +178,24 @@ export function writeServerBlock(path: string, env: Record<string, string>): str
     }
     backupOnce(path);
   }
+  // A server added with `claude mcp add` sits under a project, and Claude Code
+  // prefers that block to a top-level one of the same name. Writing a second,
+  // top-level block there reported success and changed nothing the client
+  // would run, so the block that is already in use is the one updated.
+  const topLevel = existing.mcpServers as Record<string, unknown> | undefined;
+  const scoped = serverMaps(existing)
+    .filter((map) => map !== topLevel)
+    .flatMap((map) => Object.values(map))
+    .filter(launchesThisServer);
+  if (scoped.length && !Object.values(topLevel ?? {}).some(launchesThisServer)) {
+    for (const block of scoped) block.env = { ...(block.env ?? {}), ...env };
+    writeFileSync(path, JSON.stringify(existing, null, 2) + "\n");
+    return (
+      `Updated the asc-mcp server already set up in ${path} for ${scoped.length} project(s) ` +
+      `(backup at ${path}.bak). Restart the client.`
+    );
+  }
+
   const servers = (existing.mcpServers as Record<string, unknown>) ?? {};
 
   // Keep any env var already on the block that this run did not ask about.
@@ -173,23 +247,14 @@ export function injectLicenseKey(
       continue;
     }
 
-    const servers = parsed.mcpServers as Record<string, any> | undefined;
-    if (!servers || typeof servers !== "object") continue;
-
     let touched = false;
-    for (const block of Object.values(servers)) {
+    for (const block of serverMaps(parsed).flatMap((servers) => Object.values(servers))) {
       if (!block || typeof block !== "object") continue;
       // Match the command exactly, or as the final path segment. A substring
       // test wrote the licence key into any unrelated server whose binary path
       // merely contained "asc-mcp" (a wrapper, a proxy, a local checkout),
       // handing a paid key to a process that has no business holding it.
-      const command = String(block.command ?? "");
-      const binary = command.split(/[\\/]/).pop() ?? "";
-      const launches =
-        JSON.stringify(block.args ?? "").includes("@pofky/asc-mcp") ||
-        binary === "asc-mcp" ||
-        binary === "appstore-connect-mcp";
-      if (!launches) continue;
+      if (!launchesThisServer(block)) continue;
       block.env = { ...(block.env ?? {}), ASC_LICENSE_KEY: key };
       touched = true;
     }
@@ -321,8 +386,10 @@ function runInitNonInteractive(
       process.stdout.write(
         existing.length
           ? "\nMore than one client config exists, so none was chosen for you. Re-run with one of:\n" +
-              existing.map((c) => `  --config ${c.path}\n`).join("")
-          : "\nNo client config exists yet, so none was written. Re-run with --config <path>, or paste the block below.\n",
+              existing.map((c) => `  --config "${c.path}"\n`).join("")
+          : "\nNone of the client configs this looks for exists yet, so none was written. Re-run with one of:\n" +
+              candidates.map((c) => `  --config "${c.path}"   (${c.label})\n`).join("") +
+              "or paste the block below into your client's MCP config.\n",
       );
     }
   }

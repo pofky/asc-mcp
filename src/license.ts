@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { LicenseStatus, Tier } from "./types.js";
@@ -131,6 +131,52 @@ function offlineTier(key: string): Tier {
   } catch {
     return "free";
   }
+}
+
+function savedKeyPath(): string {
+  return join(homedir(), ".asc-mcp", "license.json");
+}
+
+/**
+ * Keep a licence key on this machine, so it outlives the session that got it.
+ *
+ * A trial key used to survive a restart only if `injectLicenseKey` found this
+ * server's block in a client config it knew how to edit. For a server added
+ * with `claude mcp add` at its default scope, or in Cursor, Windsurf or Cline,
+ * it found nothing, the key lived in the process and died with it, and the
+ * next session started on the free tier with no memory that a trial existed:
+ * no days-left line, no warning, and no price when it ended. This file is the
+ * path that does not depend on knowing where any client keeps its config.
+ */
+export function saveLicenseKey(key: string): boolean {
+  if (!usableKey(key)) return false;
+  try {
+    const path = savedKeyPath();
+    mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+    writeFileSync(path, JSON.stringify({ key: key.trim(), at: Date.now() }) + "\n", { mode: 0o600 });
+    // `mode` only applies when the file is created, and this one holds the key
+    // itself, so an older copy with looser permissions is tightened here.
+    chmodSync(path, 0o600);
+    return true;
+  } catch {
+    // A read-only or sandboxed home: the caller says what to do instead.
+    return false;
+  }
+}
+
+/** The key saved by `saveLicenseKey`, or undefined. ASC_LICENSE_KEY always wins over it. */
+export function savedLicenseKey(): string | undefined {
+  try {
+    const saved = JSON.parse(readFileSync(savedKeyPath(), "utf-8")) as { key?: unknown };
+    return typeof saved.key === "string" && usableKey(saved.key) ? saved.key.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Where `saveLicenseKey` writes, for messages. */
+export function savedLicenseKeyPath(): string {
+  return savedKeyPath();
 }
 
 /**

@@ -64,7 +64,7 @@ export function requirePro(
         `  ${upgradeUrl(tool)}\n` +
         `  (direct link: ${CHECKOUT_URL})\n\n` +
         "If you already subscribed, call `asc_start_trial` with the same email and it will fetch " +
-        "your paid key and put it in your config.\n"
+        "your paid key and save it on this machine.\n"
       : "Free for 7 days, no card: call the `asc_start_trial` tool with the user's email. " +
         "It unlocks all 41 tools in this session immediately, no restart.\n\n" +
         `Or subscribe now, $9/month: ${upgradeUrl(tool)}\n` +
