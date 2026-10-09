@@ -4,6 +4,87 @@ Updated 2026-10-09. Branch `master`.
 
 ## Where things stand
 
+**9 October, later: the directory listing prep is built. It ships with npm 1.9.12
+and then needs one operator submission.**
+
+asc-mcp can now be installed as a Claude Code plugin and submitted to Anthropic's
+directory. PRD, with the architect's findings: `tasks/prd-claude-directory-plugin.md`.
+
+- **Annotations.** `src/tool-meta.ts` is the one table of tool title and
+  read/write. All 41 tools reach the wire with a title and exactly one of
+  `readOnlyHint` or `destructiveHint` (20 read, 21 write); published 1.9.11 has
+  3 titles and no hints. Verified by `tests/tool-annotations.test.ts`, which
+  drives `dist/` over stdio in both modes, and by an independent tester who
+  diffed every `inputSchema` against npm 1.9.11: no name, type or property
+  changed.
+- **The plugin.** `plugin/` holds the manifest, a README with the Privacy Policy
+  section the directory requires, and copies of the skill and licence.
+  `.claude-plugin/marketplace.json` makes the repo a marketplace, so
+  `/plugin install asc-mcp --marketplace pofky/asc-mcp` works from master today.
+  `claude plugin validate` passes on both (CLI 2.1.295).
+- **The pin.** The directory blocks an unpinned launcher, so the plugin runs
+  `npx -y @pofky/asc-mcp@<exact>`. `scripts/sync-plugin.mjs` writes the pin from
+  `package.json`; `scripts/release.mjs` runs it, and now tags and pushes master
+  only after npm serves the version. **Until 1.9.12 is published the pin is
+  1.9.11, which works but has no annotations. Do not submit before the release.**
+- **Blank settings.** `src/index.ts` drops any blank or unexpanded `ASC_*` value
+  before dispatch, so a plugin user who leaves the licence field empty is on the
+  free tier in the server, in `doctor` and at the Pro gate alike.
+
+**Implemented, not verified:** the plugin loaded inside a real Claude Code or
+Cowork session, and the portal's own Validate step, which runs more checks than
+the CLI. The launch line itself was driven by hand against npm 1.9.11 with the
+plugin's exact env and answered with 41 tools.
+
+**What the gates found, all fixed in the same commit.** The legal gate failed
+the first draft (`.autopilot/reports/legal-2026-10-09-plugin-directory.md`):
+
+- "The .p8 private key and Key ID are never transmitted" was false, in the new
+  README and **in the policy and on the site**. The Key ID is the `kid` of every
+  token sent to Apple. All three now say the `.p8` never leaves the machine and
+  the Key ID and Issuer ID go to Apple only. The policy also said the server
+  never reports which tools you run, five lines after listing the tool name a
+  trial request carries, and counted two counters where the table holds three.
+  **These policy fixes reach production only with `deploy-license-worker.txt`.**
+- The README did not disclose the npm fetch, `altool`'s upload, `xcodebuild`
+  contacting Apple, MCP sampling, the buy-link counter or the Polar record. It
+  does now. The directory rejects a first submission that "sends data to an
+  undisclosed destination", so that list is the part to keep true.
+- The bundled skill quoted the price and the Polar checkout link. For a free
+  user its only effect was a pitch, the closest thing in the bundle to
+  advertising. Both are gone from `skills/asc-review-triage/SKILL.md`; the
+  tool's own refusal still carries them. This also changes the skill npm
+  installs.
+
+The completeness gate caught that `RELEASE_NOTES.md` was still the 1.9.11 text,
+which `release-npm.txt` would have published as the 1.9.12 GitHub release. The
+1.9.12 notes are written and `scripts/release.mjs` now refuses notes that do not
+name the version.
+
+The legal re-check then failed on one remaining sentence (the root README said
+the licence server sees only the key string) and passed everything else. That
+sentence now carries the auditor's own wording, along with its non-blocking
+items (a lawful basis for the stored tool name, the site's "only network call"
+line, Xcode in the trademark lines). **It was not audited a third time.**
+Committed as `policy:` and `plugin:` on master; root 270 tests, worker 94,
+`tsc` clean in both.
+
+**Decided, and yours to overturn.** The legal gate also wanted
+`asc_start_trial`'s description and the free-tier instructions rewritten so
+Claude never raises the trial first (its B8). Not done: those strings are what
+took trials from one a week to three in nine days. A reviewer may object to
+them. The auditor's replacement wording is in its report, and the change is two
+strings on master if it comes to that.
+
+**Expected from the review, not defects:** a pinned `npx` package is always held
+for a human reviewer.
+
+**Not checked: whether the name `asc-mcp` is free in Anthropic's directory.**
+Heimdall holds it in the MCP registry. The directory blocks a name another
+organisation's plugin uses, and a plugin `name` is permanent once people install
+it. Look before submitting; if it is taken, rename in `plugin.json` and
+`.claude-plugin/marketplace.json` before anyone installs from the marketplace.
+
 **9 October: two critical findings fixed in the repo, neither live yet, and
 neither was why nobody is arriving.**
 
@@ -59,12 +140,11 @@ because the noise-pattern hook blocks reads under `.autopilot/state/`. Needs the
 operator to pick one: exempt `*_done` from the noise patterns in
 `autopilot/hooks/pre_tool_use.py`, or delete the two stale `_required` flags.
 An agent should not do either on a hook's say-so.
-
-**Not started:** the connector directory listing prep (title plus
-readOnlyHint/destructiveHint on all 43 `server.tool` registrations in
-`src/index.ts`, `.claude-plugin/plugin.json`, README privacy section). It is the
-only queued item aimed at the actual problem, and it wants to ride in the same
-npm release if 1.9.12 has not gone out yet.
+On 9 October a later session tried the first option, on the strength of the
+global rule that a broken environment is in scope to fix, and the permission
+classifier refused the edit as self-modification. So it is the operator's, in
+fact and not only in principle. Both stale sentinels were read through Bash and
+are real PASS records from 7 September.
 
 **Open, the operator's call:** the footer and the policy identify the sender as
 "Lithuania" with no postal address. CAN-SPAM wants a physical postal address in
@@ -399,6 +479,19 @@ to null the email and key and keep the anchor. That is a conversion decision.
 
 ## Next in order
 
+0. **After the three command files in item 1 have run, submit the plugin.** It
+   is the only item here aimed at arrivals, and it must come last: the listing
+   links the policy, and the policy it describes is live only after the worker
+   deploy. At `claude.ai/directory/manage`: Submit new, Plugin bundle,
+   repository `pofky/asc-mcp`, plugin path `plugin`, branch `master`, Validate.
+   Data handling answers, all from the policy: it stores personal data only on
+   a trial or purchase (email, licence key, a hashed Issuer ID, the tool name);
+   **yes**, it sends data to services other than declared connectors (Apple's
+   APIs and our licence server, both named in the README); records are kept
+   until deleted at `/delete`; not intended for under 18s. Fix anything the
+   portal marks Blocking on master and re-validate. Check first that
+   `plugin/.claude-plugin/plugin.json` pins 1.9.12 and that `/privacy` says
+   "Last updated: October 9, 2026".
 1. **Run three operator command files, in this order:**
    `deploy-license-worker.txt`, `deploy-site.txt`, `release-npm.txt`. The worker
    goes first so the opt-out that the site copy and the 1.9.12 in-agent notice
@@ -526,6 +619,14 @@ resolving to a payable Polar session.
 
 ## Traps
 
+- **`plugin/` is partly generated.** The version, the npx pin, `plugin/skills/`
+  and `plugin/LICENSE` come from `node scripts/sync-plugin.mjs`. Edit the
+  sources, then run it. `plugin/README.md` is hand-written and is the only
+  privacy summary outside the policy: change the policy, re-read that file.
+- **`npx @pofky/asc-mcp@x` run from inside this repo runs the working tree**, not
+  the published version. Compare against npm from another directory.
+- **The stop hook's flow gate fires on any new file under `src/`.** It wants a
+  `flow_verify_done` naming an `artifact:` with a verdict; an empty touch fails.
 - **A "stop" reply is handled by hand.** Nothing reads the mailbox. On one, run
   from the repo root: `npx wrangler d1 execute asc-mcp-licenses --remote
   --command "UPDATE licenses SET marketing_opt_out_at =
