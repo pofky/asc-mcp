@@ -8,7 +8,7 @@
 - Install: `npx @pofky/asc-mcp init` prints a paste-ready MCP config block. `init --write` merges it into your client config directly.
 - One-click install on Claude Desktop (macOS and Windows): download the `.mcpb` bundle from https://github.com/pofky/asc-mcp/releases/latest and open it. Claude installs it in one click and collects the Issuer ID and the `.p8` file natively, with no config file editing and no restart. Every other client uses the `npx` command above.
 - Tool count: 41 tools and 6 prompts. 6 tools are free, 35 require Pro or a running trial.
-- Free tools: `asc_start_trial`, `asc_setup_check`, `asc_guide`, `list_apps`, `app_details`, `review_status`. No asc-mcp account or signup is required for any of them. The first three need nothing at all; the other three read from App Store Connect, so they need your own Apple API key like every other tool here.
+- Free tools: `asc_start_trial`, `asc_setup_check`, `asc_guide`, `list_apps`, `app_details`, `review_status`. No asc-mcp account or signup is required for any of them. Two of them, the setup check and the playbook, need nothing at all; the other four need your own Apple API key like every other tool here.
 - Free trial: all 41 tools for 7 days, no credit card and nothing to cancel. Started in-agent by calling the `asc_start_trial` tool with an email address, not on a website. It activates in the running session, so a tool that was just refused works on the next call with no restart. One trial per Apple developer account, identified by a one-way hash of the Issuer ID computed on the user's machine. The request also carries the email address the user supplies, so the key can be delivered.
 - Pricing: free for the first 7 days via `asc_start_trial`, then Pro is $9 per month, billed through Polar, cancel any time. Purchase: https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj
 - License key recovery: https://asc-mcp-license.remewdy.workers.dev/key
@@ -45,7 +45,7 @@
 A: An MCP (Model Context Protocol) server that gives an AI coding agent 41 tools for App Store Connect, covering both read intelligence (reviews, sales, preflight audits, keyword and competitor data) and write control (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release).
 
 **Q: How do I start the free trial?**
-A: In your coding agent, say "start my asc-mcp trial, my email is you@example.com". The agent calls the `asc_start_trial` tool, which returns a licence key and writes it into your MCP config. The Pro tools unlock in the same conversation, with no restart. There is no website signup and no credit card. One trial per Apple developer account.
+A: In your coding agent, say "start my asc-mcp trial, my email is you@example.com". The agent calls the `asc_start_trial` tool, which returns a licence key and saves it on your machine. The Pro tools unlock in the same conversation, with no restart. There is no website signup and no credit card. One trial per Apple developer account.
 
 **Q: How much does it cost?**
 A: Nothing for the first 7 days: `asc_start_trial` unlocks all 41 tools with no credit card. After that Pro is $9 per month through Polar and can be cancelled any time. Six tools stay free with no time limit and no account.
