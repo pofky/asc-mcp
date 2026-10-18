@@ -12,7 +12,7 @@ import { homedir } from "node:os";
 import { getToken, clearTokenCache } from "./auth.js";
 import { validateLicense, lastLicenseStatus, LICENSE_API_URL } from "./license.js";
 import { discoverPrivateKey } from "./setup.js";
-import { UPGRADE_URL } from "./gate.js";
+import { PRO_PRICE, UPGRADE_URL } from "./gate.js";
 
 export type CheckStatus = "ok" | "warn" | "fail";
 
@@ -210,7 +210,7 @@ export async function runDoctor(): Promise<DoctorReport> {
               ? "Pro trial: all tools unlocked, and it expires today."
               : `Pro trial: all tools unlocked, ${left} day${left === 1 ? "" : "s"} left.`,
           fix: ending
-            ? `To keep the write and control tools, Pro is $9/month, cancel any time: ${UPGRADE_URL}. The read tools keep working either way.`
+            ? `To keep the write and control tools, Pro is ${PRO_PRICE}, cancel any time: ${UPGRADE_URL}. The read tools keep working either way.`
             : undefined,
         });
       }
@@ -224,7 +224,7 @@ export async function runDoctor(): Promise<DoctorReport> {
       const ended: Record<string, { detail: string; fix: string }> = {
         trial_expired: {
           detail: "Your 7-day trial has ended, so the write, control and intelligence tools are locked.",
-          fix: `Pro is $9/month, cancel any time: ${UPGRADE_URL}. Already subscribed? Run \`asc_start_trial\` with the same email and it fetches your paid key.`,
+          fix: `Pro is ${PRO_PRICE}, cancel any time: ${UPGRADE_URL}. Already subscribed? Run \`asc_start_trial\` with the same email and it fetches your paid key.`,
         },
         canceled: {
           detail: "This subscription was cancelled and the paid period has ended.",

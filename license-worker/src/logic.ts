@@ -18,6 +18,13 @@
 export const CHECKOUT_URL =
   "https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj";
 
+/**
+ * The price as every page and mail states it. Polar's price excludes tax and it
+ * adds sales tax or VAT at checkout; the client holds the same words as
+ * `PRO_PRICE` in src/gate.ts.
+ */
+export const PRO_PRICE = "$9 per month plus sales tax or VAT where it applies";
+
 /** How long a self-served in-agent trial lasts. */
 export const TRIAL_DAYS = 7;
 
@@ -819,7 +826,7 @@ export function trialEmailContent(
       <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">${configSnippet(safeKey)}</pre>
       <p>If your <code>.p8</code> is in <code>~/.appstoreconnect/private_keys/</code>, that block is complete once you fill in your Issuer ID. If the key lives somewhere else, add <code>ASC_PRIVATE_KEY_PATH</code> to the same env block. On Claude for macOS or Windows there is no config file: paste the key into the extension's own License key field.</p>
       <p><strong>Worth trying first:</strong> ask your agent to run a release preflight on your app, or to give you a morning briefing across all of them. Those two answer the question "is this worth $9" faster than anything else here.</p>
-      <p>When the trial ends, Pro is $9 per month: <a href="${checkout}">subscribe here</a>. Cancel any time.</p>
+      <p>When the trial ends, Pro is ${PRO_PRICE}: <a href="${checkout}">subscribe here</a>. Cancel any time.</p>
       <p style="color:#666;font-size:14px">Lost this key? Retrieve it any time at <a href="${KEY_PAGE_URL}">the license page</a>.</p>
       <p style="color:#666;font-size:14px">Hit a bug, or something did not work? Just reply to this email. A person reads it.</p>
       <p style="color:#666;font-size:14px">You will get one reminder shortly before the trial ends and one note after it. To get neither: ${optOutHtml}.</p>
@@ -846,7 +853,7 @@ export function trialEmailContent(
     'morning briefing across all of them. Those two answer the question "is this worth $9" faster',
     "than anything else here.",
     "",
-    `When the trial ends, Pro is $9 per month, cancel any time: ${checkout}`,
+    `When the trial ends, Pro is ${PRO_PRICE}, cancel any time: ${checkout}`,
     `Lost this key? Retrieve it any time at ${KEY_PAGE_URL}`,
     "",
     "Hit a bug, or something did not work? Just reply to this email. A person reads it.",
@@ -1047,7 +1054,7 @@ export function trialEndingEmailContent(
         <li>Ask your agent for a <code>release_preflight</code> on the app you are shipping next. It lists what Apple will bounce before you submit.</li>
         <li>Ask it for a <code>daily_briefing</code>. One answer across every app: version states, what is waiting on you, new reviews.</li>
       </ul>
-      <p>To keep everything, Pro is $9 per month, cancel any time: <a href="${checkout}">subscribe here</a>. Your existing config keeps working; the key in it is replaced by the one you get back.</p>
+      <p>To keep everything, Pro is ${PRO_PRICE}, cancel any time: <a href="${checkout}">subscribe here</a>. Your existing config keeps working; the key in it is replaced by the one you get back.</p>
       <p style="color:#666;font-size:14px">Not for you? Nothing to cancel. One short automated note goes out after the trial ends. To get neither that nor anything else from me, use the unsubscribe link below or reply with the word stop.</p>
       <p style="color:#666;font-size:14px">Something did not work during the trial? Reply to this email and tell me. A person reads it, and a bug report is worth more to me than the $9.</p>
       ${footer.html}
@@ -1068,7 +1075,7 @@ export function trialEndingEmailContent(
     "  - Ask it for a daily_briefing. One answer across every app: version states, what is",
     "    waiting on you, new reviews.",
     "",
-    `To keep everything, Pro is $9 per month, cancel any time: ${checkout}`,
+    `To keep everything, Pro is ${PRO_PRICE}, cancel any time: ${checkout}`,
     "Your existing config keeps working; the key in it is replaced by the one you get back.",
     "",
     "Not for you? Nothing to cancel. One short automated note goes out after the trial ends.",
@@ -1099,7 +1106,7 @@ export function trialLapsedEmailContent(
     <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
       <h1 style="font-size:20px">Your asc-mcp trial has ended</h1>
       <p>Your 7 days are up. <code>list_apps</code>, <code>app_details</code> and <code>review_status</code> still work on the same key and always will. Everything that writes to App Store Connect, and the intelligence tools, now refuse.</p>
-      <p>Pro is $9 per month, cancel any time: <a href="${checkout}">subscribe here</a>. You get a new key by email in seconds; swap it into the same <code>ASC_LICENSE_KEY</code> line and nothing else changes.</p>
+      <p>Pro is ${PRO_PRICE}, cancel any time: <a href="${checkout}">subscribe here</a>. You get a new key by email in seconds; swap it into the same <code>ASC_LICENSE_KEY</code> line and nothing else changes.</p>
       <p><strong>If you decided against it, that is useful to me.</strong> Reply with one line saying why: it did not do what you needed, it broke, it is too expensive, you ship too rarely to care. I read every reply, and that answer is worth more than the subscription.</p>
       <p style="color:#666;font-size:14px">This is the last automated email about the trial.</p>
       ${footer.html}
@@ -1112,7 +1119,7 @@ export function trialLapsedEmailContent(
     "and always will. Everything that writes to App Store Connect, and the intelligence tools,",
     "now refuse.",
     "",
-    `Pro is $9 per month, cancel any time: ${checkout}`,
+    `Pro is ${PRO_PRICE}, cancel any time: ${checkout}`,
     "You get a new key by email in seconds; swap it into the same ASC_LICENSE_KEY line and",
     "nothing else changes.",
     "",

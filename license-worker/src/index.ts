@@ -56,6 +56,7 @@ import {
   unsubscribeHeaders,
   TRIAL_REMINDER_SQL,
   TRIAL_SUBSCRIPTION_SQL,
+  PRO_PRICE,
   CONTROLLER_IDENTITY,
   CONTACT_EMAIL,
   type LookupRow,
@@ -803,7 +804,7 @@ function trialRefused(email: string) {
     message:
       `No new trial is available for ${email}. If you already have Pro, get your key at ` +
       "https://asc-mcp-license.remewdy.workers.dev/key , using the address you checked out with " +
-      "if that is a different one. If your trial has ended, Pro is $9/month.",
+      "if that is a different one. If your trial has ended, Pro is " + PRO_PRICE + ".",
     checkout_url: buildCheckoutUrl("trial_unavailable", email),
   };
 }
@@ -1511,7 +1512,7 @@ async function handleKeyLookup(
       <p>No active Pro license found for <strong>${escapeHtml(email)}</strong>.</p>
       <p>If you just purchased, it may take a minute for the webhook to process. <a href="/key">Try again</a>.</p>
       <p>Still nothing after a few minutes? Email <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a> with the email you checked out with and we will sort it out quickly.</p>
-      <p>Never had one? Pro is $9/month, and there is a free 7-day trial you start from inside your agent by asking it to run <code>asc_start_trial</code>. <a href="${CHECKOUT_URL}">Subscribe here</a>.</p>
+      <p>Never had one? Pro is ${PRO_PRICE}, and there is a free 7-day trial you start from inside your agent by asking it to run <code>asc_start_trial</code>. <a href="${CHECKOUT_URL}">Subscribe here</a>.</p>
     `, headers, 200, { title: "No active license found", noindex: true });
   }
 
@@ -1631,7 +1632,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
 function handleTerms(headers: Record<string, string>): Response {
   return html(`
     <h1>Terms of Service</h1>
-    <p><em>Last updated: October 9, 2026</em></p>
+    <p><em>Last updated: October 18, 2026</em></p>
 
     <h2>What this is</h2>
     <p>asc-mcp is an independent developer tool that connects AI coding agents to Apple's App Store Connect API. It runs locally on your machine. It is not affiliated with, endorsed by, or sponsored by Apple Inc.</p>
@@ -1644,14 +1645,14 @@ function handleTerms(headers: Record<string, string>): Response {
     </ul>
 
     <h2>Free and Pro tiers</h2>
-    <p>Six of the 41 tools are free with no subscription: <code>asc_setup_check</code>, <code>asc_guide</code>, <code>asc_start_trial</code>, <code>list_apps</code>, <code>app_details</code> and <code>review_status</code>. Two of those (the setup check and the playbook) need nothing at all; the other four need your own Apple API key like every other tool here: the trial starter to tell one Apple developer account from another, the remaining three to read from App Store Connect. Ten of the other 35 only read, and each call to any of them counts against a preview of 5 calls in total per machine, with no subscription and no email address: <code>list_reviews</code>, <code>sales_report</code>, <code>release_preflight</code>, <code>daily_briefing</code>, <code>release_notes</code>, <code>keyword_insights</code>, <code>competitor_snapshot</code>, <code>metadata_diff</code>, <code>list_builds</code> and <code>list_beta_groups</code>. The preview is not offered on a machine where a trial or a subscription has already ended. It is a courtesy, not part of the paid service, and a later version of the software may change or remove it. Beyond the preview, all 35, covering customer reviews, sales reports, preflight audits, review triage and reply drafting, and the full write/control plane (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release), require either a running trial or a $9/month subscription managed through <a href="https://polar.sh">Polar.sh</a>.</p>
+    <p>Six of the 41 tools are free with no subscription: <code>asc_setup_check</code>, <code>asc_guide</code>, <code>asc_start_trial</code>, <code>list_apps</code>, <code>app_details</code> and <code>review_status</code>. Two of those (the setup check and the playbook) need nothing at all; the other four need your own Apple API key like every other tool here: the trial starter to tell one Apple developer account from another, the remaining three to read from App Store Connect. Ten of the other 35 only read, and each call to any of them counts against a preview of 5 calls in total per machine, with no subscription and no email address: <code>list_reviews</code>, <code>sales_report</code>, <code>release_preflight</code>, <code>daily_briefing</code>, <code>release_notes</code>, <code>keyword_insights</code>, <code>competitor_snapshot</code>, <code>metadata_diff</code>, <code>list_builds</code> and <code>list_beta_groups</code>. The preview is not offered on a machine where a trial or a subscription has already ended. It is a courtesy, not part of the paid service, and a later version of the software may change or remove it. Beyond the preview, all 35, covering customer reviews, sales reports, preflight audits, review triage and reply drafting, and the full write/control plane (metadata, screenshots, builds, TestFlight, in-app purchases, submit, release), require either a running trial or a subscription at ${PRO_PRICE}, managed through <a href="https://polar.sh">Polar.sh</a>.</p>
 
     <h2>Free trial</h2>
     <p>You can unlock every Pro tool for 7 days at no cost by calling the <code>asc_start_trial</code> tool from your agent. No card is required, nothing renews, and there is nothing to cancel: the key simply stops working when the 7 days are up.</p>
     <p>One trial per Apple developer account and per email address. The account is identified by a one-way fingerprint of your Issuer ID, described in the <a href="/privacy">privacy policy</a>. We may decline or withdraw a trial where it is being used to avoid paying for continued use, for example by cycling accounts or addresses.</p>
 
     <h2>Subscriptions</h2>
-    <p>Pro subscriptions are billed monthly through Polar. You can cancel anytime through Polar's subscription management. Polar's terms of service apply to the payment process.</p>
+    <p>Pro subscriptions are billed monthly through Polar at ${PRO_PRICE}, which Polar calculates and shows at checkout before you pay. You can cancel anytime through Polar's subscription management. Polar is the merchant of record: it takes the payment, calculates and collects the tax, and issues the receipt. Polar's terms of service apply to the payment process.</p>
 
     <h2>No warranty</h2>
     <p>This tool is provided as-is. We make no guarantees about uptime of the license validation server, accuracy of data from Apple's API, or compatibility with future API changes. You are responsible for verifying any data before acting on it.</p>
@@ -1676,7 +1677,7 @@ function handleTerms(headers: Record<string, string>): Response {
   `, headers, 200, {
     title: "Terms of Service",
     canonical: "https://asc-mcp-license.remewdy.workers.dev/terms",
-    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"asc-mcp","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Terms of Service"}]},{"@type":"WebPage","name":"Terms of Service","url":"https://asc-mcp-license.remewdy.workers.dev/terms","dateModified":"2026-10-09","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
+    head: `\n<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"asc-mcp","item":"https://asc-mcp.pages.dev/"},{"@type":"ListItem","position":2,"name":"Terms of Service"}]},{"@type":"WebPage","name":"Terms of Service","url":"https://asc-mcp-license.remewdy.workers.dev/terms","dateModified":"2026-10-18","isPartOf":{"@type":"WebSite","url":"https://asc-mcp.pages.dev/"}}]}</script>`,
   });
 }
 

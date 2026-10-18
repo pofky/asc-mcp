@@ -12,4 +12,6 @@ If the licence server cannot be reached and this machine has never confirmed you
 
 A licence key pasted with a stray space or newline around it now validates. It was sent exactly as it sat in the config and never matched.
 
+Every message that names the price now says $9/month plus sales tax or VAT where it applies. Polar adds the tax at checkout; the old wording left it out. For subscribers the only visible change is that one sentence in the playbook (`asc_guide`).
+
 Nothing else changes for subscribers: every other tool, argument and reply is identical to 1.9.14.

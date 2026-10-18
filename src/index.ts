@@ -43,7 +43,7 @@ import { runDoctor, formatDoctor, trialDaysLeft } from "./doctor.js";
 import { discoverPrivateKey, keyIdFromPath, runInit, parseInitArgs, injectLicenseKey } from "./setup.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { UPGRADE_URL, takePreviewNotice, previewScope } from "./gate.js";
+import { PRO_PRICE, UPGRADE_URL, takePreviewNotice, previewScope } from "./gate.js";
 import { BASE_INSTRUCTIONS, FREE_TIER_INSTRUCTIONS } from "./instructions.js";
 import { toolMeta, type ToolName } from "./tool-meta.js";
 
@@ -202,7 +202,7 @@ async function main() {
       left === null
         ? `asc-mcp ${SERVER_VERSION}: Pro license active. All tools available.`
         : `asc-mcp ${SERVER_VERSION}: Pro trial, ${left} day(s) left. All tools available. ` +
-            `Keep them for $9/month: ${UPGRADE_URL}`,
+            `Keep them for ${PRO_PRICE}: ${UPGRADE_URL}`,
     );
   } else {
     console.error(
@@ -413,7 +413,7 @@ async function main() {
               "policy at https://asc-mcp-license.remewdy.workers.dev/privacy",
           result.subscription || !result.checkout_url
             ? ""
-            : `When the trial ends, Pro is $9/month: ${result.checkout_url}`,
+            : `When the trial ends, Pro is ${PRO_PRICE}: ${result.checkout_url}`,
         ]
           .filter(Boolean)
           .join("\n"),

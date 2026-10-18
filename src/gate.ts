@@ -32,6 +32,13 @@ export function upgradeUrl(tool?: string): string {
 export const UPGRADE_URL = upgradeUrl();
 
 /**
+ * The price as every message states it. Polar's price is set excluding tax and
+ * adds sales tax or VAT at checkout, so "$9/month" alone understated what the
+ * first trial to convert paid ($9.70). One string, so no copy can drop the tax.
+ */
+export const PRO_PRICE = "$9/month plus sales tax or VAT where it applies";
+
+/**
  * How many Pro calls work on this machine with no licence, as a preview.
  *
  * Until 1.9.14 the gate came down on the second useful call: reviews, sales and
@@ -109,7 +116,7 @@ export function takePreviewNotice(): { footer: string; refund: () => void } | nu
   const preview = call?.grant;
   if (!call || !preview) return null;
   call.grant = null;
-  const price = `Pro is $9/month, cancel any time: ${upgradeUrl(preview.tool)}`;
+  const price = `Pro is ${PRO_PRICE}, cancel any time: ${upgradeUrl(preview.tool)}`;
   return {
     footer:
       "\n\n---\n" +
@@ -187,13 +194,13 @@ export function requirePro(
       ? (spent
           ? "Your 7-day trial has ended. "
           : "Your subscription is no longer active; a declined renewal is the usual cause. ") +
-        "Pro is $9/month, cancel any time:\n" +
+        `Pro is ${PRO_PRICE}, cancel any time:\n` +
         `  ${upgradeUrl(tool)}\n` +
         `  (direct link: ${CHECKOUT_URL})\n\n` +
         "If you already subscribed, call `asc_start_trial` with the same email and it will fetch " +
         "your paid key and save it on this machine.\n"
       : (previewSpent ? `You have used the ${PREVIEW_CALLS} free Pro calls on this machine. ` : "") +
-        "Pro is $9/month, cancel any time:\n" +
+        `Pro is ${PRO_PRICE}, cancel any time:\n` +
         `  ${upgradeUrl(tool)}\n` +
         `  (direct link: ${CHECKOUT_URL})\n\n` +
         "Or free for 7 days, no card: call the `asc_start_trial` tool with the user's email. " +

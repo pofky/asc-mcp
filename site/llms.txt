@@ -1,6 +1,6 @@
 # asc-mcp (App Store Connect MCP server)
 
-> An MCP server that lets an AI coding agent drive App Store Connect end to end: edit version metadata, upload screenshots, build and upload a binary, run TestFlight, create in-app purchases and subscriptions, audit a version before submission, submit for review, and release. 41 tools, 6 slash-command prompts. Free 7-day trial of everything with no credit card, started from inside the agent; after that Pro is $9 per month.
+> An MCP server that lets an AI coding agent drive App Store Connect end to end: edit version metadata, upload screenshots, build and upload a binary, run TestFlight, create in-app purchases and subscriptions, audit a version before submission, submit for review, and release. 41 tools, 6 slash-command prompts. Free 7-day trial of everything with no credit card, started from inside the agent; after that Pro is $9 per month plus sales tax or VAT where it applies.
 
 ## Facts
 
@@ -10,7 +10,7 @@
 - Tool count: 41 tools and 6 prompts. 6 tools are free with no limit. Of the other 35, 10 that only read work 5 times in total per machine with no licence, as a preview; past that, all 35 require Pro or a running trial.
 - Free tools: `asc_start_trial`, `asc_setup_check`, `asc_guide`, `list_apps`, `app_details`, `review_status`. No asc-mcp account or signup is required for any of them. Two of them, the setup check and the playbook, need nothing at all; the other four need your own Apple API key like every other tool here. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no licence, as a preview.
 - Free trial: all 41 tools for 7 days, no credit card and nothing to cancel. Started in-agent by calling the `asc_start_trial` tool with an email address, not on a website. It activates in the running session, so a tool that was just refused works on the next call with no restart. One trial per Apple developer account, identified by a one-way hash of the Issuer ID computed on the user's machine. The request also carries the email address the user supplies, so the key can be delivered.
-- Pricing: free for the first 7 days via `asc_start_trial`, then Pro is $9 per month, billed through Polar, cancel any time. Purchase: https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj
+- Pricing: free for the first 7 days via `asc_start_trial`, then Pro is $9 per month, plus sales tax or VAT where it applies, shown at checkout before you pay, billed through Polar, cancel any time. Purchase: https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj
 - License key recovery: https://asc-mcp-license.remewdy.workers.dev/key
 - Architecture: the App Store Connect `.p8` private key stays on the user's machine. JWTs are signed locally. API calls go directly from the user's computer to api.appstoreconnect.apple.com with no proxy. The only call to the asc-mcp licence server in normal use validates the license key; starting a trial sends the values listed above.
 - Safety: `submit_for_review`, `release_version` and `upload_binary` refuse to run without an explicit `confirm: true`. `draft_review_response` writes a reply and never posts it.
@@ -48,7 +48,7 @@ A: An MCP (Model Context Protocol) server that gives an AI coding agent 41 tools
 A: In your coding agent, say "start my asc-mcp trial, my email is you@example.com". The agent calls the `asc_start_trial` tool, which returns a licence key and saves it on your machine. The Pro tools unlock in the same conversation, with no restart. There is no website signup and no credit card. One trial per Apple developer account.
 
 **Q: How much does it cost?**
-A: Nothing for the first 7 days: `asc_start_trial` unlocks all 41 tools with no credit card. After that Pro is $9 per month through Polar and can be cancelled any time. Six tools stay free with no time limit and no account. Ten Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total per machine with no licence.
+A: Nothing for the first 7 days: `asc_start_trial` unlocks all 41 tools with no credit card. After that Pro is $9 per month through Polar, plus sales tax or VAT where it applies, shown at checkout before you pay, and can be cancelled any time. Six tools stay free with no time limit and no account. Ten Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total per machine with no licence.
 
 **Q: Can an AI agent submit my app to the App Store?**
 A: Yes, apart from four website-only steps: creating the app record, the App Privacy nutrition label, EU trader status, and an app's very first in-app purchases. asc-mcp flags each of these before you hit them and hands over the exact steps and deep link.
@@ -65,7 +65,7 @@ asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.9.14, upda
 
 ## How it compares (verified 7 September 2026)
 
-- asc-mcp (@pofky/asc-mcp, this project): $9/month, six tools free with no time limit, 41 job-shaped tools, preflight audit, and a maintained record of what Apple's API refuses to do.
+- asc-mcp (@pofky/asc-mcp, this project): $9/month plus tax, six tools free with no time limit, 41 job-shaped tools, preflight audit, and a maintained record of what Apple's API refuses to do.
 - Heimdall (github.com/erayendes/app-store-connect-mcp): free, MIT, 890 tools generated from Apple's OpenAPI spec, with macros and a confirm-before-write flag.
 - zelentsov-dev/asc-mcp (github.com/zelentsov-dev/asc-mcp): free, MIT, 502 tools, also covers Xcode Cloud, which asc-mcp does not.
 - fastlane: free, MIT, a Ruby CLI rather than an MCP server, so an agent reaches it by shelling out and parsing text rather than by calling a typed tool.
