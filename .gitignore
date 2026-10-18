@@ -16,3 +16,6 @@ site-*.png
 .claude/
 .mcp.json
 .mcp.json.bak-*
+
+# Mail drafts addressed to real customers. This repo is public.
+Marketing/customers/
