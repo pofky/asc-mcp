@@ -1,8 +1,57 @@
 # Handoff: appstore-connect-mcp
 
-Updated 2026-10-09. Branch `master`.
+Updated 2026-10-18. Branch `master`.
 
 ## Where things stand
+
+**18 October: the first trial-to-paid conversion, and the fix that keeps it
+working. Worker `b80f6cc6` live.**
+
+- **The customer.** D1 row 84, Polar sub `68aa095c`, new org. Trial row 82
+  started 12 Oct, trial-ending mail 15:00 UTC 18 Oct, clicked
+  (`checkout_click` / `trial_ending_email`), paid 15:17. Order $9.00 + $0.70
+  tax = $9.70, `paid`. Three webhooks 200, row `active=1`, `key_emailed=1`,
+  expires 18 Nov. The day-after "trial lapsed" mail is already suppressed for
+  buyers (`TRIAL_REMINDER_SQL`).
+- **The bug.** The paid key arrives only by email; the trial key stays on the
+  machine (`~/.asc-mcp/license.json`, client config) and expired 19 Oct 15:57
+  UTC, after which `requirePro` would have told a payer "Your 7-day trial has
+  ended, $9/month". **Fixed:** `/validate` answers a trial key with the
+  verdict of a live subscription on the same address, bought after the trial,
+  unclaimed or claimed by the trial's fingerprint
+  (`TRIAL_SUBSCRIPTION_SQL`, `license-worker/src/logic.ts`;
+  `handleValidate`). 11 tests on real SQLite
+  (`tests/trial-subscription.test.ts`), 5 of them fail on the old worker.
+  Independent review: no blocking finding. Run read-only on production, the
+  join matches exactly one pair (82 -> 84).
+- **Verified live after deploy:** all 7 live keys validated through
+  `/validate` (keys piped from D1, never printed). Row 82 now answers
+  `pro`, expires 18 Nov, no `trial` flag; rows 17, 21, 24, 20, 83, 84 answer
+  exactly as before. Old-org Polar shows 17/21/24 active with period ends equal
+  to their D1 expiries.
+- **Also fixed:** the webhook stored the buyer's email as typed while `/trial`
+  and `/key` lowercase; a mixed-case buyer got "no licence". Lowercased now
+  (no mixed-case rows existed, no backfill).
+- **Customer data was in this PUBLIC repo.** Four mail drafts (filenames with
+  trialists' email handles, a subscriber's name and address), plus HANDOFF,
+  WORKLOG, a PRD, a reply draft and a code comment naming customers by email.
+  Redacted to D1 row ids; drafts live in `Marketing/customers/`, gitignored.
+  **Git history on GitHub still has them.** Purging needs a history rewrite
+  and force push on a public repo plus a GitHub cache purge: operator's call.
+- **I broke and then fixed the plugin pin.** Pushing master published the
+  unreleased `release: v1.9.15` commit, which pinned the plugin to an npm
+  version that does not exist. Repinned to 1.9.14 (`claude plugin validate`
+  passes). `npm run release -- 1.9.15` re-syncs it.
+- **Left with the operator.** (1) Publish 1.9.15: `launch/release-1.9.15.txt`
+  (npm login is dead on this machine, 401; publish wants the security key).
+  (2) Send `Marketing/customers/subscriber-welcome-row84.txt` (the first
+  paid conversion; it says nothing needs changing, which is now true). (3)
+  Tax: Polar charges tax on top, the customer paid $9.70 against "$9/month"
+  everywhere; adding "plus applicable tax" is a public-copy claim. (4) History
+  purge, above.
+- **Next checks:** 29 Oct renewal (row 17 should move to 29 Nov), 1 Nov rows
+  21 and 24, 18 Nov row 84's first renewal in the new org.
+
 
 **9 October, late: the existing subscribers were checked after three releases
 and three worker deploys in one day. Nothing changed for them.**

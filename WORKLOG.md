@@ -1,6 +1,17 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**The first trial converted, and its trial key would have locked out a payer the next day (2026-10-18).**
+
+Row 82's trial got the ending mail at 15:00 and paid from it at 15:17 ($9.70 with tax, row 84,
+webhooks 200, key mailed). The paid key only arrives by email; the trial key on the machine expired
+on the 19th and would have shown "your trial has ended, $9/month". `/validate` now answers a trial
+key with the address's later, unclaimed-or-same-machine subscription. 11 tests on real SQLite,
+independent review clean, worker `b80f6cc6` deployed, all 7 live keys re-validated: row 82 is Pro
+to 18 Nov, everyone else unchanged. Also: webhook emails lowercased; customer emails and names
+redacted from this public repo (history still holds them); the plugin pin, pushed ahead of an
+unpublished 1.9.15, put back to 1.9.14.
+
 **1.9.14: a five-call look at the Pro read tools, then the price (2026-10-09).**
 
 The operator chose a short free explore followed by $9 first and the trial second, on condition

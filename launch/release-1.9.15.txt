@@ -1,0 +1,3 @@
+cd /Volumes/T7/Projects/appstore-connect-mcp
+npm login
+npm run release -- 1.9.15
