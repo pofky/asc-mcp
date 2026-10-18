@@ -58,7 +58,7 @@ function insert(row: Record<string, string | number | null>) {
 function trial(over: Record<string, string | number | null> = {}) {
   insert({
     key: "ASC-TRIAL",
-    email: "steve@example.com",
+    email: "alice@example.com",
     source: "trial",
     expires_at: TRIAL_END,
     trial_fingerprint: FINGERPRINT,
@@ -70,7 +70,7 @@ function trial(over: Record<string, string | number | null> = {}) {
 function subscription(over: Record<string, string | number | null> = {}) {
   insert({
     key: "ASC-PAID",
-    email: "steve@example.com",
+    email: "alice@example.com",
     source: "polar",
     polar_subscription_id: "sub-1",
     expires_at: PAID_UNTIL,
@@ -121,8 +121,8 @@ describe("a trial key after its owner subscribed", () => {
   });
 
   it("matches the address in any case", async () => {
-    trial({ email: "steve@example.com" });
-    subscription({ email: "Steve@Example.com" });
+    trial({ email: "alice@example.com" });
+    subscription({ email: "Alice@Example.com" });
     expect((await validate("ASC-TRIAL", "2026-10-20T09:00:00Z")).valid).toBe(true);
   });
 

@@ -552,7 +552,7 @@ async function handlePolarWebhook(
   if (ACTIVE_EVENTS.has(event.type)) {
     const sub = event.data;
     // Lowercased like /trial and /key store and search it. Kept as typed, a
-    // subscriber who checked out as "Steve@..." was invisible to both: /key
+    // subscriber who checked out as "Alice@..." was invisible to both: /key
     // said they had no licence, and /trial handed them a fresh trial instead of
     // their paid key.
     const email = (sub.customer?.email || "").trim().toLowerCase();
