@@ -551,7 +551,11 @@ async function handlePolarWebhook(
 
   if (ACTIVE_EVENTS.has(event.type)) {
     const sub = event.data;
-    const email = sub.customer?.email || "";
+    // Lowercased like /trial and /key store and search it. Kept as typed, a
+    // subscriber who checked out as "Steve@..." was invisible to both: /key
+    // said they had no licence, and /trial handed them a fresh trial instead of
+    // their paid key.
+    const email = (sub.customer?.email || "").trim().toLowerCase();
     const expiresAt = sub.current_period_end || null;
     // active=1 unless Polar reports a genuinely dead status. Earlier this
     // required status to be exactly "active"/"trialing", which left real
