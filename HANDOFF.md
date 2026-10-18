@@ -57,14 +57,21 @@ working. Worker `df9c5f02` live (b80f6cc6 plus a 204 for /favicon.ico; flow-veri
   pinned to 1.9.15, site at v1.9.15 (`ca3df9c2`). All 310 tests passed inside
   the release. Not driven on the published package: a write refusal with a
   real Apple key (refused in-session); the preview test covers that path.
-- **Left with the operator.** (2) History purge: DONE 18 Oct by the operator (filter-repo, master and
-  all 24 tags force-pushed, releases intact, no identifier in any commit or
-  message). Old objects stay reachable by SHA until GitHub support purges:
-  paste `launch/github-support-purge-request.txt` at support.github.com
-  (contact, "Remove sensitive data"). Fork `PiPyL/asc-mcp` keeps the old
-  history. Backup of the pre-purge repo:
-  `/Volumes/T7/Projects/.backups/asc-mcp-pre-purge-20261018.git` (contains
-  the data; delete once GitHub confirms). (3) Legal R1 needed no change: Polar already includes VAT outside the US,
+- **Left with the operator.** (2) Customer data in the public repo was a GDPR personal data breach;
+  Fable legal review (`.autopilot/reports/legal-2026-10-18-fable-session-review.md`):
+  internal Art. 33(5) record REQUIRED (written, private repo
+  `pofky/asc-mcp-records`, `breach-2026-10-18-public-repo.md`); VDAI
+  notification and telling customers NOT required. History purged once by
+  the operator; one address (trial row 68) survived because the sweep
+  skipped domains starting with a digit; redacted in the tree, purge rules
+  extended. **Operator: re-run**
+  `! bash /Volumes/T7/Projects/.backups/asc-mcp-purge-customer-history.txt`,
+  **then** paste `launch/github-support-purge-request.txt` at
+  support.github.com and fill the dates into the record. Fork
+  `PiPyL/asc-mcp` has no contact channel (logged). Delete
+  `/Volumes/T7/Projects/.backups/asc-mcp-pre-purge-20261018.git` on
+  GitHub's confirmation, by 18 Nov 2026 at the latest, and note the date in
+  the record. (3) Legal R1 needed no change: Polar already includes VAT outside the US,
   Canada and India; the copy was corrected to say so.
 - **Next checks:** 29 Oct renewal (row 17 should move to 29 Nov), 1 Nov rows
   21 and 24, 18 Nov row 84's first renewal in the new org.
