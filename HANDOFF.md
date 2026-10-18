@@ -51,10 +51,13 @@ working. Worker `df9c5f02` live (b80f6cc6 plus a 204 for /favicon.ico; flow-veri
   (`.autopilot/reports/legal-2026-10-18-tax-disclosure.md`).
 - **Operator decision (18 Oct): no mail to existing customers.** The
   personal note in `Marketing/customers/` is not to be sent.
-- **Left with the operator.** (1) Publish 1.9.15: `launch/release-1.9.15.txt`
-  (npm login dead, security key). Until then `tests/tool-annotations` fails
-  on the plugin pin (1.9.14 vs package 1.9.15); the release re-syncs it
-  before its test step. (2) History purge: refused in-session twice as Git
+- **1.9.15 released, 18 Oct evening.** npm serves it (clean install shows
+  the corrected `PRO_PRICE`), tag `v1.9.15`, GitHub release with the
+  `.mcpb`, MCP registry lists 1.9.15 (workflow 39159442778 success), plugin
+  pinned to 1.9.15, site at v1.9.15 (`ca3df9c2`). All 310 tests passed inside
+  the release. Not driven on the published package: a write refusal with a
+  real Apple key (refused in-session); the preview test covers that path.
+- **Left with the operator.** (2) History purge: refused in-session twice as Git
   Destructive. Backup `/Volumes/T7/Projects/.backups/asc-mcp-pre-purge-20261018.git`,
   commands in `/Volumes/T7/Projects/.backups/asc-mcp-purge-customer-history.txt`
   (kept out of the repo: they name the customers). One fork keeps the old
