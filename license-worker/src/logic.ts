@@ -568,8 +568,8 @@ export async function buildUnsubscribeUrl(
  *
  * `preview`, `scanner`, `fetch` and `proxy` are here because corporate mail
  * gateways open every link in a message before the recipient does. One of them,
- * on the trialist-company-domain trial of 17 September, opened our buy link with the
- * address rewritten to `scrambled-address` and the tool name scrambled
+ * on the trial row 77 of 17 September, opened our buy link with the
+ * address rewritten to a scrambled copy at the same company domain and the tool name scrambled
  * to `gevby_fzbvy`, which is how we know they rewrite payloads too.
  */
 const AUTOMATED_UA_TOKENS = [

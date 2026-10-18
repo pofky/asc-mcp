@@ -345,18 +345,18 @@ active subscriptions. Nothing in the machinery is broken:
 
 - **The reminder cron runs and mails.** Two trials have now been through it for
   real. `trial-row68` was stamped `2026-09-08T15:00:33Z` (ending) and
-  `2026-09-10T15:00:46Z` (lapsed); `trial-row76` on 18 and
+  `2026-09-10T15:00:46Z` (lapsed); `trial row 76` on 18 and
   19 September. Stamps are written only on a Brevo 2xx, so those four messages
   were accepted for delivery.
 - **The tier-aware instructions moved the trial rate.** Three new trials since
-  11 September (`trial-row76` 11th, `trial-row77`
-  17th, `trial-row78` 19th) against roughly one a week before, each
+  11 September (`trial row 76` 11th, `trial row 77`
+  17th, `trial row 78` 19th) against roughly one a week before, each
   started from a different locked tool (`create_iap`, `submit_for_review`,
   `update_version_metadata`). Nine trials ever.
 - **Trial keys still validate.** `POST /validate` on the live worker returns
   `valid: true, tier: pro, trial: true` for the current rows. Every trial row
   has `key_emailed = 1`.
-- **Polar is simply empty.** Two orders ever, both `subscriber-row41`
+- **Polar is simply empty.** Two orders ever, both `the row 41 subscriber`
   (August paid, September void), one canceled subscription, $0 in the last
   30 days. Nobody has attempted a payment, so no payment path is failing.
 
@@ -411,9 +411,9 @@ to tell a crawler from a person without storing it. Both dates bumped to
 22 September.
 
 **Three letters to the September trialists** in `Marketing/`, one per
-destination, paste-ready: `trial-followup-trial-row76.txt` (lapsed 18th),
+destination, paste-ready: `Marketing/customers/ (row 76)` (lapsed 18th),
 `trial-followup-trial-row77.txt` (expires 24th),
-`trial-followup-trial-row78.txt` (expires 26th). Each names the tool that person
+`Marketing/customers/ (row 78)` (expires 26th). Each names the tool that person
 was actually using when the paywall stopped them and asks one question instead
 of selling. Nine trials, zero conversions, and nobody has ever asked one of them
 why. Sending is yours.
@@ -546,7 +546,7 @@ built to create. Those need constructed fixtures.
 
 ## 7 September: the one paying subscription churned, involuntarily
 
-`subscriber-row41`, the only active subscription in the asc-mcp Polar
+`the row 41 subscriber`, the only active subscription in the asc-mcp Polar
 org, is gone. Not a decision: the 5 September renewal charge was **declined for
 insufficient funds**, Polar retried for two days, then on 7 September at 10:59
 canceled and revoked the subscription and voided the $9 invoice.

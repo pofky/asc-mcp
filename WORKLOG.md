@@ -70,7 +70,7 @@ Not live: `deploy-license-worker.txt` (migration 0004 then deploy), then `releas
 
 Re-audited production because Polar still shows zero active subscriptions. The machinery all
 works: the reminder cron has now mailed two real trials (`trial-row68` on 8 and
-10 September, `trial-row76` on 18 and 19), stamps are written only on a Brevo 2xx,
+10 September, `trial row 76` on 18 and 19), stamps are written only on a Brevo 2xx,
 live trial keys still validate as Pro, and every trial row shows its key mailed. Trials are up,
 three since 11 September against about one a week before, each started from a different locked
 tool, which is the tier-aware instructions working. Polar holds two orders ever and $0 in
@@ -637,7 +637,7 @@ Payouts from the new org also wait on KYC.
 
 **Customer #6, and the version-drift bug it found (2026-08-01, v1.8.7).**
 
-Second subscriber of the day: subscriber-row24, D1 row 24, 18:38 UTC. `active=1`,
+Second subscriber of the day: row 24, D1 row 24, 18:38 UTC. `active=1`,
 `key_emailed=1`, expires 2026-09-01, `/validate` returns Pro. They landed 7 minutes after the
 worker deploy (18:31) and after 1.8.6 was on npm, so they are the first customer to get both the
 fixed licence email with a full config block and an `init` that generates a launchable config.
@@ -655,15 +655,15 @@ The id gap in D1 (21 to 24) is not lost customers: the upsert's `ON CONFLICT` st
 AUTOINCREMENT value on every repeat Polar delivery.
 
 Full licence audit, all 7 keys checked live against `/validate`: 3 paying customers active
-(subscriber-row17, subscriber-row21, subscriber-row24), 2 lapsed real customers correctly inactive
-(subscriber-row2, subscriber-row8), and 2 owner-owned rows, the `owner-selftest` key and
+(row 17, row 21, row 24), 2 lapsed real customers correctly inactive
+(row 2, row 8), and 2 owner-owned rows, the `owner-selftest` key and
 `geowrecked@gmail.com` (an owner test purchase in June, `key_emailed=0` from the Brevo outage, so
 not a customer with an undelivered key). Not yet reconciled against Polar itself: if Polar still
 bills a row we have inactive, that is billing without access. Needs a Polar API token.
 
 **Customer #5 onboarding check, and the setup bug it found (2026-08-01).**
 
-New Pro subscriber landed 2026-08-01 17:37 UTC (D1 row 21, subscriber-row21). Provisioning
+New Pro subscriber landed 2026-08-01 17:37 UTC (D1 row 21, row 21). Provisioning
 is clean end to end: `active=1`, `key_emailed=1`, `expires_at` 2026-09-01, and `/validate`
 returns `{"valid":true,"tier":"pro"}` live. Worker `/health`, `/key`, `/privacy`, `/terms`, the
 landing page, llms.txt, sitemap and the Polar checkout all 200. All four worker secrets present.
@@ -732,7 +732,7 @@ submit_for_review/release_version with confirm (outward-facing). The June 2026 G
 exercised all of those live.
 
 **v1.8.3, customer-reported appInfo bug (2026-07-30, same day as the report).**
-the row 17 subscriber (the active Pro customer) reported that update_version_metadata's
+The row 17 subscriber (the active Pro customer) reported that update_version_metadata's
 name/subtitle writes 409 for an app that already has a release, and diagnosed it correctly: an
 app holds two appInfos at once (live plus the draft attached to the version being prepared),
 Apple lists the live one first, and the code read appInfos with limit=1. Reproduced live:
@@ -825,7 +825,7 @@ loads Tailwind from CDN. Not deployed to any domain yet, so nobody is being misi
 blocks launch and needs a rewrite through the SEO/CRO/AEO gate.
 
 ### Prior: **Shipped v1.8.0 to npm + customer #4 verified (2026-07-29).** New Pro buyer
-(subscriber-row17, sub 088dbba4) provisioned correctly: D1 row active, key emailed via
+(subscriber row 17, sub 088dbba4) provisioned correctly: D1 row active, key emailed via
 Brevo, /validate returns pro, /key recovery returns the key. Found the real gap: npm `latest` was
 still 1.3.0 from 2026-04-15, so paying customers got 13 tools instead of 40. Committed master
 (ced1419) and published 1.8.0. Verified from a clean install: 40 tools, 6 prompts, all 11 asc_guide

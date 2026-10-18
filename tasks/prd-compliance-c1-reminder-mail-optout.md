@@ -56,7 +56,7 @@ The reminders were built on 3 Sep. The legal-basis sentence was added on 22 Sep,
 - Deploy is an operator command file, because deploys are refused in agent sessions (memory `asc-mcp-sandbox-blocks-prod-writes`).
 
 ## Stopgap (if not shipped before the next 15:00 UTC run)
-Remove `[triggers] crons` from `license-worker/wrangler.toml` and deploy, which pauses the reminders. The `trial-row78` trial (expires 26 Sep) is due its "ending" mail today and its "lapsed" mail on 27 Sep.
+Remove `[triggers] crons` from `license-worker/wrangler.toml` and deploy, which pauses the reminders. The `trial row 78` trial (expires 26 Sep) is due its "ending" mail today and its "lapsed" mail on 27 Sep.
 
 ---
 

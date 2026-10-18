@@ -61,7 +61,7 @@ is the plan, that file is the checklist.
 
 - **Corpus of real customer language:** `launch/reddit-ios.md`, `launch/show-hn.md`,
   the App Store review text this server itself reads, and the two support threads
-  in `launch/reply-michael-appinfo.md`.
+  in `Marketing/customers/reply-subscriber17-appinfo.md (kept out of git)`.
 - **Where it comes from:** the subreddits above, the one customer email thread, and
   the limitations the tools themselves report (`LIMITATIONS.md` is written from what
   Apple's API actually refuses).
