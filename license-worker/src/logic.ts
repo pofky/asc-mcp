@@ -19,11 +19,13 @@ export const CHECKOUT_URL =
   "https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj";
 
 /**
- * The price as every page and mail states it. Polar's price excludes tax and it
- * adds sales tax or VAT at checkout; the client holds the same words as
- * `PRO_PRICE` in src/gate.ts.
+ * The price as every page and mail states it. The asc-mcp Polar org uses
+ * location-based tax (`default_tax_behavior: location`, no price override): VAT
+ * is inside the $9 everywhere except the US, Canada and India, where sales tax
+ * is added at checkout. The client holds the same words as `PRO_PRICE` in
+ * src/gate.ts.
  */
-export const PRO_PRICE = "$9 per month plus sales tax or VAT where it applies";
+export const PRO_PRICE = "$9 per month (VAT included; in the US, Canada and India sales tax is added at checkout)";
 
 /** How long a self-served in-agent trial lasts. */
 export const TRIAL_DAYS = 7;

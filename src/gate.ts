@@ -32,11 +32,12 @@ export function upgradeUrl(tool?: string): string {
 export const UPGRADE_URL = upgradeUrl();
 
 /**
- * The price as every message states it. Polar's price is set excluding tax and
- * adds sales tax or VAT at checkout, so "$9/month" alone understated what the
- * first trial to convert paid ($9.70). One string, so no copy can drop the tax.
+ * The price as every message states it. The Polar org uses location-based tax:
+ * VAT is inside the $9 everywhere except the US, Canada and India, where sales
+ * tax is added at checkout (the first trial to convert, a US buyer, paid
+ * $9.70). One string, so no copy can drop or misstate the tax.
  */
-export const PRO_PRICE = "$9/month plus sales tax or VAT where it applies";
+export const PRO_PRICE = "$9/month (VAT included; in the US, Canada and India sales tax is added at checkout)";
 
 /**
  * How many Pro calls work on this machine with no licence, as a preview.

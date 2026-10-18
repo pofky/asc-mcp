@@ -58,10 +58,8 @@ working. Worker `df9c5f02` live (b80f6cc6 plus a 204 for /favicon.ico; flow-veri
   Destructive. Backup `/Volumes/T7/Projects/.backups/asc-mcp-pre-purge-20261018.git`,
   commands in `/Volumes/T7/Projects/.backups/asc-mcp-purge-customer-history.txt`
   (kept out of the repo: they name the customers). One fork keeps the old
-  history regardless. (3) Legal R1, a money decision: EU consumer law wants
-  the price shown including VAT; Polar's "Location-based" tax setting would
-  do it at roughly $7.1 to $7.7 net per EU sale. Until decided, the accepted
-  reasoning is that buyers are mostly businesses (see Traps).
+  history regardless. (3) Legal R1 needed no change: Polar already includes VAT outside the US,
+  Canada and India; the copy was corrected to say so.
 - **Next checks:** 29 Oct renewal (row 17 should move to 29 Nov), 1 Nov rows
   21 and 24, 18 Nov row 84's first renewal in the new org.
 
@@ -867,8 +865,10 @@ resolving to a payable Polar session.
 - **Price wording lives in two constants** (`PRO_PRICE` in `src/gate.ts` and
   `license-worker/src/logic.ts`). Site, llms.txt and README copies carry the
   same "plus sales tax or VAT where it applies"; keep them in step.
-- **EU price display is an accepted gap** until the operator decides on Polar's
-  tax-inclusive setting: the price is stated tax-exclusive with a disclosure.
+- **Tax is location-based in Polar** (org `default_tax_behavior: location`, the
+  Pro price has no override): VAT inside the $9 everywhere except the US,
+  Canada and India, where sales tax is added. Every disclosure says exactly
+  that. If the Polar setting ever changes, `PRO_PRICE` and the site must too.
 - **A trial key validates as the owner's later subscription**
   (`TRIAL_SUBSCRIPTION_SQL`). Do not "simplify" /validate back to one row.
 

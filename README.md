@@ -2,7 +2,7 @@
 
 > **Ship an App Store release from your coding agent.** An MCP server for App Store Connect: 41 tools that edit version metadata, upload screenshots, attach builds, drive TestFlight, create in-app purchases, submit and release, plus an intelligence layer that audits a version before you submit and summarizes your reviews. 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper.
 
-[asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/month plus tax](https://asc-mcp.pages.dev/#pricing)
+[asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/month, VAT included (sales tax added in the US, Canada and India)](https://asc-mcp.pages.dev/#pricing)
 
 **Claude Desktop, one click:** download the latest [`asc-mcp.mcpb`](https://github.com/pofky/asc-mcp/releases/latest) and open it. Claude asks for your Issuer ID and lets you pick your `.p8` with a file picker. No JSON, no restart hunt.
 
@@ -12,7 +12,7 @@
 npx @pofky/asc-mcp init --write   # finds your .p8, asks for your Issuer ID, writes your MCP config
 ```
 
-Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 41 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month plus sales tax or VAT where it applies. Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no licence, as a preview.
+Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 41 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month (VAT included; in the US, Canada and India sales tax is added at checkout). Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no licence, as a preview.
 
 | You say | What happens |
 |---------|-------------|
@@ -115,7 +115,7 @@ Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-com
 
 ### Pro (free 7-day trial, then $9/month)
 
-$9 per month plus sales tax or VAT where it applies, which Polar shows at checkout before you pay. Cancel any time.
+$9 per month, VAT included; in the US, Canada and India sales tax is added at checkout, before you pay. Cancel any time.
 
 | Tool | What it does | Why it matters |
 |------|-------------|----------------|
