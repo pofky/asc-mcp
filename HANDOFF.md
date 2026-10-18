@@ -57,11 +57,14 @@ working. Worker `df9c5f02` live (b80f6cc6 plus a 204 for /favicon.ico; flow-veri
   pinned to 1.9.15, site at v1.9.15 (`ca3df9c2`). All 310 tests passed inside
   the release. Not driven on the published package: a write refusal with a
   real Apple key (refused in-session); the preview test covers that path.
-- **Left with the operator.** (2) History purge: refused in-session twice as Git
-  Destructive. Backup `/Volumes/T7/Projects/.backups/asc-mcp-pre-purge-20261018.git`,
-  commands in `/Volumes/T7/Projects/.backups/asc-mcp-purge-customer-history.txt`
-  (kept out of the repo: they name the customers). One fork keeps the old
-  history regardless. (3) Legal R1 needed no change: Polar already includes VAT outside the US,
+- **Left with the operator.** (2) History purge: DONE 18 Oct by the operator (filter-repo, master and
+  all 24 tags force-pushed, releases intact, no identifier in any commit or
+  message). Old objects stay reachable by SHA until GitHub support purges:
+  paste `launch/github-support-purge-request.txt` at support.github.com
+  (contact, "Remove sensitive data"). Fork `PiPyL/asc-mcp` keeps the old
+  history. Backup of the pre-purge repo:
+  `/Volumes/T7/Projects/.backups/asc-mcp-pre-purge-20261018.git` (contains
+  the data; delete once GitHub confirms). (3) Legal R1 needed no change: Polar already includes VAT outside the US,
   Canada and India; the copy was corrected to say so.
 - **Next checks:** 29 Oct renewal (row 17 should move to 29 Nov), 1 Nov rows
   21 and 24, 18 Nov row 84's first renewal in the new org.
