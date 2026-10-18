@@ -321,6 +321,12 @@ async function handleRequest(
       return new Response(null, { headers: corsHeaders });
     }
 
+    // The HTML pages carry an inline icon; a browser opening a JSON endpoint
+    // such as /health asks for this instead and logged a 404 for it.
+    if (url.pathname === "/favicon.ico") {
+      return new Response(null, { status: 204, headers: { "cache-control": "public, max-age=604800" } });
+    }
+
     try {
       if (url.pathname === "/health") {
         return json({ ok: true, ts: new Date().toISOString() }, corsHeaders);
