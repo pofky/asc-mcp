@@ -55,6 +55,7 @@ import {
   marketingFooter,
   unsubscribeHeaders,
   TRIAL_REMINDER_SQL,
+  TRIAL_SUBSCRIPTION_SQL,
   CONTROLLER_IDENTITY,
   CONTACT_EMAIL,
   type LookupRow,
@@ -455,7 +456,36 @@ async function handleValidate(
     return json({ valid: false, tier: "free" }, headers);
   }
 
-  const verdict = isLicenseUsable(row, new Date());
+  const now = new Date();
+
+  // A trial key whose owner has since subscribed is answered as the
+  // subscription, before and after the trial's own end. Why, and what stops
+  // this being a way onto someone else's subscription: `TRIAL_SUBSCRIPTION_SQL`.
+  if (row.source === "trial") {
+    try {
+      const { results } = await env.DB.prepare(TRIAL_SUBSCRIPTION_SQL)
+        .bind(body.key)
+        .all<LookupRow>();
+      const paid = pickLookupRow(results ?? [], now);
+      if (paid && paid.source !== "trial") {
+        const paidVerdict = isLicenseUsable(paid, now);
+        return json(
+          {
+            valid: true,
+            tier: paid.tier,
+            expires: paid.expires_at,
+            ...(paidVerdict.grace ? { grace: true } : {}),
+          },
+          headers,
+        );
+      }
+    } catch (err) {
+      // Never worse than before this existed: the trial row's own verdict.
+      console.error("validate: trial-to-subscription lookup failed", err);
+    }
+  }
+
+  const verdict = isLicenseUsable(row, now);
   if (!verdict.usable) {
     return json({ valid: false, tier: "free", reason: verdict.reason }, headers);
   }

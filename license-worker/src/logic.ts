@@ -375,6 +375,42 @@ export function pickLookupRow(rows: LookupRow[], now: Date): LookupRow | null {
   return usable.find((r) => r.source !== "trial") ?? usable[0] ?? null;
 }
 
+/**
+ * The subscriptions a trial key may stand in for: the trialist bought Pro with
+ * the address the trial was started from.
+ *
+ * Buying does not change the trial row, and the paid key arrives by email.
+ * Someone who pays from the trial-ending mail and goes back to work still has
+ * the trial key on their machine, and the day it expires they were told "your
+ * trial has ended, $9/month" by the product they had just paid for. The first
+ * trial to convert, on 18 October, was one day from exactly that. So /validate
+ * answers a trial key with the subscription's verdict, and the customer has
+ * nothing to swap.
+ *
+ * Two conditions keep this from being a way to get Pro off someone else's
+ * subscription. The subscription must have been bought after the trial began:
+ * /trial checks for a live subscription before it mints anything, so a trial
+ * started on a paying customer's address is never created, and the only trial
+ * that precedes a purchase is the one the buyer tried first. And the
+ * subscription must be unclaimed, or claimed by the machine that ran the trial,
+ * the same fingerprint rule /trial uses to decide who gets a paid key inline.
+ *
+ * Both timestamps can be either ISO shape (see `TRIAL_REMINDER_SQL`), so both
+ * sides go through `replace` before they are compared.
+ */
+export const TRIAL_SUBSCRIPTION_SQL = `SELECT p.key, p.tier, p.active, p.expires_at, p.source,
+            p.canceled_at, p.revoked_at
+       FROM licenses t
+       JOIN licenses p
+         ON lower(p.email) = lower(t.email)
+        AND p.source = 'polar'
+      WHERE t.key = ?
+        AND t.source = 'trial'
+        AND t.email IS NOT NULL
+        AND replace(p.created_at, ' ', 'T') >= replace(t.created_at, ' ', 'T')
+        AND (p.claim_fingerprint IS NULL OR p.claim_fingerprint = t.trial_fingerprint)
+      ORDER BY p.created_at DESC, p.id DESC`;
+
 export const ACTIVE_EVENTS = new Set([
   "subscription.created",
   "subscription.updated",
