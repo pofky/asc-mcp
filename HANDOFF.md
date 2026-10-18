@@ -5,7 +5,7 @@ Updated 2026-10-18. Branch `master`.
 ## Where things stand
 
 **18 October: the first trial-to-paid conversion, and the fix that keeps it
-working. Worker `b80f6cc6` live.**
+working. Worker `df9c5f02` live (b80f6cc6 plus a 204 for /favicon.ico; flow-verifier PASS on every worker page).**
 
 - **The customer.** D1 row 84, Polar sub `68aa095c`, new org. Trial row 82
   started 12 Oct, trial-ending mail 15:00 UTC 18 Oct, clicked
