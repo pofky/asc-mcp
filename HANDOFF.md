@@ -64,9 +64,8 @@ working. Worker `df9c5f02` live (b80f6cc6 plus a 204 for /favicon.ico; flow-veri
   notification and telling customers NOT required. History purged once by
   the operator; one address (trial row 68) survived because the sweep
   skipped domains starting with a digit; redacted in the tree, purge rules
-  extended. **Operator: re-run**
-  `! bash /Volumes/T7/Projects/.backups/asc-mcp-purge-customer-history.txt`,
-  **then** paste `launch/github-support-purge-request.txt` at
+  extended; second purge run by the operator 18 Oct, verified clean.
+  **Operator:** paste `launch/github-support-purge-request.txt` at
   support.github.com and fill the dates into the record. Fork
   `PiPyL/asc-mcp` has no contact channel (logged). Delete
   `/Volumes/T7/Projects/.backups/asc-mcp-pre-purge-20261018.git` on
