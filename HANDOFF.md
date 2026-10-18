@@ -42,13 +42,26 @@ working. Worker `df9c5f02` live (b80f6cc6 plus a 204 for /favicon.ico; flow-veri
   unreleased `release: v1.9.15` commit, which pinned the plugin to an npm
   version that does not exist. Repinned to 1.9.14 (`claude plugin validate`
   passes). `npm run release -- 1.9.15` re-syncs it.
+- **Price now says tax everywhere (later on 18 Oct).** `PRO_PRICE` once in
+  `src/gate.ts` (client) and once in `license-worker/src/logic.ts` (worker
+  pages, trial mails); site pricing card, FAQ, JSON-LD, llms.txt, README,
+  Terms ("Polar is the merchant of record"). Worker `54deab24`, site
+  `b47c710a`, both verified live. The client wording ships with 1.9.15.
+  Legal: PASS on the disclosure
+  (`.autopilot/reports/legal-2026-10-18-tax-disclosure.md`).
+- **Operator decision (18 Oct): no mail to existing customers.** The
+  personal note in `Marketing/customers/` is not to be sent.
 - **Left with the operator.** (1) Publish 1.9.15: `launch/release-1.9.15.txt`
-  (npm login is dead on this machine, 401; publish wants the security key).
-  (2) Send `Marketing/customers/subscriber-welcome-row84.txt` (the first
-  paid conversion; it says nothing needs changing, which is now true). (3)
-  Tax: Polar charges tax on top, the customer paid $9.70 against "$9/month"
-  everywhere; adding "plus applicable tax" is a public-copy claim. (4) History
-  purge, above.
+  (npm login dead, security key). Until then `tests/tool-annotations` fails
+  on the plugin pin (1.9.14 vs package 1.9.15); the release re-syncs it
+  before its test step. (2) History purge: refused in-session twice as Git
+  Destructive. Backup `/Volumes/T7/Projects/.backups/asc-mcp-pre-purge-20261018.git`,
+  commands in `/Volumes/T7/Projects/.backups/asc-mcp-purge-customer-history.txt`
+  (kept out of the repo: they name the customers). One fork keeps the old
+  history regardless. (3) Legal R1, a money decision: EU consumer law wants
+  the price shown including VAT; Polar's "Location-based" tax setting would
+  do it at roughly $7.1 to $7.7 net per EU sale. Until decided, the accepted
+  reasoning is that buyers are mostly businesses (see Traps).
 - **Next checks:** 29 Oct renewal (row 17 should move to 29 Nov), 1 Nov rows
   21 and 24, 18 Nov row 84's first renewal in the new org.
 
@@ -848,6 +861,16 @@ resolving to a payable Polar session.
   mirrors pull a new version hard, so treat it as inflated.
 
 ## Traps
+
+- **This repo is public.** Never name a customer in a tracked file: use the D1
+  row id. Drafts addressed to people go in `Marketing/customers/` (ignored).
+- **Price wording lives in two constants** (`PRO_PRICE` in `src/gate.ts` and
+  `license-worker/src/logic.ts`). Site, llms.txt and README copies carry the
+  same "plus sales tax or VAT where it applies"; keep them in step.
+- **EU price display is an accepted gap** until the operator decides on Polar's
+  tax-inclusive setting: the price is stated tax-exclusive with a disclosure.
+- **A trial key validates as the owner's later subscription**
+  (`TRIAL_SUBSCRIPTION_SQL`). Do not "simplify" /validate back to one row.
 
 - **`plugin/` is partly generated.** The version, the npx pin, `plugin/skills/`
   and `plugin/LICENSE` come from `node scripts/sync-plugin.mjs`. Edit the
