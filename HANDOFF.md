@@ -4,12 +4,32 @@ Updated 2026-10-31. Branch `master`.
 
 ## Where things stand
 
-**31 October: next product work is written up, nothing built.**
-`tasks/0002-prd-app-store-preflight.md` is the full brief for Preflight v2, from
-the 29 October ideas research. Start at its section 0, which lists what that
-research got wrong, then go to architect review. Ship milestone M0 first: the
-README's unsupported "40% of rejections" claim is live. Its defect list comes
-from reading the code and is not yet reproduced against Apple.
+**31 October: Preflight v2 is live as 1.10.0 on every surface.**
+`release_preflight` now reports what it could not check, and can read a local
+project (`project_path`), probe links and name the rule and fix for each finding.
+Brief and amendments: `tasks/0002-prd-app-store-preflight.md` section 11. Flows:
+`FLOWS.md` F1, F2. Code: `src/preflight/`. Tool count stays 41; `src/gate.ts`,
+licensing and `tool-meta.ts` were not touched.
+
+- **Live, checked after release:** npm `latest` 1.10.0, tag `v1.10.0`, GitHub
+  release with `.mcpb`, MCP registry 1.10.0 (workflow 41210122803), plugin pin
+  1.10.0 (`claude plugin validate` passes), site `1aa56aa0`, worker `c0ec3fc8`
+  (`/privacy` dated October 31 with the preflight section, cron armed).
+- **Driven on the published package as a free user, from a clean HOME:** 41 tools,
+  a real app audited, a made-up app id gives an `Error` and costs no call, a
+  missing `project_path` reads NOT CONFIRMED and not clean, the count goes 4, 3, 2,
+  1, then the refusal with the price; a write is refused.
+- **Pro users:** the independent tester diffed the build against published 1.9.15
+  as Pro (stub) and found only the expected differences: the report, the preflight
+  description and schema, and the deliberate prompt description. Not re-run on the
+  published 1.10.0. No real subscriber key was used.
+- **Gates at `1df26c1`:** legal, completeness, security and flow verify all PASS,
+  root 492 tests, worker 105. Real Apple run: all 11 of the operator's apps.
+- **Implemented, not tested:** a low-role key against real Apple, a multi-platform
+  app against real Apple, the long report in Claude Desktop, comparison with a real
+  ITMS-91053 mail. Rivals were not run, so no comparison claim is made.
+- **Also 31 October:** the README's unsupported "40% of rejections" claim is gone
+  (`623531a`).
 
 
 **18 October: the first trial-to-paid conversion, and the fix that keeps it
@@ -741,6 +761,9 @@ to null the email and key and keep the anchor. That is a conversion decision.
 
 ## Next in order
 
+00. **2 November: read D1 rows 21 and 24**, which expire 1 November; `expires_at`
+   should move to December. Row 17 did renew, to 29 November. 18 November: row 84's
+   first renewal in the new org.
 0. **Watch the directory review.** Open the plugin page (Where things stand)
    and read the Review tab and the operator's inbox for the reviewer's
    decision. Fix what they ask for on master; the webhook picks the push up in
@@ -880,6 +903,14 @@ resolving to a payable Polar session.
 
 ## Traps
 
+- **Preflight rules are dated.** `RULESET_DATE` in `src/preflight/rules.ts` is
+  printed in every report and flagged stale after 90 days, so 29 January 2027 is
+  the latest re-read. Bump `verified` only for a page actually re-read.
+- **The fake Apple in `tests/preflight/` passed every false verdict the real apps
+  exposed.** Run a new read against real apps too (the facts are in memory, and in
+  the comments in `rules.ts`). Never assert in copy that preflight predicts review.
+- **A fetch from a site page is refused by CSP** (`connect-src` is the worker only).
+  Those console errors come from the test script, not the page; check links with curl.
 - **This repo is public.** Never name a customer in a tracked file: use the D1
   row id. Drafts addressed to people go in `Marketing/customers/` (ignored).
 - **Price wording lives in two constants** (`PRO_PRICE` in `src/gate.ts` and

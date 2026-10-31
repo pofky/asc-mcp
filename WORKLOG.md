@@ -1,6 +1,18 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**1.10.0: Preflight v2 live (2026-10-31).**
+
+`release_preflight` now separates fail, warn and could-not-check, reads a local project and probes
+links. Eleven real apps exposed what the fake API passed: a price schedule that answers with no
+price, iPad sizes on iPhone-only builds, no rejection reasons in the API. Two independent rounds
+found false fails inside bundles, a bad `project_path` reading clean, and overflow at 375px; all
+fixed. 492 + 105 tests, four gates PASS. Worker `c0ec3fc8`, npm, tag, GitHub release, registry,
+plugin pin and site `1aa56aa0` all at 1.10.0. The release script stopped at the publish on 2FA as
+expected; the operator approved the login and the publish with their security key, the rest went in
+the script's order. The published package was driven as a free user through the audit, the error
+refund, all five preview calls, the refusal and a write refusal.
+
 **The first trial converted, and its trial key would have locked out a payer the next day (2026-10-18).**
 
 Row 82's trial got the ending mail at 15:00 and paid from it at 15:17 ($9.70 with tax, row 84,
