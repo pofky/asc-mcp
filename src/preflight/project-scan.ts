@@ -105,6 +105,12 @@ function bundleIdsIn(text: string): string[] {
 }
 
 const IMPORT_VIA = "an import in the source";
+/**
+ * On Apple's SDK list, and also the name of one of Apple's own frameworks, so an
+ * import says nothing. `import Charts` is Swift Charts in every app that has no
+ * dependency on the third-party library; found on a real project on 2026-10-31.
+ */
+const SAME_NAME_AS_APPLE_FRAMEWORK: ReadonlySet<string> = new Set(["Charts"]);
 
 function dependenciesIn(file: ProjectFile, text: string): Array<{ name: string; via: string; repo: string }> {
   const out: Array<{ name: string; via: string; repo: string }> = [];
@@ -125,7 +131,9 @@ function dependenciesIn(file: ProjectFile, text: string): Array<{ name: string; 
     }
   } else if (/\.(swift|m|mm)$/.test(file.name)) {
     // Last resort, for a vendored framework no dependency file mentions.
-    for (const m of text.matchAll(/^\s*(?:@?import\s+(?:class\s+|struct\s+|enum\s+|func\s+)?|#import\s+<)([A-Za-z0-9_]+)/gm)) add(m[1], IMPORT_VIA);
+    for (const m of text.matchAll(/^\s*(?:@?import\s+(?:class\s+|struct\s+|enum\s+|func\s+)?|#import\s+<)([A-Za-z0-9_]+)/gm)) {
+      if (!SAME_NAME_AS_APPLE_FRAMEWORK.has(m[1])) add(m[1], IMPORT_VIA);
+    }
   } else if (file.name === "Package.resolved") {
     for (const m of text.matchAll(/"identity"\s*:\s*"([^"]+)"/g)) add(m[1], "Package.resolved");
     for (const m of text.matchAll(/"(?:repositoryURL|location)"\s*:\s*"[^"]*\/([^"/]+?)(?:\.git)?"/g)) add(m[1], "Package.resolved");

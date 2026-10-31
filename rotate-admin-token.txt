@@ -1,0 +1,1 @@
+cd /Volumes/T7/Projects/appstore-connect-mcp/license-worker && T=$(openssl rand -hex 32) && printf '%s' "$T" | CLOUDFLARE_API_TOKEN=$(security find-generic-password -s cloudflare-api -w) npx wrangler secret put ADMIN_TOKEN && security add-generic-password -U -s autopilot -a ASC_MCP_ADMIN_TOKEN -w "$T" && unset T

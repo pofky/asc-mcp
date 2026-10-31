@@ -9,15 +9,18 @@ Fixes to release_preflight's loop, found by running each rule through its named 
 - Export compliance now answers the build attached to your version. It used to answer the newest upload, say it had worked, and leave preflight failing.
 - If an app has versions in progress on two platforms, write tools refuse and ask for `platform`, which they now accept, rather than writing to the first they find. Preflight's fix lines name it. With one platform in progress nothing changes.
 - submit_for_review opens its submission on the version's own platform. A Mac-only app no longer needs `platform` passed.
-- release_preflight reads a Podfile when no lock file is committed.
+- release_preflight reads a Podfile when no lock file is committed, and notices a listed SDK it can only see through an import.
 
 Safer writes:
 
 - set_app_price refuses a negative price, and says which price is nearest rather than charging one you did not ask for. Changing a price the app already has takes confirm: true. Setting a first price does not.
 - set_app_availability takes confirm: true to turn territories off on an app already set up, including taking it off sale.
+- create_iap and create_subscription take confirm: true, and say what they would make first.
 
 When the licence server is down:
 
 - Startup waits 8 seconds at most. A server that never answered could hold it for five minutes, past your client's own limit.
 - A subscriber in the renewal grace keeps Pro through an outage.
 - A key that got no answer is reported as an outage, not as a bad key, and the startup line no longer offers a trial to someone who would be refused one.
+
+Smaller things: a lapsed licence is no longer told about a trial it cannot have, an unknown asc_guide topic lists the real ones, and arguments like limit: 0 get a plain answer. daily_briefing reads version states in words.

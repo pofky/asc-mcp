@@ -216,6 +216,13 @@ describe("third-party SDKs, built from Apple's list", () => {
     expect(found?.via).toBe("an import in the source");
   });
 
+  it("does not take Apple's Swift Charts for the third-party library of the same name", async () => {
+    write("App.xcodeproj/project.pbxproj", "// project\n");
+    write("App.swift", "import SwiftUI\nimport Charts\n");
+    const input = await readProjectInput(root, null);
+    expect("scan" in input ? input.scan.sdks.map((s) => s.name) : ["no scan"]).toEqual([]);
+  });
+
   it("sees a CocoaPods dependency with a manifest", async () => {
     write("Podfile.lock", `PODS:\n  - ${listed} (5.9.0)\n\nDEPENDENCIES:\n  - ${listed}\n`);
     write(`Pods/${listed}/Source/PrivacyInfo.xcprivacy`, manifest({}));

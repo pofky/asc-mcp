@@ -114,7 +114,7 @@ Manual interruptions you must do yourself:
 When: Selling a lifetime unlock, consumable credits, etc.
 
 Steps:
-1. `create_iap` - product_id, reference name, display name (max 30), description (max 45), type, price_usd. It's idempotent: USA base price, auto-equalized across all territories, availability set. IAP state recomputes immediately on availability (unlike subscriptions, which need a nudge), so once price + availability + a review screenshot are set the product is READY_TO_SUBMIT.
+1. `create_iap` - needs confirm:true. product_id, reference name, display name (max 30), description (max 45), type, price_usd. It's idempotent: USA base price, auto-equalized across all territories, availability set. IAP state recomputes immediately on availability (unlike subscriptions, which need a nudge), so once price + availability + a review screenshot are set the product is READY_TO_SUBMIT.
 2. `set_iap_review_screenshot` - IAPs need an App Review screenshot to leave MISSING_METADATA. Upload one showing the paywall.
 3. For the FIRST IAP ever on the app: it must be submitted WITH the app version in the ASC website (see topic:first-app). After the first release is live, later IAPs submit via `submit_for_review`.
 
@@ -129,7 +129,7 @@ Manual interruptions you must do yourself:
 When: Recurring billing (monthly/yearly plans, free trials).
 
 Steps:
-1. `create_subscription` - group ref + display name, product_id, names, description (max 45), period, price_usd, optional free_trial, review_note. It is idempotent and handles the gnarly order Apple requires: availability FIRST, then USA base price, then equalize across ~175 territories, then per-territory free-trial intro offers, then a final no-op PATCH to force the state to recompute to READY_TO_SUBMIT.
+1. `create_subscription` - needs confirm:true. group ref + display name, product_id, names, description (max 45), period, price_usd, optional free_trial, review_note. It is idempotent and handles the gnarly order Apple requires: availability FIRST, then USA base price, then equalize across ~175 territories, then per-territory free-trial intro offers, then a final no-op PATCH to force the state to recompute to READY_TO_SUBMIT.
 2. `set_iap_review_screenshot` - subscriptions also need a review screenshot of the paywall.
 3. First subscriptions on a brand-new app submit WITH the version in the website; later ones via the API.
 

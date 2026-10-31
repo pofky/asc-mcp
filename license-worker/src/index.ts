@@ -1433,13 +1433,13 @@ function generateLicenseKey(): string {
   return `ASC-${parts.join("-")}`;
 }
 
-const EMAIL_FIELD = (label: string, button: string, colour = "#4f46e5") => `
+const EMAIL_FIELD = (label: string, button: string) => `
     <form method="POST" action="/key">
       <label for="email">${label}</label>
       <input id="email" type="email" name="email" placeholder="you@example.com" required autocomplete="email"
-        style="padding:10px;font-size:16px;width:min(300px,100%);border:1px solid #555;border-radius:6px;background:#1a1a2e;color:#fff">
+        style="min-height:44px;padding:10px;font-size:16px;width:min(300px,100%);border:1px solid #232a33;border-radius:8px;background:#161b22;color:#e7ecf2">
       <button type="submit"
-        style="padding:10px 20px;font-size:16px;background:${colour};color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:8px">
+        style="margin-top:8px">
         ${button}
       </button>
     </form>`;
@@ -1706,9 +1706,9 @@ function handleDeletePage(headers: Record<string, string>): Response {
     <form method="POST" action="/delete">
       <label for="email">Your email address</label>
       <input id="email" type="email" name="email" placeholder="you@example.com" required autocomplete="email"
-        style="padding:10px;font-size:16px;width:min(300px,100%);border:1px solid #555;border-radius:6px;background:#1a1a2e;color:#fff">
+        style="padding:10px;font-size:16px;width:min(300px,100%);border:1px solid #232a33;border-radius:8px;background:#161b22;color:#e7ecf2">
       <button type="submit"
-        style="padding:10px 20px;font-size:16px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:8px">
+        style="background:#dc2626;color:#fff;margin-top:8px">
         Email me a deletion link
       </button>
     </form>
@@ -1950,10 +1950,14 @@ function html(
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230E1116'/%3E%3Cpath d='M8 21l4.6-11h1.9L19 21h-2.2l-1-2.6h-4.6L10.2 21H8zm4-4.4h3.2l-1.6-4.3-1.6 4.3z' fill='%23F0A828'/%3E%3Ccircle cx='24' cy='11' r='2.5' fill='%233DC48F'/%3E%3C/svg%3E">${
     opts.canonical ? `\n<link rel="canonical" href="${opts.canonical}">` : ""
   }${opts.head ?? ""}
-<style>body{font-family:-apple-system,system-ui,sans-serif;max-width:600px;margin:40px auto;padding:0 20px;background:#0d0d1a;color:#e0e0e0;line-height:1.6}
-a{color:#818cf8}h1{color:#fff}h2{color:#fff;font-size:1.05rem;margin-top:28px}pre{color:#a5b4fc}
-label{display:block;margin-bottom:6px;color:#c0c0c0;font-size:14px}
-.muted{color:#888;font-size:14px}</style></head><body>${body}
+<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:17px;max-width:600px;margin:40px auto;padding:0 16px;background:#0e1116;color:#e7ecf2;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:#e7ecf2;text-decoration-color:#f0a828;text-underline-offset:3px}a:focus-visible{outline:2px solid #f0a828;outline-offset:3px}
+h1{color:#e7ecf2;line-height:1.2;font-size:1.7rem}h2{color:#e7ecf2;font-size:1.05rem;margin-top:28px}
+code,pre{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;overflow-wrap:anywhere}pre{color:#95a1b0;overflow-wrap:normal}
+label{display:block;margin-bottom:6px;color:#95a1b0;font-size:14px}
+input:focus-visible,button:focus-visible{outline:2px solid #f0a828;outline-offset:2px}
+button{min-height:44px;padding:10px 20px;font-size:16px;font-weight:600;background:#f0a828;color:#0e1116;border:0;border-radius:8px;cursor:pointer}input{min-height:44px}
+.muted{color:#95a1b0;font-size:14px}.muted a{display:inline-block;padding:12px 2px}</style></head><body>${body}
 <p class="muted" style="margin-top:40px">&larr; <a href="https://asc-mcp.pages.dev/">asc-mcp</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="mailto:povkonop@gmail.com">povkonop@gmail.com</a></p>
 </body></html>`;
   // These pages take an email address and hand back a licence key, so they get
