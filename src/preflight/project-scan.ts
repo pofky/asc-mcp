@@ -104,6 +104,8 @@ function bundleIdsIn(text: string): string[] {
   return ids;
 }
 
+const IMPORT_VIA = "an import in the source";
+
 function dependenciesIn(file: ProjectFile, text: string): Array<{ name: string; via: string; repo: string }> {
   const out: Array<{ name: string; via: string; repo: string }> = [];
   const add = (raw: string, via: string) => {
@@ -121,6 +123,9 @@ function dependenciesIn(file: ProjectFile, text: string): Array<{ name: string; 
       add(m[1], "Podfile");
       if (m[2]) add(`${m[1]}${m[2]}`, "Podfile");
     }
+  } else if (/\.(swift|m|mm)$/.test(file.name)) {
+    // Last resort, for a vendored framework no dependency file mentions.
+    for (const m of text.matchAll(/^\s*(?:@?import\s+(?:class\s+|struct\s+|enum\s+|func\s+)?|#import\s+<)([A-Za-z0-9_]+)/gm)) add(m[1], IMPORT_VIA);
   } else if (file.name === "Package.resolved") {
     for (const m of text.matchAll(/"identity"\s*:\s*"([^"]+)"/g)) add(m[1], "Package.resolved");
     for (const m of text.matchAll(/"(?:repositoryURL|location)"\s*:\s*"[^"]*\/([^"/]+?)(?:\.git)?"/g)) add(m[1], "Package.resolved");
@@ -224,6 +229,9 @@ async function scanProject(root: string, bundleId: string | null): Promise<Proje
     }
     if (SOURCE_FILE.test(file.name)) {
       scanSource(file, text, apis, purposes, signIn);
+      for (const dep of dependenciesIn(file, text)) {
+        if (!dependencies.has(dep.name)) dependencies.set(dep.name, dep);
+      }
     } else if (file.name.endsWith(".xcprivacy")) {
       let parsed: ProjectManifest["parsed"];
       try {

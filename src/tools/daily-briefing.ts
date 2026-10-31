@@ -48,7 +48,8 @@ export async function dailyBriefing(
   const gate = requirePro(tier, "Daily briefing", "daily_briefing");
   if (gate) return gate;
 
-  const lookbackDays = args.days || 3;
+  if (args.days !== undefined && !(args.days >= 1)) return "Error: days must be 1 or more.";
+  const lookbackDays = args.days ?? 3;
   const now = new Date();
   const today = now.toISOString().split("T")[0];
 
@@ -193,7 +194,15 @@ function formatState(state: string): string {
     PENDING_APPLE_RELEASE: "Approved - Pending Release",
     PENDING_DEVELOPER_RELEASE: "Approved - Your Release",
     READY_FOR_SALE: "Live",
-    REJECTED: "REJECTED",
+    REJECTED: "Rejected",
+    DEVELOPER_REJECTED: "Withdrawn by you",
+    INVALID_BINARY: "Invalid Binary",
+    PROCESSING_FOR_APP_STORE: "Processing",
+    WAITING_FOR_EXPORT_COMPLIANCE: "Waiting for Export Compliance",
+    DEVELOPER_REMOVED_FROM_SALE: "Removed from Sale",
+    REMOVED_FROM_SALE: "Removed from Sale",
+    REPLACED_WITH_NEW_VERSION: "Replaced",
+    PENDING_CONTRACT: "Pending Contract",
     METADATA_REJECTED: "Metadata Rejected",
     PREPARE_FOR_SUBMISSION: "Preparing",
     READY_FOR_REVIEW: "Ready for Review",

@@ -26,6 +26,7 @@ export async function listApps(
   client: ASCClient,
   args: { limit?: number },
 ): Promise<string> {
+  if (args.limit !== undefined && !(args.limit >= 1)) return "Error: limit must be between 1 and 200.";
   const limit = Math.min(args.limit ?? 50, 200);
   const response = await client.get<AppAttributes>("/v1/apps", {
     "fields[apps]": "name,bundleId,sku,primaryLocale",

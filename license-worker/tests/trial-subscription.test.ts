@@ -189,3 +189,16 @@ describe("a trial key that must not borrow a subscription", () => {
     expect((await validate("ASC-TRIAL", "2026-10-20T09:00:00Z")).valid).toBe(true);
   });
 });
+
+describe("a trial only follows a purchase made soon after it", () => {
+  it("does not answer a stale trial with a subscription bought weeks later", async () => {
+    trial();
+    subscription({ created_at: "2026-11-20 10:00:00" });
+    const res = await worker.fetch(
+      new Request("https://worker.test/validate", { method: "POST", body: JSON.stringify({ key: "ASC-TRIAL" }), headers: { "content-type": "application/json" } }),
+      env,
+      { waitUntil() {}, passThroughOnException() {} } as never,
+    );
+    expect(await res.json()).toMatchObject({ valid: false, reason: "trial_expired" });
+  });
+});

@@ -205,6 +205,15 @@ describe("when the licence server gives no answer", () => {
     expect(await validateLicense("GRACE-KEY")).toBe("pro");
   });
 
+  it("gives an ended trial no offline grace, since it has no renewal coming", async () => {
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString();
+    mockFetchOnce({ valid: true, tier: "pro", trial: true, expires: yesterday });
+    await validateLicense("TRIAL-KEY");
+    clearLicenseCache();
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline"); }));
+    expect(await validateLicense("TRIAL-KEY")).toBe("free");
+  });
+
   it("does not stretch past the grace", async () => {
     const longAgo = new Date(Date.now() - 5 * 86_400_000).toISOString();
     mockFetchOnce({ valid: true, tier: "pro", expires: longAgo });

@@ -44,3 +44,28 @@ export const FREE_TIER_INSTRUCTIONS =
   "need their email address and must never invent one. Mention the price or the trial once per " +
   "conversation and drop it if they decline. The six free tools are complete; never describe them " +
   "as limited.";
+
+/**
+ * A licence that ended, or a key that got no answer, must not be pitched a trial
+ * the server will refuse. The model only knows what this says.
+ */
+export const ENDED_LICENSE_INSTRUCTIONS =
+  "\n\nTIER: free, because this machine's trial or subscription has ended. Six tools still work " +
+  "(asc_setup_check, asc_guide, asc_start_trial, list_apps, app_details, review_status). The other 35 " +
+  "need Pro, and no free trial or preview is available here. When a call is refused, tell the user the " +
+  "price it states. If they have already subscribed, asc_start_trial with their subscription's address " +
+  "emails them their key.";
+
+export const UNCHECKED_LICENSE_INSTRUCTIONS =
+  "\n\nTIER: unknown for now. A licence key is set and the licence server gave no answer, which says " +
+  "nothing about the key. Pro tools are locked until it answers. Do not offer a trial or a price; tell " +
+  "the user to retry shortly.";
+
+export function instructionsFor(tier: string, reason: string | undefined, keyUnchecked: boolean): string {
+  if (tier === "pro") return BASE_INSTRUCTIONS;
+  if (keyUnchecked) return BASE_INSTRUCTIONS + UNCHECKED_LICENSE_INSTRUCTIONS;
+  if (reason === "trial_expired" || reason === "revoked" || reason === "canceled" || reason === "inactive") {
+    return BASE_INSTRUCTIONS + ENDED_LICENSE_INSTRUCTIONS;
+  }
+  return BASE_INSTRUCTIONS + FREE_TIER_INSTRUCTIONS;
+}

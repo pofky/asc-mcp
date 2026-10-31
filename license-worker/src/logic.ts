@@ -402,12 +402,23 @@ export function pickLookupRow(rows: LookupRow[], now: Date): LookupRow | null {
  * started on a paying customer's address is never created, and the only trial
  * that precedes a purchase is the one the buyer tried first. And the
  * subscription must be unclaimed, or claimed by the machine that ran the trial,
- * the same fingerprint a pre-31-October claim recorded. A trial minted on a future
- * buyer's address by someone else also passes this: tracked in the bug queue.
+ * the same fingerprint a pre-31-October claim recorded. A stranger's trial on an
+ * address that then buys within the window below still passes: that needs them to
+ * foresee the purchase, the owner has been mailed about the trial, and it reveals
+ * nothing of the owner's. It is the remaining cost of a trial with no mailbox check.
  *
  * Both timestamps can be either ISO shape (see `TRIAL_REMINDER_SQL`), so both
  * sides go through `replace` before they are compared.
  */
+/**
+ * How long after a trial starts a purchase still counts as that trial's. /trial
+ * cannot verify the address, so without a limit a trial started on someone else's
+ * address would ride any purchase they ever made. Seven days of trial, the mail the
+ * day after, and a week to act on it; row 82 converted on day 6. A later buyer is not
+ * stranded: the gate tells them asc_start_trial mails their paid key.
+ */
+const TRIAL_TO_PURCHASE_DAYS = 14;
+
 export const TRIAL_SUBSCRIPTION_SQL = `SELECT p.key, p.tier, p.active, p.expires_at, p.source,
             p.canceled_at, p.revoked_at
        FROM licenses t
@@ -418,6 +429,7 @@ export const TRIAL_SUBSCRIPTION_SQL = `SELECT p.key, p.tier, p.active, p.expires
         AND t.source = 'trial'
         AND t.email IS NOT NULL
         AND replace(p.created_at, ' ', 'T') >= replace(t.created_at, ' ', 'T')
+        AND julianday(replace(p.created_at, ' ', 'T')) - julianday(replace(t.created_at, ' ', 'T')) <= ${TRIAL_TO_PURCHASE_DAYS}
         AND (p.claim_fingerprint IS NULL OR p.claim_fingerprint = t.trial_fingerprint)
       ORDER BY p.created_at DESC, p.id DESC`;
 
@@ -1133,4 +1145,14 @@ export function trialLapsedEmailContent(
   ].join("\n");
 
   return { subject: "Your asc-mcp trial has ended", html, text };
+}
+
+/** The tags our own links carry. A value that only makes sense through ROT13 is a mail gateway's rewrite. */
+const OWN_LINK_TAGS = ["trial_ending_email", "trial_lapsed_email", "failed_renewal_email", "site_pricing", "trial_unavailable"];
+const rot13 = (s: string) => s.replace(/[a-z]/gi, (c) => {
+  const base = c <= "Z" ? 65 : 97;
+  return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
+});
+export function isScrambledTag(tool: string): boolean {
+  return OWN_LINK_TAGS.includes(rot13(tool));
 }

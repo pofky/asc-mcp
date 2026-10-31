@@ -208,6 +208,14 @@ describe("third-party SDKs, built from Apple's list", () => {
     expect(names).not.toContain("Alamofire");
   });
 
+  it("catches a listed SDK seen only in an import, and does not let that hide a better source", async () => {
+    write("App.xcodeproj/project.pbxproj", "// project\n");
+    write("App.swift", "import UIKit\nimport FirebaseCrashlytics\n");
+    const input = await readProjectInput(root, null);
+    const found = "scan" in input ? input.scan.sdks.find((s) => s.name === "FirebaseCrashlytics") : undefined;
+    expect(found?.via).toBe("an import in the source");
+  });
+
   it("sees a CocoaPods dependency with a manifest", async () => {
     write("Podfile.lock", `PODS:\n  - ${listed} (5.9.0)\n\nDEPENDENCIES:\n  - ${listed}\n`);
     write(`Pods/${listed}/Source/PrivacyInfo.xcprivacy`, manifest({}));

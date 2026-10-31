@@ -1,3 +1,4 @@
+import { BASE_INSTRUCTIONS, instructionsFor } from "../src/instructions.js";
 /**
  * The server instructions, which are the only thing every client hands the
  * model on every conversation.
@@ -56,5 +57,24 @@ describe("server instructions", () => {
       expect(text).toContain("never");
       expect(text).toContain("draft only");
     }
+  });
+});
+
+describe("instructionsFor never pitches what the server will refuse", () => {
+  it.each(["trial_expired", "revoked", "canceled", "inactive"])("%s: no trial, no preview", (reason) => {
+    const out = instructionsFor("free", reason, false);
+    expect(out).toContain("no free trial or preview is available");
+    expect(out).not.toContain("7 days");
+  });
+  it("a key with no answer: no price, no trial", () => {
+    const out = instructionsFor("free", undefined, true);
+    expect(out).toContain("says nothing about the key");
+    expect(out).not.toContain("7 days");
+  });
+  it("a new user still gets the free tier text", () => {
+    expect(instructionsFor("free", undefined, false)).toContain("7 days");
+  });
+  it("Pro is unchanged", () => {
+    expect(instructionsFor("pro", undefined, false)).toBe(BASE_INSTRUCTIONS);
   });
 });

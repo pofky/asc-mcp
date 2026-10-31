@@ -49,6 +49,7 @@ async function findPricePoint(
 }
 
 export interface CreateSubscriptionArgs {
+  confirm?: boolean;
   app_id: string;
   group_reference_name: string;
   group_display_name: string;
@@ -81,6 +82,11 @@ export async function createSubscription(
 
   if (args.display_name.length > NAME_LIMIT) return `display_name too long: ${args.display_name.length}/${NAME_LIMIT}.`;
   if (args.description.length > DESC_LIMIT) return `description too long: ${args.description.length}/${DESC_LIMIT}.`;
+
+  // A product is a thing customers can be charged for, and it stays on the account.
+  if (!args.confirm) {
+    return `This creates the subscription ${args.product_id} at $${args.price_usd} on your App Store Connect account. Nothing was changed. Re-run with confirm: true to proceed.`;
+  }
 
   const locale = args.locale ?? "en-US";
   const steps: string[] = [];
@@ -301,6 +307,7 @@ export async function createSubscription(
 }
 
 export interface CreateIAPArgs {
+  confirm?: boolean;
   app_id: string;
   product_id: string;
   reference_name: string;
@@ -335,6 +342,11 @@ export async function createIAP(
   }
   if (args.display_name.length > NAME_LIMIT) return `display_name too long: ${args.display_name.length}/${NAME_LIMIT}.`;
   if (args.description.length > IAP_DESC_LIMIT) return `description too long: ${args.description.length}/${IAP_DESC_LIMIT}.`;
+
+  // A product is a thing customers can be charged for, and it stays on the account.
+  if (!args.confirm) {
+    return `This creates the in-app purchase ${args.product_id} at $${args.price_usd} on your App Store Connect account. Nothing was changed. Re-run with confirm: true to proceed.`;
+  }
 
   const locale = args.locale ?? "en-US";
   const steps: string[] = [];

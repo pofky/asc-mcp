@@ -44,7 +44,7 @@ import { discoverPrivateKey, keyIdFromPath, runInit, parseInitArgs, injectLicens
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PRO_PRICE, UPGRADE_URL, takePreviewNotice, previewScope } from "./gate.js";
-import { BASE_INSTRUCTIONS, FREE_TIER_INSTRUCTIONS } from "./instructions.js";
+import { BASE_INSTRUCTIONS, instructionsFor } from "./instructions.js";
 import { toolMeta, type ToolName } from "./tool-meta.js";
 
 /**
@@ -229,7 +229,7 @@ async function main() {
         tools: {},
         prompts: {},
       },
-      instructions: BASE_INSTRUCTIONS + (tier === "pro" ? "" : FREE_TIER_INSTRUCTIONS),
+      instructions: instructionsFor(tier, lastLicenseStatus()?.reason, Boolean(process.env.ASC_LICENSE_KEY) && lastLicenseStatus() === null),
     },
   );
 
@@ -273,21 +273,9 @@ async function main() {
     "START HERE. Returns the exact end-to-end playbook for an App Store task, with every manual ASC-website/Xcode step that no API can do flagged inline. Call with topic to orient before any multi-step flow. Free.",
     {
       topic: z
-        .enum([
-          "overview",
-          "setup",
-          "first-app",
-          "update",
-          "screenshots",
-          "iap",
-          "subscriptions",
-          "reviews",
-          "testflight",
-          "binary",
-          "limitations",
-        ])
+        .string()
         .optional()
-        .describe("Which playbook. Omit for the overview + topic list."),
+        .describe("Which playbook: overview, setup, first-app, update, screenshots, iap, subscriptions, reviews, testflight, binary or limitations. Omit for the overview."),
     },
     safe((args) => ascGuide(args)),
   );
@@ -820,6 +808,7 @@ async function main() {
       group_level: z.number().optional().describe("Rank within the group (1 = top tier; default 1). Higher-value plans get a lower number."),
       family_sharable: z.boolean().optional().describe("Allow Family Sharing of this subscription (default false)."),
       review_note: z.string().optional().describe("Notes for App Review: how to reach the paywall, test instructions"),
+      confirm: z.boolean().optional().describe("Required. This creates a real product on your App Store Connect account."),
     },
     safe((args) => createSubscription(client, args, tier)),
   );
@@ -838,6 +827,7 @@ async function main() {
       locale: z.string().optional().describe("Localization locale (default en-US)"),
       family_sharable: z.boolean().optional().describe("Allow Family Sharing of this purchase (default false)."),
       review_note: z.string().optional().describe("Notes for App Review: how to reach the paywall, test instructions"),
+      confirm: z.boolean().optional().describe("Required. This creates a real product on your App Store Connect account."),
     },
     safe((args) => createIAP(client, args, tier)),
   );

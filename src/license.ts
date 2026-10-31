@@ -114,7 +114,7 @@ function rememberPro(key: string, status: LicenseStatus): void {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(
       path,
-      JSON.stringify({ key: keyDigest(key), tier: "pro", expires: status.expires ?? null, at: Date.now() }),
+      JSON.stringify({ key: keyDigest(key), tier: "pro", trial: Boolean(status.trial), expires: status.expires ?? null, at: Date.now() }),
       { mode: 0o600 },
     );
   } catch {
@@ -133,10 +133,12 @@ function offlineTier(key: string): Tier {
       tier?: string;
       expires?: string | null;
       at?: number;
+      trial?: boolean;
     };
     if (cached.tier !== "pro" || cached.key !== keyDigest(key)) return "free";
     if (!cached.at || Date.now() - cached.at > OFFLINE_GRACE_MS) return "free";
-    if (cached.expires && new Date(cached.expires).getTime() + RENEWAL_GRACE_MS < Date.now()) return "free";
+    // A trial has no renewal to wait for, so no grace.
+    if (cached.expires && new Date(cached.expires).getTime() + (cached.trial ? 0 : RENEWAL_GRACE_MS) < Date.now()) return "free";
 
     console.error("asc-mcp: license server unreachable, honouring the last confirmed Pro verdict.");
     cachedStatus = { valid: true, tier: "pro", expires: cached.expires ?? undefined } as LicenseStatus;

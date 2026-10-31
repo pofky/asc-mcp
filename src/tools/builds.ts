@@ -64,6 +64,7 @@ export async function waitForBuild(
   const gate = requirePro(tier, "Waiting for a build", "wait_for_build");
   if (gate) return gate;
 
+  if (args.max_wait_seconds !== undefined && !(args.max_wait_seconds > 0)) return "Error: max_wait_seconds must be more than 0.";
   const maxWait = Math.min(args.max_wait_seconds ?? 1800, 3600) * 1000;
   const poll = Math.max(args.poll_seconds ?? 30, 10) * 1000;
   const start = Date.now();

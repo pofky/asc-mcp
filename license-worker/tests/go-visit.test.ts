@@ -1,3 +1,4 @@
+import worker from "../src/index.js";
 /**
  * What may be counted as a person clicking "buy", and what may be sent to a
  * payment page.
@@ -132,5 +133,46 @@ describe("beaconPage", () => {
     ]) {
       expect(beaconPage(p as string)).toBe("other");
     }
+  });
+});
+
+describe("what /go and /b count, through the real worker", () => {
+  const counted = (rows: Array<{ kind: string }>) => rows.map((r) => r.kind);
+  const run = async (method: string, path: string) => {
+    const seen: Array<{ kind: string }> = [];
+    const env = {
+      DB: {
+        prepare: () => ({
+          bind: (_day: string, kind: string) => ({ run: async () => { seen.push({ kind }); return {}; } }),
+        }),
+      },
+    } as never;
+    const tasks: Promise<unknown>[] = [];
+    const res = await worker.fetch(
+      new Request(`https://worker.test${path}`, { method, headers: { "User-Agent": "Mozilla/5.0 Safari/605" } }),
+      env,
+      { waitUntil: (p: Promise<unknown>) => tasks.push(p), passThroughOnException() {} } as never,
+    );
+    await Promise.all(tasks);
+    return { res, kinds: counted(seen) };
+  };
+  it("a HEAD of a buy link is not a click", async () => {
+    expect((await run("HEAD", "/go?tool=list_reviews")).kinds).toEqual(["checkout_click_bot"]);
+  });
+  it("a browser GET of a buy link is", async () => {
+    const { res, kinds } = await run("GET", "/go?tool=list_reviews");
+    expect(kinds).toEqual(["checkout_click"]);
+    expect(res.status).toBe(302);
+  });
+  it("a HEAD of the beacon is not a view", async () => {
+    expect((await run("HEAD", "/b?p=/")).kinds).toEqual(["page_view_bot"]);
+  });
+  it("a gateway's ROT13 of our own tag is a machine, and opens no checkout", async () => {
+    const { res, kinds } = await run("GET", "/go?tool=gevny_raqvat_rznvy");
+    expect(res.status).toBe(204);
+    expect(kinds).toEqual(["checkout_click_bot"]);
+  });
+  it("the real tag still reaches checkout", async () => {
+    expect((await run("GET", "/go?tool=trial_ending_email")).res.status).toBe(302);
   });
 });

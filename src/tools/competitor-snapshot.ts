@@ -129,7 +129,7 @@ export async function competitorSnapshot(
       return `No apps found matching "${query}" in the ${country.toUpperCase()} store.`;
     }
 
-    result += `Found ${apps.length} app(s) matching "${query}" (${country.toUpperCase()} store):\n\n`;
+    result += `The App Store's closest ${apps.length} result(s) for "${query}" (${country.toUpperCase()} store), which it returns even when nothing matches exactly:\n\n`;
 
     for (const app of apps) {
       result += formatApp(app);

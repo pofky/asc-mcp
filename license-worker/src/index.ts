@@ -24,6 +24,7 @@ import {
   trialExpiry,
   daysRemaining,
   classifyGoVisit,
+  isScrambledTag,
   beaconPage,
   buildCheckoutUrl,
   trialEmailContent,
@@ -164,6 +165,7 @@ export default {
         new Request(request.url, { method: "GET", headers: request.headers }),
         env,
         ctx,
+        true,
       );
       return new Response(null, { status: asGet.status, headers: asGet.headers });
     }
@@ -316,6 +318,8 @@ async function handleRequest(
   request: Request,
   env: Env,
   ctx: ExecutionContext,
+  // A HEAD is routed as its GET, so the counters need telling: nothing renders from one.
+  wasHead = false,
 ): Promise<Response> {
   {
     const url = new URL(request.url);
@@ -366,11 +370,11 @@ async function handleRequest(
       }
 
       if (url.pathname === "/b") {
-        return handleBeacon(request, url, ctx, env);
+        return handleBeacon(request, url, ctx, env, wasHead);
       }
 
       if (url.pathname === "/go") {
-        return handleGo(request, url, ctx, env);
+        return handleGo(request, url, ctx, env, wasHead);
       }
 
       if (url.pathname === "/admin/stats" && request.method === "GET") {
@@ -655,6 +659,17 @@ async function handlePolarWebhook(
       )
         .bind(event.data.id)
         .run();
+      // Polar does not guarantee order. A revoke that beats its own create used to
+      // update nothing, and the create then made a live row and mailed a key. This
+      // row holds the revocation for it to meet: key_emailed so it is never mailed,
+      // and the key is one nobody has ever seen.
+      await env.DB.prepare(
+        `INSERT INTO licenses (key, tier, email, polar_subscription_id, active, key_emailed, revoked_at, created_at)
+         VALUES (?, 'pro', ?, ?, 0, 1, datetime('now'), datetime('now'))
+         ON CONFLICT(polar_subscription_id) DO NOTHING`,
+      )
+        .bind(generateLicenseKey(), (event.data.customer?.email || "").trim().toLowerCase(), event.data.id)
+        .run();
       return json({ ok: true }, headers);
     }
 
@@ -720,6 +735,7 @@ function handleBeacon(
   url: URL,
   ctx: ExecutionContext,
   env: Env,
+  wasHead = false,
 ): Response {
   const page = beaconPage(url.searchParams.get("p"));
   const visit = classifyGoVisit(
@@ -730,7 +746,7 @@ function handleBeacon(
       request.headers.get("X-Moz"),
       request.headers.get("X-Purpose"),
     ],
-    request.method,
+    wasHead ? "HEAD" : request.method,
   );
 
   ctx.waitUntil(recordIntent(env, visit.automated ? "page_view_bot" : "page_view", page));
@@ -757,6 +773,7 @@ function handleGo(
   url: URL,
   ctx: ExecutionContext,
   env: Env,
+  wasHead = false,
 ): Response {
   const raw = url.searchParams.get("tool");
   const tool = isValidToolName(raw) ? raw : "unknown";
@@ -775,8 +792,15 @@ function handleGo(
       request.headers.get("X-Moz"),
       request.headers.get("X-Purpose"),
     ],
-    request.method,
+    wasHead ? "HEAD" : request.method,
   );
+
+  // A mail gateway that follows links with the tool name scrambled is a machine
+  // whatever its user agent says, and it should not open a checkout session.
+  if (isScrambledTag(tool)) {
+    ctx.waitUntil(recordIntent(env, "checkout_click_bot", tool));
+    return new Response(null, { status: 204 });
+  }
 
   // An optional prefill, used only to fill the checkout's email field. The
   // redirect target is still the constant checkout link, so this cannot send
@@ -985,12 +1009,16 @@ async function handleTrial(
       );
     }
 
-    const mailed = !mayMailKey(email) || (await sendLicenseEmail(env, email, paid.key));
+    const allowed = mayMailKey(email);
+    const mailed = !allowed || (await sendLicenseEmail(env, email, paid.key));
     return json(
       {
         ok: false,
         subscription: true,
-        message: mailed
+        message: !allowed
+          ? `This address has a subscription, so its key is sent by email and not returned here. ` +
+            `It was already emailed to ${email} in the last few minutes. Paste it in as ASC_LICENSE_KEY, or into the extension's License key field, then restart your agent.`
+          : mailed
           ? `This address has a subscription, so its key is sent by email and not returned here. ` +
             `It has been emailed to ${email}. Paste it in as ASC_LICENSE_KEY, or into the extension's License key field, then restart your agent.`
           : `This address has a subscription, so its key is sent by email and not returned here, ` +

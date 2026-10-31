@@ -1,3 +1,7 @@
+import { listApps } from "../src/tools/list-apps.js";
+import { dailyBriefing } from "../src/tools/daily-briefing.js";
+import { waitForBuild } from "../src/tools/builds.js";
+import { ascGuide } from "../src/tools/guide.js";
 import { setAppPrice } from "../src/tools/submission.js";
 import { describe, it, expect } from "vitest";
 import { requirePro } from "../src/gate.js";
@@ -450,5 +454,36 @@ describe("set_app_price", () => {
     const out = await setAppPrice(client, { app_id: "1", price_usd: 1.5 }, "pro");
     expect(out).toContain("nearest is $1.99");
     expect(posts).toHaveLength(0);
+  });
+});
+
+describe("creating a product takes a second call", () => {
+  const untouched = { get: async () => { throw new Error("must not reach Apple"); } } as never;
+  const iap = { app_id: "1", product_id: "com.a.life", reference_name: "r", display_name: "d", description: "x", type: "NON_CONSUMABLE", price_usd: 4.99 } as never;
+  const sub = { app_id: "1", group_reference_name: "G", group_display_name: "G", product_id: "com.a.m", reference_name: "r", display_name: "d", description: "x", period: "ONE_MONTH", price_usd: 2.99 } as never;
+  it("create_iap names what it would make, and touches nothing", async () => {
+    const out = await createIAP(untouched, iap, "pro");
+    expect(out).toContain("com.a.life at $4.99");
+    expect(out).toContain("confirm: true");
+  });
+  it("create_subscription names what it would make, and touches nothing", async () => {
+    const out = await createSubscription(untouched, sub, "pro");
+    expect(out).toContain("com.a.m at $2.99");
+    expect(out).toContain("confirm: true");
+  });
+  it("still reports a bad argument first", async () => {
+    expect(await createIAP(untouched, { app_id: "1" } as never, "pro")).toContain("Missing required");
+  });
+});
+
+describe("arguments that make no sense get said so", () => {
+  const untouched = { get: async () => { throw new Error("must not reach Apple"); } } as never;
+  it("list_apps limit 0", async () => expect(await listApps(untouched, { limit: 0 })).toMatch(/^Error: limit/));
+  it("daily_briefing days 0", async () => expect(await dailyBriefing(untouched, { days: 0 }, "pro")).toMatch(/^Error: days/));
+  it("wait_for_build max_wait_seconds -1", async () => expect(await waitForBuild(untouched, { app_id: "1", max_wait_seconds: -1 }, "pro")).toMatch(/^Error: max_wait/));
+  it("asc_guide names the topics when asked for one that does not exist", async () => {
+    const out = await ascGuide({ topic: "submit" } as never);
+    expect(out).toContain('no playbook called "submit"');
+    expect(out).toContain("first-app");
   });
 });
