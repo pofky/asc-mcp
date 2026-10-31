@@ -76,19 +76,6 @@ export async function setAppAvailability(
     if (!(err instanceof ASCAPIError && err.status === 404)) throw err;
   }
 
-  // Where an app already sells, turning territories off stops sales there at once,
-  // and [] takes it off the store. That is one mistyped argument, so it takes a
-  // second call. A first setup has nothing to lose, and turning on loses nothing.
-  if (availId && args.territories !== undefined && !args.confirm) {
-    const off = allIds.filter((id) => !wanted.has(id)).length;
-    return (
-      (wanted.size === 0
-        ? "This takes the app off sale in every territory."
-        : `This turns off every territory except ${[...wanted].join(", ")} (${off} of ${allIds.length}), where the app may be on sale now.`) +
-      " Nothing was changed. Re-run with confirm: true to proceed."
-    );
-  }
-
   // Create path: no availability yet. Apple requires a territoryAvailability
   // for EVERY territory on create, not just the wanted ones: sending a subset
   // returns one 409 per missing territory ("expects an included resource with
@@ -138,6 +125,19 @@ export async function setAppAvailability(
       if (territory) rows.push({ id: t.id, territory, on: Boolean(t.attributes?.available) });
     }
     url = r.links?.next ?? null;
+  }
+
+  // Turning a territory off stops sales there at once, and [] takes the app off the
+  // store. That is one mistyped argument, so it takes a second call. First setup has
+  // nothing to lose, and widening loses nothing.
+  const stopping = rows.filter((r) => r.on && !wanted.has(r.territory));
+  if (stopping.length && !args.confirm) {
+    return (
+      (wanted.size === 0
+        ? "This takes the app off sale in every territory."
+        : `This turns off ${stopping.length} territories where the app is on sale now, keeping ${[...wanted].join(", ")}.`) +
+      " Nothing was changed. Re-run with confirm: true to proceed."
+    );
   }
 
   let turnedOn = 0;

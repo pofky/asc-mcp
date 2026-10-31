@@ -257,7 +257,7 @@ export async function runDoctor(): Promise<DoctorReport> {
         checks.push({
           name: "License",
           status: "warn",
-          detail: "A license key is set, and the license server could not be reached to check it.",
+          detail: "A license key is set, and the license server gave no verdict on it.",
           fix: `Retry once you are online. Server status: ${LICENSE_API_URL}/health`,
         });
       } else checks.push({

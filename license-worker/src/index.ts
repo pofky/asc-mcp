@@ -992,7 +992,7 @@ async function handleTrial(
         subscription: true,
         message: mailed
           ? `This address has a subscription, so its key is sent by email and not returned here. ` +
-            `It has been emailed to ${email}. Paste it in as ASC_LICENSE_KEY, or into the extension's License key field.`
+            `It has been emailed to ${email}. Paste it in as ASC_LICENSE_KEY, or into the extension's License key field, then restart your agent.`
           : `This address has a subscription, so its key is sent by email and not returned here, ` +
             "and the email could not be sent just now. Try again in a few minutes, or write to povkonop@gmail.com.",
       },
@@ -1562,7 +1562,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <h2>What is saved on your own machine</h2>
     <p>None of this is sent to us. It is listed so you know what the software leaves on your disk.</p>
     <ul>
-      <li><code>~/.asc-mcp/license.json</code>: your licence key, in plain text, written when you call <code>asc_start_trial</code> to start a trial or to fetch a paid key. On macOS and Linux it is given owner-only permissions. It is read on startup when no <code>ASC_LICENSE_KEY</code> is set in your client. Delete the file to remove it.</li>
+      <li><code>~/.asc-mcp/license.json</code>: your licence key, in plain text, written when <code>asc_start_trial</code> returns a key: when you start a trial, or on a machine that already fetched its paid key before 31 October 2026. On macOS and Linux it is given owner-only permissions. It is read on startup when no <code>ASC_LICENSE_KEY</code> is set in your client. Delete the file to remove it.</li>
       <li><code>~/.asc-mcp/preview.json</code>: one number, how many of the 5 free preview calls to Pro read tools have been used on this machine.</li>
       <li><code>~/.asc-mcp/last-verdict.json</code>: the result of the last successful Pro licence check and a SHA-256 hash of the key, not the key, so a paid licence keeps working for up to 14 days if our server cannot be reached.</li>
       <li>Your MCP client configs: the same call adds the key as <code>ASC_LICENSE_KEY</code> to every asc-mcp entry it finds in the Claude Desktop config, <code>~/.claude.json</code> (including per-project entries), <code>.mcp.json</code> in the current folder, and the Cursor, Windsurf and Cline configs. It changes nothing else in those files and does not touch a file that has no asc-mcp entry. The first time it edits a file it leaves a copy of the original beside it, named with <code>.bak</code>. That copy holds whatever the file held, including settings for your other servers.</li>
@@ -1597,7 +1597,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <ul>
       <li>Your email, licence key and subscription id, for a paid subscription: performance of the contract you entered into when you subscribed (GDPR Article 6(1)(b)). We cannot deliver or validate a licence without them.</li>
       <li>Your email and licence key, for a free trial: taking steps at your request before entering a contract (Article 6(1)(b)).</li>
-      <li>The one-way Issuer ID fingerprint: our legitimate interest in not giving the same person an unlimited number of free trials (Article 6(1)(f)). We considered doing this with the email alone and rejected it, because that would let anyone burn a stranger's trial by typing their address.</li>
+      <li>The one-way Issuer ID fingerprint: our legitimate interest in not giving the same person an unlimited number of free trials, and in honouring a key request a machine made before 31 October 2026 (Article 6(1)(f)). We considered doing this with the email alone and rejected it, because that would let anyone burn a stranger's trial by typing their address.</li>
       <li>The user agent, prefetch headers and IP address that reach our server while a page view or a buy-link click is being counted: our legitimate interest in knowing how many real people arrive, and in keeping automated traffic out of a payment funnel (Article 6(1)(f)). None of it is stored, and what is stored is a count that identifies nobody.</li>
       <li>An email to someone who has started a trial or held a subscription, about that product: our legitimate interest in asking a small number of our own users what they thought and whether they want to continue (Article 6(1)(f)). For a trial that is two automated messages, one shortly before it ends and one shortly after, and occasionally one personal note from the developer. Every such message names us, says why you are receiving it and carries a free opt-out, and you can object at any time under Article 21(2) by using the unsubscribe link where the message has one, by replying with the word stop, or by writing to the address below. The link takes effect immediately. A reply is read and acted on by hand, normally within two working days, and a message already scheduled inside that time may still arrive. After that we will not email you about the product again. The emails a licence needs in order to work, the key itself and a deletion confirmation link, are not affected.</li>
       <li>The time you opted out of product email: our legitimate interest, and yours, in keeping that instruction (Article 6(1)(f)).</li>

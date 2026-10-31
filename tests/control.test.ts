@@ -337,12 +337,18 @@ describe("set_app_availability territory semantics", () => {
    * the tool to see what it does then quietly widened where a deliberately
    * limited app was sold, and that is not a reversible read.
    */
-  it.each([[[], "every territory"], [["USA"], "except USA"]])("asks before turning territories off on an app already set up: %j", async (territories, says) => {
+  it.each([[[], "every territory"], [["USA"], "keeping USA"]])("asks before turning territories off on an app already set up: %j", async (territories, says) => {
     const { client, patched } = stubClient(true);
     const out = await setAppAvailability(client, { app_id: "1", territories: territories as string[] }, "pro");
     expect(patched).toHaveLength(0);
     expect(out).toContain(says);
     expect(out).toContain("Nothing was changed");
+  });
+
+  it("does not ask when nothing that is on gets turned off", async () => {
+    const { client } = stubClient(true);
+    const out = await setAppAvailability(client, { app_id: "1", territories: ["USA", "GBR", "JPN"] }, "pro");
+    expect(out).not.toContain("Nothing was changed");
   });
 
   it("does not ask on first setup, when there is nothing to lose", async () => {
