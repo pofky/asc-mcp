@@ -80,6 +80,9 @@ function checkDuo(v: VersionSnapshot, sets: ScreenshotSet[], today: string): Fin
       : finding("shots.duo", "warn", `This build uses the iOS 27.1 SDK or later. From April 2027 such apps need iPhone Duo screenshots.`)];
   }
   if (onSdk === null && required) return [finding("shots.duo", "unknown", "Could not read this build's SDK, so whether iPhone Duo screenshots are required is unknown.")];
+  // Apple's spec page scopes the rule to the iOS 27.1 SDK; its 5 October 2026
+  // release note says any app submitted from April 2027. So not a failure, not silence.
+  if (required) return [finding("shots.duo", "warn", "No iPhone Duo set. Apple's screenshot page requires one from the iOS 27.1 SDK, which this build predates, but its release note says any app submitted from April 2027. Check App Store Connect.")];
   return [];
 }
 

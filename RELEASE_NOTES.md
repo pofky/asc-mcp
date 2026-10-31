@@ -16,7 +16,7 @@ If you or your agent read `release_preflight` output, expect these changes. The 
 - A privacy policy URL is required in the primary language on every app, per Guideline 5.1.1(i).
 - Rejected versions are audited, every locale's screenshots are read, and apps with several platforms get a section each. Pass `platform` to audit one.
 - Screenshots are judged by platform. A 13-inch iPad set is required if the build runs on iPad, and one large iPhone set is enough.
-- New checks: real price rows, export compliance, content rights, copyright, build expiry, placeholder text, name and subtitle length, and the April 2027 iPhone Duo rule.
+- New checks: real price rows, export compliance, content rights, copyright, build expiry, placeholder text, name and subtitle length, and the April 2027 iPhone Duo rule for builds on the iOS 27.1 SDK or later.
 - A custom licence agreement now satisfies the subscription terms rule. The tool no longer claims Apple "auto-rejects".
 
 **New, optional: `project_path`**

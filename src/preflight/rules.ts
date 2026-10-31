@@ -82,7 +82,7 @@ export const RULES = {
 
   "shots.required": { family: "Screenshots", source: "screenshots", clause: "required device sizes", fixTool: "upload_screenshots" },
   "shots.nonempty": { family: "Screenshots", source: "screenshots", clause: "at least one screenshot per set", fixTool: "upload_screenshots" },
-  "shots.duo": { family: "Screenshots", source: "screenshots", clause: "iPhone Duo, from April 2027", fixTool: "upload_screenshots" },
+  "shots.duo": { family: "Screenshots", source: "screenshots", clause: "iPhone Duo, from April 2027, for apps on the iOS 27.1 SDK or later", fixTool: "upload_screenshots" },
 
   "build.attached": { family: "Build", source: "guidelines", clause: "Guideline 2.1(a), final versions", fixTool: "attach_build" },
   "build.encryption": { family: "Build", source: "metadataRef", clause: "export compliance", fixTool: "set_app_metadata", fixHint: "uses_non_exempt_encryption" },

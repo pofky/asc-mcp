@@ -194,9 +194,11 @@ describe("the iPhone Duo date rule", () => {
     expect(isDuoSdk(null)).toBeNull();
     expect(isDuoSdk("garbage")).toBeNull();
   });
-  it("stays quiet on an older SDK, before and after the date", async () => {
+  it("stays quiet on an older SDK before the date, and warns after it, since Apple's two pages differ", async () => {
     expect(await onSdk("23B77", before)).not.toContain("shots.duo");
-    expect(await onSdk("23B77", after)).not.toContain("shots.duo");
+    const later = await onSdk("23B77", after);
+    expect(later).toContain("WARN  shots.duo");
+    expect(later).not.toContain("FAIL  shots.duo");
   });
   it("warns before the date and fails after it, on a new SDK", async () => {
     expect(await onSdk("24B50", before)).toContain("WARN  shots.duo");
