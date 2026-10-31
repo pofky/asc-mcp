@@ -11,7 +11,8 @@ export const BASE_INSTRUCTIONS =
   "asc-mcp, an MCP server for Apple's App Store Connect API. Tools query that API. " +
   "Slash-command Prompts seed multi-tool workflows. triage_reviews and draft_review_response " +
   "use MCP Sampling (your own client's model, zero extra cost). draft_review_response never " +
-  "auto-posts: it returns a draft only.";
+  "auto-posts: it returns a draft only. When you know the app's local Xcode project folder, pass it " +
+  "to release_preflight as project_path.";
 
 /**
  * The free tier's half, and the only place a free user learns what they have.

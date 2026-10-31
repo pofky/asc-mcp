@@ -6,11 +6,11 @@ cost_category: low
 
 # PRD-0002: App Store Preflight v2
 
-**Status:** Draft, ready for architect review
+**Status:** Implemented, amendments in section 11
 **Owner:** the asc-mcp team (next session in this repo)
 **Type:** C (Feature / Refactor)
 **Created:** 2026-10-31
-**Shipped:** not shipped
+**Shipped:** see HANDOFF.md
 **Related:** `src/tools/release-preflight.ts`, `launch/competitors.md`. Source research, in the private Ideas repo: `/Volumes/T7/Projects/Ideas/research/2026-10-29_agent_harness_ideas/` (`00_VERDICT.md`, idea #2).
 
 This repo is public. Keep customer names, addresses and D1 row ids out of this file and out of anything derived from it.
@@ -347,3 +347,29 @@ The strongest search phrase is a build-side error, which only Layer C answers. S
 **Read directly on 2026-10-31.** This repo at `3dbe4ea`, package `1.9.15`. Production `intent_events`, read-only and aggregated, no personal data: 22 all-time `trial_started` rows, 2 tagged `release_preflight` (most recent 30 Oct), and no `checkout_click` tagged with it. Apple's Guidelines, screenshot spec, third-party SDK list, App Store Connect release notes and API notes 4.0 to 4.5.1. GitHub metadata and READMEs for the rivals.
 
 **Not verified.** Nobody has been quoted saying they would pay for this. Rivals were read, not run. The real-account checks in §1a are still to do. The defects in §1 were found by reading the code and not by reproducing each against Apple, so D3, D4 and D9 in particular should be confirmed by a failing test first. The per-idea harness, buyer and first-customer notes are in the research's `03_persona_toolsmith.md` and `03_persona_contrarian.md`; pain points are in `02_pain_points.md`.
+
+## 11. Amendments, 2026-10-31 (implementation)
+
+Read-only probes with the real key, across all 11 apps on the account, changed these. Section 1a's rows are answered here.
+
+| Row or item | The brief assumed | What was found | What was built |
+|---|---|---|---|
+| 1a #2 | `appDataUsages` absent | Still 404 on 2026-10-31 | Checklist from manifests |
+| 1a #3 | Upload a test set per candidate to learn the iPhone rule | Unneeded and it would write. Five real apps with only `APP_IPHONE_67` were accepted into review | Any of 67, 65, 61 satisfies iPhone; smaller only fails |
+| 1a #4 | `assetDeliveryState` reads reliably | It does, on every real asset read | Used |
+| 1a #5 | `appPriceSchedule` with data means priced | **False.** A never-priced draft app answers with a schedule and zero manual prices, so the old check passed it | `manualPrices` rows decide |
+| 1a #7 | Symbols find static SDK use | Reads real archives correctly (`_NSFileCreationDate`, mangled `UserDefaults`). **Not compared with a real ITMS-91053 mail**: none on file | Implemented, that comparison not done |
+| 1a #8 | Long reports trip clients | Merged findings keep a 30-locale app under 60 lines. Not driven in Claude Desktop | Test covers length |
+| D5, iPad | Device family readable | `buildBundleFileSizes` is no signal: iPhone-only apps list 84 iPad models. The build icon is: `~ipad` on all universal targets checked, `AppIcon60` on iPhone-only ones | Project setting wins, then icon. A missing `~ipad` is only a warning |
+| Severity | `review.contact` warn | The tool's own description and the guide call it required | fail |
+| Severity | `sdk.manifest` fail | A Swift package's source is usually not on disk, so absence cannot be seen | fail only when seen absent, warn when not on disk |
+| Scope | Rule table | Added `meta.name`, `meta.subtitle`, `app.copyright`, placeholder hosts | Own rows |
+| Files | One `project-scan.ts` | Over the size budget | `project-files.ts`, `plist.ts`, `binary-scan.ts`, `apple-lists.ts`, `run.ts` |
+
+Defects confirmed on the old tree (`00a9fa8`) by tests asserting each bug directly: D1, D2, D3, D4, D5, D6, D8, D9, D10, D11, D12, plus the price and expired-build false passes. One assertion was wrong: a 403 on the review detail did not reach "Ready" but printed a false "contact not set" warning. `tests/preflight/defects.test.ts` on that tree: 36 of 38 fail, many on wording alone, which is why the direct run was added.
+
+Not run: a low-role key against Apple (simulated by 403s), a rival, a real ITMS-91053 mail.
+
+**After independent review, same day.** A bad `project_path` was `SKIPPED` per section 3 and could still read as clean; the caller asked for those rules, so it is now `UNKNOWN`, and the clean verdict says `project files not checked` when no path was given. `url.privacy.set` fails only on the primary language, since Apple does not state a per-language rule. A description with a link that does not look like Terms is a warning, and no link at all stays a failure. An unverifiable certificate chain is `UNKNOWN`, because a company proxy causes it.
+
+**After the independent tester, same day.** `review_status` holds no rejection message, so the report no longer points there; a version Apple rejected carries `UNKNOWN version.rejected` and cannot read clean, which replaces "Rejected version ... points to review_status" in section 3. A folder with no project, or one building other bundle ids, is `UNKNOWN`. `review.demo` looks only for password and email login, after a false warning on a real app with optional Sign in with Apple. Not tested: a low-role key on real Apple (`BASE_URL` is fixed), a multi-platform app on real Apple, Claude Desktop.

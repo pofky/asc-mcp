@@ -88,7 +88,7 @@ is the plan, that file is the checklist.
   logo wall, and inventing one breaks Rule 1.
 - **Personalize:** the tools read the user's own apps, so the first useful answer is
   about their app, not a demo app.
-- **Simulate the result:** `release_preflight` shows exactly what a submission would
+- **Simulate the result:** `release_preflight` shows what it can establish about a submission (never a prediction of App Review) that would
   flag, before any Pro tool is needed, and it is itself behind the trial.
 - **Paywall placement:** the moment the agent is asked to write something real, via
   `requirePro` in `src/gate.ts`, which leads with the trial and not the price.
@@ -156,3 +156,12 @@ Smithery is deliberately not on this list: it no longer lists a local stdio
 server from a repo, and a hosted variant is impossible when the whole point is
 that the `.p8` never leaves the user's machine. See
 `launch/distribution-checklist.md`.
+
+## Preflight v2 (tasks/0002, added 2026-10-31)
+
+- **Search asset:** `/writing/itms-91053/`, on the strongest measured phrase (`itms-91053`, autocomplete prefix 7). Page views count as `writing_itms_91053`.
+- **The clip, still to make:** preflight finds a dead URL on a real app, the agent fixes it, the re-run comes back clean.
+- **Replies:** r/iOSProgramming and Apple forum threads on ITMS-91053 or 2.1 rejections, real help first, drafts in `launch/`. No cold outreach.
+- **Mail to past trial users is not part of this launch.** It needs the legal gate and the operator's decision.
+- **Kill rule, read 60 days after release:** fewer than 5 new `trial_started` with `tool=release_preflight` and no paid conversion traceable to it means stop adding rules and keep the honesty fix. Baseline 2026-10-31: 2 of 22 trial starts, 0 `checkout_click`.
+- **No public comparison with a rival** until that rival has been run.

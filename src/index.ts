@@ -475,8 +475,12 @@ async function main() {
 
   tool(
     "release_preflight",
-    "Pre-submission audit: checks metadata, character limits, screenshots, build status. Catches rejection causes before you submit. Pro feature.",
-    { app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID") },
+    "Pre-submission audit: metadata, screenshots, build, price, contact, products, and whether the support, privacy and terms links actually load. With project_path, also privacy manifests, required-reason APIs, listed SDKs and purpose strings, read locally. Every rule ends in PASS, WARN, FAIL or UNKNOWN, and any UNKNOWN withholds the clean verdict; project files are checked only with project_path. Fix each FAIL with the tool it names, then re-run. Pro feature.",
+    {
+      app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
+      project_path: z.string().optional().describe("Local folder of the app's Xcode project. Optional. Read only, nothing from it is executed or sent anywhere. Omit to audit the App Store Connect record alone."),
+      platform: z.enum(["IOS", "MAC_OS", "TV_OS", "VISION_OS"]).optional().describe("Audit one platform. Default: every platform with a version in progress."),
+    },
     safe((args) => releasePreflight(client, args, tier)),
   );
 
@@ -667,7 +671,7 @@ async function main() {
     "Upload screenshots to a version localization for a device display type (e.g. APP_IPHONE_67). Handles Apple's reserve/upload/commit flow. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
-      display_type: z.string().describe("Device display type, e.g. APP_IPHONE_67, APP_IPHONE_65, APP_IPAD_PRO_129"),
+      display_type: z.string().describe("Device display type, e.g. APP_IPHONE_67, APP_IPHONE_65, APP_IPAD_PRO_3GEN_129"),
       files: z.array(z.string()).describe("Absolute paths to PNG/JPEG screenshot files, in order"),
       locale: z.string().optional().describe("Locale (e.g. en-US). Default: first/primary locale."),
     },

@@ -42,7 +42,7 @@ fastlane's `deliver`/`pilot` are just [spaceship](https://github.com/fastlane/fa
 Binary upload path that works with a least-privilege API key: `setup_app_store_signing` -> `build_and_archive` (export_options_plist = the generated file) -> `upload_binary` (confirm:true) -> poll `list_builds` to VALID -> `attach_build`. Requires an Apple Distribution certificate already in the login keychain (cert creation is not exposed to API keys). Cloud signing (`-allowProvisioningUpdates` with automatic style) fails as `Cloud signing permission error` unless the key has Admin/App Manager with certificate rights.
 
 ### What the API CANNOT do (must be done in the ASC website / Xcode)
-`release_preflight` lists these in a "Manual steps to finish" section, tailored to the app's current state:
+`release_preflight` lists these in a "Manual steps Apple keeps on its website" section, tailored to the app's current state:
 - **Submit an app's FIRST in-app purchases.** They must be bundled with the version in the website (Add for Review -> tick the products -> Submit). `submit_for_review` detects this and aborts rather than orphaning. Later IAPs submit via the API.
 - **App Privacy nutrition labels.** `set_privacy_nutrition` returns the checklist + deep link.
 - **EU DSA trader status.** `set_eu_trader_status` returns guidance + deep link.
@@ -86,4 +86,4 @@ Binary upload path that works with a least-privilege API key: `setup_app_store_s
 - **reviewSubmissions cannot be DELETEd, and unsubmitted ones cannot be canceled** (`canceled:true` only withdraws SUBMITTED ones). To free a version from an unsubmitted submission, DELETE its `reviewSubmissionItems`. Empty unsubmitted submissions linger harmlessly; the website consolidates them.
 
 ## Submission-prep tools (v1.5.x)
-`set_app_metadata` (category/copyright/content-rights/export-compliance), `set_app_price` (free or USD tier; creates the price schedule), `set_review_contact` (appStoreReviewDetail). `release_preflight` also checks age rating, privacy URL, and per-product readiness. `submit_for_review` submits products first, then the version, bundling them when allowed.
+`set_app_metadata` (category/copyright/content-rights/export-compliance), `set_app_price` (free or USD tier; creates the price schedule), `set_review_contact` (appStoreReviewDetail). `release_preflight` also checks age rating, price, whether the record's links load, and per-product readiness, and with `project_path` the local privacy manifests and purpose strings. `submit_for_review` submits products first, then the version, bundling them when allowed.

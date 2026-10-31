@@ -23,6 +23,17 @@ gh api repos/zelentsov-dev/asc-mcp --jq '{desc:.description,license:.license.spd
 | App Store Connect website | Apple's own console | Free | n/a | n/a | n/a |
 | asc-mcp (this project) | 41 job-shaped tools, preflight audit, confirm-gated writes, in-agent playbook | $9/month, 6 tools free with no expiry, 7-day trial | 41 | see repo | continuous |
 
+## Preflight rivals, read 2026-10-31 (READMEs read, none run)
+
+| Who | Scope | Price | Stars |
+|---|---|---|---|
+| `truongduy2611/app-store-preflight-skills` | Agent skill scanning project and pulled metadata against rule files | Free | 1,405 |
+| Heimdall | 902-tool server with a submission readiness macro | Free, MIT | 54 |
+| `ilan-uzan/app-store-preflight` | Claude Code skill, says 1,772 checks quoted from Apple | Free | 3 |
+| `menansali/ios-ship-doctor` | MCP server: manifests, purpose strings, SDK manifests, with fixes | Free, MIT | 2 |
+
+Make no public comparison until a rival has been run. See `tasks/0002-prd-app-store-preflight.md` section 1.
+
 ## What changed since the last reading
 
 - `zelentsov-dev` advertised "208 tools across 25 workers" on 2026-08-06
