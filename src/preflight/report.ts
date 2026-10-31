@@ -36,19 +36,19 @@ function merge(findings: Finding[]): Finding[] {
   return [...seen.values()];
 }
 
-function block(f: Finding): string {
+function block(f: Finding, platform?: string): string {
   const rule = ruleOf(f.rule);
   const lines = [`${LABEL[f.status]}  ${f.rule}${f.scope ? `  [${f.scope}]` : ""}`, `Saw:  ${f.saw}`];
   if (rule) {
     const source = SOURCES[rule.source];
     lines.push(`Rule: ${rule.clause} (${source.label}, verified ${source.verified})`);
-    if (rule.fixTool && f.status !== "skipped") lines.push(`Fix:  ${rule.fixTool}${rule.fixHint ? ` ${rule.fixHint}` : ""}`);
+    if (rule.fixTool && f.status !== "skipped") lines.push(`Fix:  ${rule.fixTool}${platform ? ` platform ${platform},` : ""}${rule.fixHint ? ` ${rule.fixHint}` : ""}`.replace(/,$/, ""));
   }
   return lines.join("\n");
 }
 
-function section(title: string, findings: Finding[]): string {
-  return findings.length ? `\n### ${title}\n\n${findings.map(block).join("\n\n")}\n` : "";
+function section(title: string, findings: Finding[], platform?: string): string {
+  return findings.length ? `\n### ${title}\n\n${findings.map((f) => block(f, platform)).join("\n\n")}\n` : "";
 }
 
 /** Passes are a count per family, so a 30-locale app does not print hundreds of lines. */
@@ -87,6 +87,8 @@ function staleNotice(now: Date): string {
 export interface ReportSection {
   /** Set when the app has more than one platform in the report. */
   title?: string;
+  /** Named in each fix when versions are in progress on several platforms. */
+  platform?: string;
   findings: Finding[];
 }
 
@@ -105,9 +107,9 @@ export function renderReport(input: {
   for (const s of sections) {
     const merged = merge(s.findings);
     if (s.title) out += `\n## ${s.title}\n`;
-    out += section("Failures", merged.filter((f) => f.status === "fail"));
-    out += section("Could not be checked", merged.filter((f) => f.status === "unknown"));
-    out += section("Warnings", merged.filter((f) => f.status === "warn"));
+    out += section("Failures", merged.filter((f) => f.status === "fail"), s.platform);
+    out += section("Could not be checked", merged.filter((f) => f.status === "unknown"), s.platform);
+    out += section("Warnings", merged.filter((f) => f.status === "warn"), s.platform);
     out += passSummary(merged.filter((f) => f.status === "pass"));
     out += skippedLines(merged.filter((f) => f.status === "skipped"));
   }

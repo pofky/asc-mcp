@@ -1,28 +1,55 @@
 import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
+import { pickEditableVersion } from "../editable.js";
 import { fetchAppInfos, pickEditableAppInfo, noEditableAppInfoMessage } from "../app-info.js";
 
-const EDITABLE = new Set([
-  "PREPARE_FOR_SUBMISSION",
-  "DEVELOPER_REJECTED",
-  "REJECTED",
-  "METADATA_REJECTED",
-  "INVALID_BINARY",
-]);
-
-async function editableVersionId(client: ASCClient, appId: string): Promise<{ id: string; version: string } | null> {
-  const res = await client.get<{ versionString: string; appStoreState: string }>(
+/** The version a write means, or the sentence that says why it cannot tell. */
+async function editableVersion(
+  client: ASCClient,
+  appId: string,
+  platform?: string,
+): Promise<{ version: { id: string; versionString: string } | null; refusal?: string }> {
+  const res = await client.get<{ versionString: string; appStoreState: string; platform: string }>(
     `/v1/apps/${appId}/appStoreVersions`,
-    { "fields[appStoreVersions]": "versionString,appStoreState", limit: "5" },
+    { "fields[appStoreVersions]": "versionString,appStoreState,platform", limit: "5" },
   );
   const versions = (Array.isArray(res.data) ? res.data : [res.data]).filter(Boolean);
-  const v = versions.find((x) => EDITABLE.has(x.attributes.appStoreState));
-  return v ? { id: v.id, version: v.attributes.versionString } : null;
+  const { version, refusal } = pickEditableVersion(versions, platform);
+  return { version: version ? { id: version.id, versionString: version.attributes.versionString } : null, refusal };
+}
+
+async function attachedBuildId(client: ASCClient, versionId: string): Promise<string | null> {
+  try {
+    const res = await client.get<Record<string, never>>(`/v1/appStoreVersions/${versionId}/build`);
+    return res.data && !Array.isArray(res.data) ? res.data.id : null;
+  } catch (err) {
+    if (err instanceof ASCAPIError && err.status === 404) return null;
+    throw err;
+  }
+}
+
+/**
+ * VALID only. Without the state filter the newest build by upload date wins,
+ * which during an upload is the one still PROCESSING.
+ */
+async function newestValidBuildId(client: ASCClient, appId: string, platform?: string): Promise<string | null> {
+  const res = await client.get<Record<string, never>>("/v1/builds", {
+    "filter[app]": appId,
+    "filter[processingState]": "VALID",
+    ...(platform ? { "filter[preReleaseVersion.platform]": platform } : {}),
+    "fields[builds]": "version",
+    sort: "-uploadedDate",
+    limit: "1",
+  });
+  const build = Array.isArray(res.data) ? res.data[0] : res.data;
+  return build ? (build as { id: string }).id : null;
 }
 
 export interface AppMetadataArgs {
   app_id: string;
+  /** Which version copyright and export compliance apply to, when more than one platform is in progress. */
+  platform?: string;
   primary_category?: string;
   secondary_category?: string;
   copyright?: string;
@@ -47,6 +74,11 @@ export async function setAppMetadata(
   if (gate) return gate;
   const changes: string[] = [];
 
+  // Resolved before any write, so a refusal never leaves half the fields applied.
+  const needsVersion = args.copyright !== undefined || args.uses_non_exempt_encryption !== undefined;
+  const picked = needsVersion ? await editableVersion(client, args.app_id, args.platform) : { version: null };
+  if ("refusal" in picked && picked.refusal) return picked.refusal;
+
   // Categories live on appInfos relationships.
   if (args.primary_category || args.secondary_category) {
     // An app in review or already live also has a locked appInfo, and Apple
@@ -67,7 +99,7 @@ export async function setAppMetadata(
 
   // Copyright is a version attribute.
   if (args.copyright !== undefined) {
-    const v = await editableVersionId(client, args.app_id);
+    const v = picked.version;
     if (!v) return "No editable version to set copyright on.";
     await client.patch(`/v1/appStoreVersions/${v.id}`, {
       data: { type: "appStoreVersions", id: v.id, attributes: { copyright: args.copyright } },
@@ -83,25 +115,16 @@ export async function setAppMetadata(
     changes.push(`content rights ${args.content_rights}`);
   }
 
-  // Export compliance lives on the build (newest).
+  // Export compliance lives on a build, and the one that matters is the one the
+  // version will submit. Answering the newest instead left the attached build
+  // unanswered while this reported success, and preflight failed again on re-run.
   if (args.uses_non_exempt_encryption !== undefined) {
-    // VALID only. Without the state filter the newest build by upload date wins,
-    // which during an upload is the one still PROCESSING: compliance lands on a
-    // build that cannot be submitted while the ready one behind it keeps none,
-    // and the version then fails submission for missing export compliance.
-    const buildRes = await client.get<Record<string, never>>("/v1/builds", {
-      "filter[app]": args.app_id,
-      "filter[processingState]": "VALID",
-      "fields[builds]": "version",
-      sort: "-uploadedDate",
-      limit: "1",
-    });
-    const build = Array.isArray(buildRes.data) ? buildRes.data[0] : buildRes.data;
-    if (build) {
-      await client.patch(`/v1/builds/${(build as { id: string }).id}`, {
+    const buildId = (picked.version && (await attachedBuildId(client, picked.version.id))) ?? (await newestValidBuildId(client, args.app_id, args.platform));
+    if (buildId) {
+      await client.patch(`/v1/builds/${buildId}`, {
         data: {
           type: "builds",
-          id: (build as { id: string }).id,
+          id: buildId,
           attributes: { usesNonExemptEncryption: args.uses_non_exempt_encryption },
         },
       });
@@ -181,6 +204,7 @@ export async function setAppPrice(
 
 export interface ReviewContactArgs {
   app_id: string;
+  platform?: string;
   first_name: string;
   last_name: string;
   phone: string;
@@ -209,7 +233,8 @@ export async function setReviewContact(
   const gate = requirePro(tier, "Setting the App Review contact", "set_review_contact");
   if (gate) return gate;
 
-  const v = await editableVersionId(client, args.app_id);
+  const { version: v, refusal } = await editableVersion(client, args.app_id, args.platform);
+  if (refusal) return refusal;
   if (!v) return "No editable version to attach review details to.";
 
   const attributes: Record<string, string | boolean> = {
@@ -253,5 +278,5 @@ export async function setReviewContact(
       },
     });
   }
-  return `App Review contact set for version ${v.version}: ${args.first_name} ${args.last_name}, ${args.email}.`;
+  return `App Review contact set for version ${v.versionString}: ${args.first_name} ${args.last_name}, ${args.email}.`;
 }

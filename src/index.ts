@@ -597,6 +597,7 @@ async function main() {
     "Edit App Store metadata on the editable version: description, keywords, what's-new, promotional text, marketing/support/privacy-policy URLs, plus app name and subtitle. Validates Apple character limits before writing. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
+      platform: z.enum(["IOS", "MAC_OS", "TV_OS", "VISION_OS"]).optional().describe("Which version, needed only when this app has versions in progress on more than one platform."),
       locale: z.string().optional().describe("Locale to edit (e.g. en-US). Default: first/primary locale."),
       description: z.string().optional().describe("App description (max 4000 chars)"),
       keywords: z.string().optional().describe("Comma-separated keywords (max 100 chars total)"),
@@ -661,6 +662,7 @@ async function main() {
     "Attach a build to the editable version (defaults to the newest processed build). Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
+      platform: z.enum(["IOS", "MAC_OS", "TV_OS", "VISION_OS"]).optional().describe("Which version, needed only when this app has versions in progress on more than one platform."),
       build_id: z.string().optional().describe("Specific build ID (from list_builds). Omit for newest VALID build."),
     },
     safe((args) => attachBuild(client, args, tier)),
@@ -671,6 +673,7 @@ async function main() {
     "Upload screenshots to a version localization for a device display type (e.g. APP_IPHONE_67). Handles Apple's reserve/upload/commit flow. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
+      platform: z.enum(["IOS", "MAC_OS", "TV_OS", "VISION_OS"]).optional().describe("Which version, needed only when this app has versions in progress on more than one platform."),
       display_type: z.string().describe("Device display type, e.g. APP_IPHONE_67, APP_IPHONE_65, APP_IPAD_PRO_3GEN_129"),
       files: z.array(z.string()).describe("Absolute paths to PNG/JPEG screenshot files, in order"),
       locale: z.string().optional().describe("Locale (e.g. en-US). Default: first/primary locale."),
@@ -846,6 +849,7 @@ async function main() {
     "Set submission-required app basics: primary/secondary category (appCategory ids like HEALTH_AND_FITNESS), copyright, content-rights declaration, and export compliance (encryption). Each applied only if provided. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
+      platform: z.enum(["IOS", "MAC_OS", "TV_OS", "VISION_OS"]).optional().describe("Which version, needed only when this app has versions in progress on more than one platform."),
       primary_category: z.string().optional().describe("Primary appCategory id, e.g. HEALTH_AND_FITNESS"),
       secondary_category: z.string().optional().describe("Secondary appCategory id"),
       copyright: z.string().optional().describe("Copyright line, e.g. 2026 Povilas Konopackas"),
@@ -876,6 +880,7 @@ async function main() {
     "Set the App Review contact and optional demo account on the editable version. Required before submission. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
+      platform: z.enum(["IOS", "MAC_OS", "TV_OS", "VISION_OS"]).optional().describe("Which version, needed only when this app has versions in progress on more than one platform."),
       first_name: z.string().describe("Contact first name"),
       last_name: z.string().describe("Contact last name"),
       phone: z.string().describe("Contact phone (with country code)"),

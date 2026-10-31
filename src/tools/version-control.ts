@@ -1,7 +1,7 @@
 import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
-import { EDITABLE_VERSION_STATES as EDITABLE } from "../editable.js";
+import { pickEditableVersion } from "../editable.js";
 
 interface VersionAttrs {
   versionString: string;
@@ -126,18 +126,20 @@ export async function submitForReview(
     );
   }
 
-  const platform: Platform = args.platform ?? "IOS";
-
   // Find the editable version to submit.
   const versionsRes = await client.get<VersionAttrs>(
     `/v1/apps/${args.app_id}/appStoreVersions`,
     { "fields[appStoreVersions]": "versionString,appStoreState,platform", limit: "5" },
   );
   const versions = Array.isArray(versionsRes.data) ? versionsRes.data : [versionsRes.data];
-  const target = versions.find((v) => EDITABLE.has(v.attributes.appStoreState));
+  const { version: target, refusal } = pickEditableVersion(versions, args.platform);
+  if (refusal) return refusal;
   if (!target) {
     return "No editable version to submit. Create one with create_version and attach a build first.";
   }
+  // The review submission's platform has to be the version's own. A Mac-only app
+  // with no platform argument used to open an iOS submission around its Mac version.
+  const platform = (target.attributes.platform ?? args.platform ?? "IOS") as Platform;
 
   // 0. Submit READY_TO_SUBMIT in-app purchases / subscriptions FIRST, before we
   // open the version review. These are NOT reviewSubmission items: IAPs use
