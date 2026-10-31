@@ -42,9 +42,9 @@ export interface TrialFailure {
 export type TrialResponse = TrialSuccess | TrialFailure;
 
 /**
- * Ask the licence server for a trial key. Every failure mode returns a
+ * Ask the license server for a trial key. Every failure mode returns a
  * TrialFailure with something the agent can say out loud; nothing throws, so a
- * licence-server outage degrades to a readable message rather than a tool error.
+ * license-server outage degrades to a readable message rather than a tool error.
  */
 /** The worker sends a mail inside this request, so it gets longer than a validation. A judgement. */
 const TRIAL_TIMEOUT_MS = 20_000;

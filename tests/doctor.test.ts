@@ -48,7 +48,7 @@ describe("runDoctor", () => {
 
   /**
    * A finished trial is not a broken key. The old copy sent that person to look
-   * up a licence that is working exactly as designed, and hid the two things
+   * up a license that is working exactly as designed, and hid the two things
    * they need at that moment: the price and the link.
    */
   it("says the trial ended, rather than blaming the key", async () => {
@@ -130,7 +130,7 @@ describe("runDoctor", () => {
     expect(lic?.detail).toContain("1 day left");
     expect(lic?.fix).toContain("$9/month");
     // A trial nearly up is a warning, never a failure: the key is fine, and a
-    // fail here would read as "your licence is broken" two days early.
+    // fail here would read as "your license is broken" two days early.
     expect(report.checks.every((c) => c.name !== "License" || c.status !== "fail")).toBe(true);
   });
 

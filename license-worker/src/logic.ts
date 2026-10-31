@@ -1,5 +1,5 @@
 /**
- * Pure decision logic for the licence worker.
+ * Pure decision logic for the license worker.
  *
  * Separate from index.ts for two reasons. The Workers runtime only accepts a
  * default handler export from the entry module, so exporting these constants and
@@ -151,7 +151,7 @@ export function isLicenseUsable(
   if (!row.active && !isWithinRenewalGrace(row, now)) {
     // Say which kind of dead this is. "inactive" is true but useless to the
     // person reading it: a customer whose renewal card was declined and whose
-    // subscription Polar then revoked was told a licence key "did not validate",
+    // subscription Polar then revoked was told a license key "did not validate",
     // which sends them to check a key that is perfectly correct instead of
     // telling them a payment failed and offering the one link that fixes it.
     // Gating is unchanged, only the label.
@@ -206,7 +206,7 @@ export function computeActiveFlag(status?: string): 0 | 1 {
  * Two orderings make the status alone insufficient. Polar's own cancellation
  * emits `canceled` and `revoked` back to back, and any late or retried
  * `subscription.updated` carrying the still-live status would otherwise
- * resurrect a licence that `revoked` had just switched off. And a `cycled` or
+ * resurrect a license that `revoked` had just switched off. And a `cycled` or
  * `updated` replayed long after a subscription lapsed would reactivate it.
  * A period end in the past means no entitlement, whatever the status says.
  */
@@ -249,7 +249,7 @@ export function webhookSecrets(env: {
 /**
  * Polar has emitted the product id under several shapes over time, and a guard
  * that reads only one of them silently falls through to "provision it", which
- * is exactly how the stray-licence incident happened.
+ * is exactly how the stray-license incident happened.
  */
 export function resolveProductId(data: Record<string, unknown>): string | null {
   const direct = data.product_id ?? data.productId;
@@ -331,7 +331,7 @@ export async function verifyPolarSignature(
  * A secret copied from the Polar dashboard looks like `polar_whs_...`, and the
  * key is the raw UTF-8 of the whole string: Polar's `validateEvent`
  * base64-encodes the secret before handing it to the Standard Webhooks library,
- * which base64-decodes it straight back. Getting this wrong meant zero licence
+ * which base64-decodes it straight back. Getting this wrong meant zero license
  * rows were ever created and the first paying customer got no key.
  *
  * A secret minted through `POST /v1/webhooks/endpoints` comes back as
@@ -449,7 +449,7 @@ export const ACTIVE_EVENTS = new Set([
 // In Polar, `subscription.canceled` means "will not renew": the customer keeps
 // access until the period they already paid for ends. Only `revoked` means
 // access ends now. Treating both as immediate revocation took away time
-// customers had paid for, which is the one thing a licence server must not do.
+// customers had paid for, which is the one thing a license server must not do.
 export const CANCEL_EVENTS = new Set([
   "subscription.canceled",
   "subscription.revoked",
@@ -480,7 +480,7 @@ const DEAD_STATUSES = new Set([
  * Polar delivers each event to EVERY webhook endpoint registered in the
  * organization, so an endpoint in a shared org receives the other products'
  * sales too. That has already caused a real incident on this account: one
- * project's test purchase fanned out and minted three stray licences plus
+ * project's test purchase fanned out and minted three stray licenses plus
  * welcome emails in a sibling project. The old org sold asc-mcp alongside other
  * products, so without this guard someone else's subscription would mint an
  * asc-mcp Pro key and email it to them.
@@ -726,7 +726,7 @@ export function beaconPage(path: string | null | undefined): string {
 /** The counted redirect to checkout, used by every link we control. */
 export const GO_URL = "https://asc-mcp-license.remewdy.workers.dev/go";
 
-/** The licence page, linked from every email so a lost key is self-serve. */
+/** The license page, linked from every email so a lost key is self-serve. */
 export const KEY_PAGE_URL = "https://asc-mcp-license.remewdy.workers.dev/key";
 
 export const UNSUBSCRIBE_URL = "https://asc-mcp-license.remewdy.workers.dev/unsubscribe";
@@ -882,7 +882,7 @@ export function trialEmailContent(
   return { subject: `Your ${TRIAL_DAYS}-day asc-mcp Pro trial key`, html, text };
 }
 
-/** The paid licence email, sent on a subscription and on a key lookup. */
+/** The paid license email, sent on a subscription and on a key lookup. */
 export function licenseEmailContent(key: string): EmailContent {
   const safeKey = escapeHtml(key);
 
@@ -975,7 +975,7 @@ export interface TrialRow {
  * The first NOT EXISTS keeps a buyer out; the comment at the call site in index.ts
  * says why. The second keeps out anyone who has opted out, on any row sharing the
  * address in any case, because the opt-out is a fact about a mailbox and not
- * about one licence.
+ * about one license.
  */
 export const TRIAL_REMINDER_SQL = `SELECT id, email, key, expires_at, source, revoked_at, canceled_at,
             trial_ending_emailed_at, trial_lapsed_emailed_at

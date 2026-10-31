@@ -17,10 +17,18 @@ Safer writes:
 - set_app_availability takes confirm: true to turn territories off on an app already set up, including taking it off sale.
 - create_iap and create_subscription take confirm: true, and say what they would make first.
 
-When the licence server is down:
+When the license server is down:
 
 - Startup waits 8 seconds at most. A server that never answered could hold it for five minutes, past your client's own limit.
 - A subscriber in the renewal grace keeps Pro through an outage.
 - A key that got no answer is reported as an outage, not as a bad key, and the startup line no longer offers a trial to someone who would be refused one.
 
-Smaller things: a lapsed licence is no longer told about a trial it cannot have, an unknown asc_guide topic lists the real ones, and arguments like limit: 0 get a plain answer. daily_briefing reads version states in words.
+set_age_rating works. Its lookup dropped the field it needed, so on every app it said the app_id might be wrong.
+
+A key that got no answer at startup now asks again on your next tool call, and adopts Pro when the server is back.
+
+One trial per address, as the Terms say, and an ended subscription gets the price rather than a new trial.
+
+daily_briefing only says "Action needed" when something is yours to do. assign_build_to_group and invite_beta_tester check the group exists before asking you to confirm. set_app_availability refuses a territory code Apple does not know. competitor_snapshot says its results are the App Store's closest, not exact matches, and asc_guide's topic is now free text.
+
+Smaller things: a lapsed license is no longer told about a trial it cannot have, an unknown asc_guide topic lists the real ones, and arguments like limit: 0 get a plain answer. daily_briefing reads version states in words.

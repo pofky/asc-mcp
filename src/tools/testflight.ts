@@ -1,4 +1,4 @@
-import type { ASCClient } from "../client.js";
+import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
 
@@ -43,6 +43,15 @@ export async function assignBuildToGroup(
 ): Promise<string> {
   const gate = requirePro(tier, "Assigning a build to TestFlight", "assign_build_to_group");
   if (gate) return gate;
+
+  // Asking a human to approve a send to a group that does not exist wastes the one
+  // question this tool gets to ask.
+  try {
+    await client.get(`/v1/betaGroups/${args.group_id}`, { "fields[betaGroups]": "name" });
+  } catch (err) {
+    if (err instanceof ASCAPIError && err.status === 404) return `Error: no beta group with id ${args.group_id}. list_beta_groups shows them.`;
+    throw err;
+  }
 
   // Real people get a push notification the moment this lands, and it cannot be
   // recalled. Worse without build_id: the tool picks the newest VALID build,
@@ -96,6 +105,15 @@ export async function inviteBetaTester(
   // point of the prompt is to put a real address in front of a human.
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(args.email)) {
     return `"${args.email}" is not a valid email.`;
+  }
+
+  // Asking a human to approve a send to a group that does not exist wastes the one
+  // question this tool gets to ask.
+  try {
+    await client.get(`/v1/betaGroups/${args.group_id}`, { "fields[betaGroups]": "name" });
+  } catch (err) {
+    if (err instanceof ASCAPIError && err.status === 404) return `Error: no beta group with id ${args.group_id}. list_beta_groups shows them.`;
+    throw err;
   }
 
   // Apple emails a real human the instant this succeeds, from the developer's

@@ -50,7 +50,7 @@ Success: `NO BLOCKING ISSUES FOUND: ... This is not a prediction of App Review's
 
 ## F2. Preflight as first look
 
-Who: a free user with an Apple key and no licence.
+Who: a free user with an Apple key and no license.
 Goal: see what the paid tool would say about their own app.
 Entry: `release_preflight` on the free tier.
 Success: the full F1 report, ending with the existing preview footer.
@@ -87,7 +87,7 @@ Success: the key arrives in the mailbox on the subscription, they paste it in, r
 
 ### States on this flow
 
-- Address with no licence: the same `Check your email` page, and no mail, so the page says nothing about who subscribes.
+- Address with no license: the same `Check your email` page, and no mail, so the page says nothing about who subscribes.
 - Mail failed: `/key` answers 503, `The email could not be sent`, with an address to write to. `asc_start_trial` says the same in its reply.
 - More than 3 requests for one address in 15 minutes: the same page, and no further mail until the window ends.
 - A machine that fetched its key before 31 October 2026: `asc_start_trial` still returns the key inline, because its fingerprint is on the row.

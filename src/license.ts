@@ -29,7 +29,7 @@ function usableKey(key?: string): key is string {
 
 /**
  * How long to wait for a verdict. The server does not connect to its client until
- * this returns, and a licence host that accepted the connection and never answered
+ * this returns, and a license host that accepted the connection and never answered
  * held startup for five minutes, past every client's own limit. A judgement: the
  * worker answers in well under a second, and this is what a dead network costs.
  */
@@ -82,13 +82,13 @@ export async function validateLicense(licenseKey?: string): Promise<Tier> {
 
     return status.valid ? status.tier : "free";
   } catch (err) {
-    console.error("License validation network error:", err);
+    console.error(`asc-mcp: the license server gave no answer (${err instanceof Error ? err.name : "network error"}).`);
     return offlineTier(licenseKey);
   }
 }
 
 /**
- * How long a previously-confirmed Pro key keeps working while the licence
+ * How long a previously-confirmed Pro key keeps working while the license
  * server cannot be reached.
  *
  * Deliberately generous, and deliberately one-directional: only a verdict of
@@ -123,7 +123,7 @@ function rememberPro(key: string, status: LicenseStatus): void {
 }
 
 /**
- * The tier to use when the licence server could not give an answer. Free unless
+ * The tier to use when the license server could not give an answer. Free unless
  * this exact key was confirmed Pro recently and its own expiry, with the renewal grace, has not passed.
  */
 function offlineTier(key: string): Tier {
@@ -154,7 +154,7 @@ function savedKeyPath(): string {
 }
 
 /**
- * Keep a licence key on this machine, so it outlives the session that got it.
+ * Keep a license key on this machine, so it outlives the session that got it.
  *
  * A trial key used to survive a restart only if `injectLicenseKey` found this
  * server's block in a client config it knew how to edit. For a server added

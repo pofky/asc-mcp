@@ -64,6 +64,10 @@ export async function setAppAvailability(
   const allIds = (Array.isArray(allTerrRes.data) ? allTerrRes.data : [allTerrRes.data])
     .filter(Boolean)
     .map((t) => (t as { id: string }).id);
+  const unknown = (args.territories ?? []).filter((t) => !allIds.includes(t));
+  if (unknown.length) {
+    return `Nothing was changed: ${unknown.join(", ")} ${unknown.length === 1 ? "is not a territory" : "are not territories"} Apple knows. Use three-letter codes such as USA, GBR, JPN.`;
+  }
   // An empty array is a real instruction ("nowhere"), not a missing argument.
   const wanted = new Set(args.territories === undefined ? allIds : args.territories);
 

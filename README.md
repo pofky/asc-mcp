@@ -12,7 +12,7 @@
 npx @pofky/asc-mcp init --write   # finds your .p8, asks for your Issuer ID, writes your MCP config
 ```
 
-Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 41 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month (VAT included; in the US, Canada and India sales tax is added at checkout). Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no licence, as a preview.
+Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 41 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month (VAT included; in the US, Canada and India sales tax is added at checkout). Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no license, as a preview.
 
 | You say | What happens |
 |---------|-------------|

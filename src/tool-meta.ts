@@ -16,7 +16,7 @@ import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 type Effect = "read" | "write";
 
 const TOOL_META = {
-  // Orientation and licence
+  // Orientation and license
   asc_setup_check: ["Check setup and connection", "read"],
   asc_guide: ["Get the playbook for a release task", "read"],
   asc_start_trial: ["Start a free 7-day Pro trial", "write"],

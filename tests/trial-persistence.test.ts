@@ -155,7 +155,7 @@ describe("a key saved on this machine", () => {
 
 /**
  * The part that matters to a user: the next session. Driven against the built
- * server with a stand-in licence server, because what is promised is which key
+ * server with a stand-in license server, because what is promised is which key
  * the restarted process sends for validation.
  */
 describe("the next session, with no key in the client config", () => {
@@ -166,7 +166,7 @@ describe("the next session, with no key in the client config", () => {
   let server: Server | undefined;
   afterEach(() => server?.close());
 
-  /** Start the built server once and return the keys it asked the licence server about. */
+  /** Start the built server once and return the keys it asked the license server about. */
   async function keysValidated(home: string, envKey?: string): Promise<string[]> {
     const seen: string[] = [];
     server = createServer((req, res) => {
@@ -247,7 +247,7 @@ describe("fetching a paid key while an older key is set in the client", () => {
   let server: Server | undefined;
   afterEach(() => server?.close());
 
-  /** Run asc_start_trial against a stand-in licence server that hands back PAID-KEY as a subscription. */
+  /** Run asc_start_trial against a stand-in license server that hands back PAID-KEY as a subscription. */
   async function fetchPaidKey(
     env: Record<string, string | undefined>,
     prepareHome: (home: string) => void = () => {},

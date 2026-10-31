@@ -33,7 +33,7 @@ export const FREE_TIER_INSTRUCTIONS =
   "list_apps, app_details, review_status). The other 35 need Pro. Ten of those only read " +
   "(list_reviews, sales_report, release_preflight, daily_briefing, release_notes, keyword_insights, " +
   "competitor_snapshot, metadata_diff, list_builds, list_beta_groups) and work 5 times in total on " +
-  "this machine as a free preview with no licence and no email: when the user asks for one, just " +
+  "this machine as a free preview with no license and no email: when the user asks for one, just " +
   "call it, and tell them how many preview calls are left, which the last line of the reply " +
   "states. The preview is not offered once a trial or subscription has ended on this machine. " +
   "Everything that writes to App Store Connect (metadata, screenshots, builds, TestFlight, in-app " +
@@ -46,7 +46,7 @@ export const FREE_TIER_INSTRUCTIONS =
   "as limited.";
 
 /**
- * A licence that ended, or a key that got no answer, must not be pitched a trial
+ * A license that ended, or a key that got no answer, must not be pitched a trial
  * the server will refuse. The model only knows what this says.
  */
 export const ENDED_LICENSE_INSTRUCTIONS =
@@ -57,7 +57,7 @@ export const ENDED_LICENSE_INSTRUCTIONS =
   "emails them their key.";
 
 export const UNCHECKED_LICENSE_INSTRUCTIONS =
-  "\n\nTIER: unknown for now. A licence key is set and the licence server gave no answer, which says " +
+  "\n\nTIER: unknown for now. A license key is set and the license server gave no answer, which says " +
   "nothing about the key. Pro tools are locked until it answers. Do not offer a trial or a price; tell " +
   "the user to retry shortly.";
 

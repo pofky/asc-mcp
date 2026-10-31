@@ -66,7 +66,7 @@ export async function salesReport(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("Invalid vendor number")) {
-      return "Invalid vendor number. Find yours in App Store Connect → Sales and Trends → top right (Vendor ID).";
+      return "Invalid vendor number. Find yours in App Store Connect, Sales and Trends, top-left account picker (or Payments and Financial Reports, Vendor ID).";
     }
     if (msg.includes("404")) {
       return `No sales report available for ${reportDate}. Reports may take 1-2 days to appear.`;

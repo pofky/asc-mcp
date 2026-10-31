@@ -64,7 +64,7 @@ async function listTools(
   throw new Error(`no tools/list response. stderr: ${err}`);
 }
 
-/** Enough to leave setup mode. No licence, so nothing is sent anywhere. */
+/** Enough to leave setup mode. No license, so nothing is sent anywhere. */
 const FULL_MODE = {
   ASC_KEY_ID: "x",
   ASC_ISSUER_ID: "x",
@@ -139,7 +139,7 @@ describe("tool annotations on the wire", () => {
  * blank arrives empty or as the unexpanded template, and neither is a value.
  */
 describe("blank plugin settings", () => {
-  it("an unexpanded licence key is the free tier, not a key that failed", async () => {
+  it("an unexpanded license key is the free tier, not a key that failed", async () => {
     const { tools, err } = await listTools({
       ...FULL_MODE,
       ASC_LICENSE_KEY: "${user_config.asc_license_key}",
@@ -187,7 +187,7 @@ describe("the numbers the copy quotes", () => {
 });
 
 describe("plugin folder", () => {
-  it("is in step with package.json, the skill and the licence", () => {
+  it("is in step with package.json, the skill and the license", () => {
     const result = spawnSync(process.execPath, [join(ROOT, "scripts", "sync-plugin.mjs"), "--check"], {
       encoding: "utf8",
     });

@@ -1,5 +1,5 @@
 /**
- * A licence key belongs to whoever reads the mailbox on the subscription. Until
+ * A license key belongs to whoever reads the mailbox on the subscription. Until
  * 31 October 2026 anyone holding the address could read the key from /key, or
  * from /trial on a subscription no machine had claimed yet. Real handlers, over
  * `schema.sql`, with Brevo stubbed and each mail recorded.
@@ -74,7 +74,7 @@ describe("POST /key", () => {
     expect(mails[0].to).toBe(email);
     expect(mails[0].body).toContain(KEY);
   });
-  it("answers an address with no licence exactly as one with a licence", async () => {
+  it("answers an address with no license exactly as one with a license", async () => {
     const known = nextAddress();
     const unknown = nextAddress();
     subscribe(known);
@@ -146,5 +146,40 @@ describe("bad bodies get a 400, not the catch-all 500", () => {
   it("/delete with a JSON body", async () => {
     const res = await request("/delete", { method: "POST", body: "{}", headers: { "content-type": "application/json" } });
     expect(res.status).toBe(400);
+  });
+});
+
+describe("POST /trial, one per address", () => {
+  it("refuses a second Apple account on an address that already had a trial", async () => {
+    const email = nextAddress();
+    expect(((await (await trial(email, OWNER)).json()) as { ok: boolean }).ok).toBe(true);
+    const res = await trial(email, STRANGER);
+    expect(res.status).toBe(409);
+    expect(await res.text()).not.toContain("ASC-");
+  });
+  it("gives an ended subscription the price, not a new trial", async () => {
+    const email = nextAddress();
+    subscribe(email, { revoked_at: "2026-01-01 00:00:00", expires_at: "2026-01-01T00:00:00.000Z" });
+    db.prepare("UPDATE licenses SET active = 0 WHERE email = ?").run(email);
+    const res = await trial(email, STRANGER);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: "trial_unavailable" });
+  });
+  it("still returns the same trial to the machine that started it", async () => {
+    const email = nextAddress();
+    const first = (await (await trial(email, OWNER)).json()) as { key: string };
+    const again = (await (await trial(email, OWNER)).json()) as { key: string; already_started: boolean };
+    expect(again).toMatchObject({ key: first.key, already_started: true });
+  });
+});
+
+describe("a person on a bad address", () => {
+  it("gets a page", async () => {
+    const res = await request("/nope", { method: "GET", headers: { Accept: "text/html" } });
+    expect(res.status).toBe(404);
+    expect(await res.text()).toContain("That page is not here");
+  });
+  it("a client still gets JSON", async () => {
+    expect(await (await request("/nope", { method: "GET" })).json()).toEqual({ error: "Not found" });
   });
 });

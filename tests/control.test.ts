@@ -355,6 +355,13 @@ describe("set_app_availability territory semantics", () => {
     expect(out).not.toContain("Nothing was changed");
   });
 
+  it("refuses a territory code Apple does not know, rather than turning the rest off", async () => {
+    const { client, patched } = stubClient(true);
+    const out = await setAppAvailability(client, { app_id: "1", territories: ["USA", "usa"], confirm: true }, "pro");
+    expect(out).toContain("Nothing was changed: usa is not a territory");
+    expect(patched).toHaveLength(0);
+  });
+
   it("does not ask on first setup, when there is nothing to lose", async () => {
     const { client } = stubClient(false);
     const out = await setAppAvailability(client, { app_id: "1", territories: ["USA"] }, "pro");

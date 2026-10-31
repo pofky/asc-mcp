@@ -75,7 +75,7 @@ interface Env {
   // Polar's sandbox instance, for verifying the checkout -> webhook -> email ->
   // validate chain with a test card against this exact deployed code. Temporary
   // by design: DELETE IT once a verification run is finished, so a sandbox
-  // signature can never mint a real licence.
+  // signature can never mint a real license.
   POLAR_WEBHOOK_SECRET_SANDBOX?: string;
   // Extra asc-mcp product ids beyond the two built in, comma-separated. Used to
   // admit the sandbox mirror product during a verification run.
@@ -425,6 +425,15 @@ async function handleRequest(
         return await handleUnsubscribe(request.method, url, env, corsHeaders);
       }
 
+      // A person who followed a bad link gets a page; a client asking for JSON does not.
+      if ((request.headers.get("Accept") ?? "").includes("text/html")) {
+        return html(
+          '<h1>That page is not here</h1><p>The address may have a typo. <a href="/key">Get your license key</a>, or go to <a href="https://asc-mcp.pages.dev/">asc-mcp</a>.</p>',
+          corsHeaders,
+          404,
+          { title: "Page not found", noindex: true },
+        );
+      }
       return json({ error: "Not found" }, corsHeaders, 404);
     } catch (err) {
       console.error("Worker error");
@@ -443,7 +452,7 @@ async function handleValidate(
     body = (await request.json()) as ValidateRequest;
   } catch {
     // Otherwise this falls to the catch-all as a 500, which reads as "our
-    // licence server is down" to anyone debugging their setup.
+    // license server is down" to anyone debugging their setup.
     return json({ valid: false, tier: "free", error: "bad_request" }, headers, 400);
   }
 
@@ -584,7 +593,7 @@ async function handlePolarWebhook(
     const sub = event.data;
     // Lowercased like /trial and /key store and search it. Kept as typed, a
     // subscriber who checked out as "Alice@..." was invisible to both: /key
-    // said they had no licence, and /trial handed them a fresh trial instead of
+    // said they had no license, and /trial handed them a fresh trial instead of
     // their paid key.
     const email = (sub.customer?.email || "").trim().toLowerCase();
     const expiresAt = sub.current_period_end || null;
@@ -673,7 +682,7 @@ async function handlePolarWebhook(
       return json({ ok: true }, headers);
     }
 
-    // Scheduled cancellation: leave the licence usable and let the paid period
+    // Scheduled cancellation: leave the license usable and let the paid period
     // run out. Refresh the expiry if Polar sent one, so it ends exactly when
     // the customer's paid time does.
     //
@@ -805,7 +814,7 @@ function handleGo(
   // An optional prefill, used only to fill the checkout's email field. The
   // redirect target is still the constant checkout link, so this cannot send
   // anyone anywhere else; a malformed value is dropped rather than passed on.
-  // It exists so the licence emails can link through this counted redirect
+  // It exists so the license emails can link through this counted redirect
   // without making a customer retype the address we already have.
   const rawEmail = url.searchParams.get("email");
   const email = isValidEmail(rawEmail ?? undefined) ? (rawEmail as string) : undefined;
@@ -859,7 +868,7 @@ function trialRefused(email: string) {
  * Every trial sends mail through Brevo, whose free tier is 300 a day, and the
  * per-IP limiter lives in one isolate's memory so it does not bind across
  * Cloudflare PoPs. Without a hard cap, a distributed script could exhaust the
- * mail quota, which would take down the licence emails paying customers depend
+ * mail quota, which would take down the license emails paying customers depend
  * on and put the sender domain's reputation at risk. Well above any plausible
  * real day: 30 trials a day would be a very good problem.
  */
@@ -1053,6 +1062,11 @@ async function handleTrial(
     return json(trialRefused(email), headers, 409);
   }
 
+  // The Terms promise one trial per address, and a subscription that has ended is
+  // not a new customer. Both used to get a fresh 7 days from a second Apple account.
+  const earlier = await env.DB.prepare("SELECT id FROM licenses WHERE email = ? LIMIT 1").bind(email).first<{ id: number }>();
+  if (earlier) return json(trialRefused(email), headers, 409);
+
   // Checked only on the path that actually creates a row, so a legitimate
   // repeat caller is never turned away by someone else's abuse.
   if ((await trialsCreatedToday(env)) >= TRIALS_PER_DAY_MAX) {
@@ -1072,8 +1086,8 @@ async function handleTrial(
   const key = generateLicenseKey();
   const expiresAt = trialExpiry(now);
 
-  // OR IGNORE, not ON CONFLICT: either partial unique index (fingerprint or
-  // trial email) can be the one that blocks, and both mean "no second trial".
+  // OR IGNORE, not ON CONFLICT: two calls can race past the checks above, and the
+  // partial unique index on the fingerprint is what settles it.
   await env.DB.prepare(
     `INSERT OR IGNORE INTO licenses
        (key, tier, email, expires_at, active, source, trial_fingerprint, trigger_tool, created_at)
@@ -1285,7 +1299,7 @@ async function handleAdminAnnounce(
   // promises the sender, the reason and the opt-out on every product mail.
   const unsubscribe = await buildUnsubscribeUrl(deleteSecret(env), body.email);
   const footer = marketingFooter(
-    "You are getting this because you have an asc-mcp licence or trial.",
+    "You are getting this because you have an asc-mcp license or trial.",
     unsubscribe,
   );
 
@@ -1398,7 +1412,7 @@ async function sendTrialEmail(
         subject: content.subject,
         htmlContent: content.html,
         // A plain-text alternative, because an HTML-only message scores worse
-        // with spam filters and this one carries a licence key.
+        // with spam filters and this one carries a license key.
         textContent: content.text,
       }),
     });
@@ -1456,9 +1470,9 @@ function handleSuccess(headers: Record<string, string>): Response {
     <p>Your key is being emailed to the address you checked out with. It usually takes a few seconds, so look in spam if it is not there. Nothing yet? Send it again:</p>
     ${EMAIL_FIELD("The email you used at checkout", "Email me my key")}
 
-    <h2>Then what</h2>
+    <h2>Once you have it</h2>
     <p>On Claude for macOS or Windows there is no config file to edit: <a href="https://github.com/pofky/asc-mcp/releases/latest">download the .mcpb bundle</a>, open it, and paste the key into the extension's own License key field.</p>
-    <p>Every other client: put the key in your MCP config as <code>ASC_LICENSE_KEY</code> and restart your agent, or run <code>npx @pofky/asc-mcp init --write</code> and it will do it for you. The next page gives you a complete config block to paste.</p>
+    <p>Every other client: put the key in your MCP config as <code>ASC_LICENSE_KEY</code> and restart your agent, or run <code>npx @pofky/asc-mcp init --write</code> and it will do it for you. The mail has a complete config block to paste.</p>
 
     <p class="muted">Nothing showing after a minute? That is on us, not you. Email <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a> with the address you checked out with and you will get a key back the same day.</p>
   `, headers, 200, { title: "Subscription confirmed", noindex: true });
@@ -1488,7 +1502,7 @@ async function handleKeyLookup(
 
   // `formData()` throws on a JSON body, which fell through to the catch-all and
   // returned 500 "Internal error". The browser form is unaffected, but anything
-  // watching error rates reads it as the licence server being down.
+  // watching error rates reads it as the license server being down.
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -1502,7 +1516,7 @@ async function handleKeyLookup(
   // Normalised the same way /trial and the webhook path store it. SQLite
   // compares TEXT case-sensitively, so "Alice@Example.com" typed into this form
   // found nothing for a row Polar had stored as "alice@example.com", and the
-  // page told a paying customer they had no licence.
+  // page told a paying customer they had no license.
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
 
   if (!email) {
@@ -1522,11 +1536,11 @@ async function handleKeyLookup(
 
   const row = pickLookupRow(candidates.results ?? [], new Date());
 
-  // One answer whether or not this address has a licence, and never the key on
+  // One answer whether or not this address has a license, and never the key on
   // the page: this form used to print any subscriber's key to anyone who typed
   // their address. The mail is the proof of owning it.
   if (row && mayMailKey(email) && !(await sendLicenseEmail(env, email, row.key))) {
-    console.error("key lookup: the licence mail could not be sent");
+    console.error("key lookup: the license mail could not be sent");
     return html(`
       <h1>The email could not be sent</h1>
       <p>Try again in a few minutes. Still stuck? Write to <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a> from the address you subscribed with.</p>
@@ -1535,7 +1549,7 @@ async function handleKeyLookup(
 
   return html(`
     <h1>Check your email</h1>
-    <p>If <strong>${escapeHtml(email)}</strong> has an active licence, the key is on its way from license@brewist.app, with the steps to set it up. It usually takes a few seconds, so look in spam if it is not there.</p>
+    <p>If <strong>${escapeHtml(email)}</strong> has an active license, the key is on its way from license@brewist.app, with the steps to set it up. It usually takes a few seconds, so look in spam if it is not there.</p>
     <p>Nothing after a few minutes? It may be a different address: use the one you checked out with, or write to <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a>.</p>
     <p>Never had one? Pro is ${PRO_PRICE}, and there is a free 7-day trial you start from inside your agent by asking it to run <code>asc_start_trial</code>.</p>
   `, headers, 200, { title: "Check your email", noindex: true });
@@ -1585,14 +1599,14 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>A trial request, sending the email you provided, the one-way fingerprint, and the tool name. This happens only when you call <code>asc_start_trial</code>.</li>
     </ul>
     <p>Separately, when you click a subscribe link from inside your agent, it passes through a redirect on our server that increments a daily counter of the form "3 people clicked the buy link from the submit_for_review tool today". That counter holds a date, a tool name and a number. It records no identifier, no IP address, no user agent, and nothing that could be tied back to you. Your browser's user agent string is read at the moment of the request, and only to tell a crawler apart from a person so that the two are counted separately; it is not stored. A link we email you may carry your address in it as a checkout prefill, so you do not have to retype it; that value is passed to the checkout and is not written to the counter.</p>
-    <p>Our marketing site counts page views the same way. Each page asks our own server to add one to a daily count of the form "12 views of the home page today". The only thing the page puts in that request is the path you are on. It is an ordinary web request, so it also carries what your browser attaches to every request it makes, including your IP address and your user agent; we read the user agent and the browser's prefetch headers at that moment, for the same reason as above, to count a crawler separately from a person. Neither is stored, and neither reaches the counter. What is written down is a date, a page name and a number: no cookie, no local storage, no advertising or device identifier, and no third-party analytics service. The stored count cannot distinguish you from any other visitor, or one of your visits from the next, and there is nothing in it to link back to a licence, a trial or an email address.</p>
+    <p>Our marketing site counts page views the same way. Each page asks our own server to add one to a daily count of the form "12 views of the home page today". The only thing the page puts in that request is the path you are on. It is an ordinary web request, so it also carries what your browser attaches to every request it makes, including your IP address and your user agent; we read the user agent and the browser's prefetch headers at that moment, for the same reason as above, to count a crawler separately from a person. Neither is stored, and neither reaches the counter. What is written down is a date, a page name and a number: no cookie, no local storage, no advertising or device identifier, and no third-party analytics service. The stored count cannot distinguish you from any other visitor, or one of your visits from the next, and there is nothing in it to link back to a license, a trial or an email address.</p>
 
     <h2>What is saved on your own machine</h2>
     <p>None of this is sent to us. It is listed so you know what the software leaves on your disk.</p>
     <ul>
-      <li><code>~/.asc-mcp/license.json</code>: your licence key, in plain text, written when <code>asc_start_trial</code> returns a key: when you start a trial, or on a machine that already fetched its paid key before 31 October 2026. On macOS and Linux it is given owner-only permissions. It is read on startup when no <code>ASC_LICENSE_KEY</code> is set in your client. Delete the file to remove it.</li>
+      <li><code>~/.asc-mcp/license.json</code>: your license key, in plain text, written when <code>asc_start_trial</code> returns a key: when you start a trial, or on a machine that already fetched its paid key before 31 October 2026. On macOS and Linux it is given owner-only permissions. It is read on startup when no <code>ASC_LICENSE_KEY</code> is set in your client. Delete the file to remove it.</li>
       <li><code>~/.asc-mcp/preview.json</code>: one number, how many of the 5 free preview calls to Pro read tools have been used on this machine.</li>
-      <li><code>~/.asc-mcp/last-verdict.json</code>: the result of the last successful Pro licence check and a SHA-256 hash of the key, not the key, so a paid licence keeps working for up to 14 days if our server cannot be reached.</li>
+      <li><code>~/.asc-mcp/last-verdict.json</code>: the result of the last successful Pro license check and a SHA-256 hash of the key, not the key, so a paid license keeps working for up to 14 days if our server cannot be reached.</li>
       <li>Your MCP client configs: the same call adds the key as <code>ASC_LICENSE_KEY</code> to every asc-mcp entry it finds in the Claude Desktop config, <code>~/.claude.json</code> (including per-project entries), <code>.mcp.json</code> in the current folder, and the Cursor, Windsurf and Cline configs. It changes nothing else in those files and does not touch a file that has no asc-mcp entry. The first time it edits a file it leaves a copy of the original beside it, named with <code>.bak</code>. That copy holds whatever the file held, including settings for your other servers.</li>
     </ul>
     <p>Deleting your record at <a href="/delete">/delete</a> removes it from our database. It cannot reach your machine: remove the file and the <code>ASC_LICENSE_KEY</code> lines yourself.</p>
@@ -1608,7 +1622,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <p>License data is stored on Cloudflare D1 (EU region). Cloudflare acts as our infrastructure provider under their <a href="https://www.cloudflare.com/cloudflare-customer-dpa/">Data Processing Agreement</a>.</p>
 
     <h2>Email delivery</h2>
-    <p>Licence keys, a reminder shortly before a trial ends and one note shortly after it, deletion confirmation links and the occasional product notice are sent through <a href="https://www.brevo.com/">Brevo</a>, a French email provider acting as our processor under their data processing agreement. They receive your email address and the message, and they keep their own delivery records for it.</p>
+    <p>License keys, a reminder shortly before a trial ends and one note shortly after it, deletion confirmation links and the occasional product notice are sent through <a href="https://www.brevo.com/">Brevo</a>, a French email provider acting as our processor under their data processing agreement. They receive your email address and the message, and they keep their own delivery records for it.</p>
 
     <h2>Payment processing</h2>
     <p>Payments are handled by <a href="https://polar.sh">Polar.sh</a>, who acts as Merchant of Record. We never see your credit card details. Polar's privacy policy applies to the checkout process.</p>
@@ -1623,11 +1637,11 @@ function handlePrivacy(headers: Record<string, string>): Response {
 
     <h2>Why we are allowed to hold it</h2>
     <ul>
-      <li>Your email, licence key and subscription id, for a paid subscription: performance of the contract you entered into when you subscribed (GDPR Article 6(1)(b)). We cannot deliver or validate a licence without them.</li>
-      <li>Your email and licence key, for a free trial: taking steps at your request before entering a contract (Article 6(1)(b)).</li>
-      <li>The one-way Issuer ID fingerprint: our legitimate interest in not giving the same person an unlimited number of free trials, and in honouring a key request a machine made before 31 October 2026 (Article 6(1)(f)). We considered doing this with the email alone and rejected it, because that would let anyone burn a stranger's trial by typing their address.</li>
+      <li>Your email, license key and subscription id, for a paid subscription: performance of the contract you entered into when you subscribed (GDPR Article 6(1)(b)). We cannot deliver or validate a license without them.</li>
+      <li>Your email and license key, for a free trial: taking steps at your request before entering a contract (Article 6(1)(b)).</li>
+      <li>The one-way Issuer ID fingerprint: our legitimate interest in not giving the same person an unlimited number of free trials, and in honouring a key request a machine made before 31 October 2026 (Article 6(1)(f)). The address is checked as well, because the Terms allow one trial per address. We do not rely on it alone, because that would let anyone burn a stranger's trial by typing their address.</li>
       <li>The user agent, prefetch headers and IP address that reach our server while a page view or a buy-link click is being counted: our legitimate interest in knowing how many real people arrive, and in keeping automated traffic out of a payment funnel (Article 6(1)(f)). None of it is stored, and what is stored is a count that identifies nobody.</li>
-      <li>An email to someone who has started a trial or held a subscription, about that product: our legitimate interest in asking a small number of our own users what they thought and whether they want to continue (Article 6(1)(f)). For a trial that is two automated messages, one shortly before it ends and one shortly after, and occasionally one personal note from the developer. Every such message names us, says why you are receiving it and carries a free opt-out, and you can object at any time under Article 21(2) by using the unsubscribe link where the message has one, by replying with the word stop, or by writing to the address below. The link takes effect immediately. A reply is read and acted on by hand, normally within two working days, and a message already scheduled inside that time may still arrive. After that we will not email you about the product again. The emails a licence needs in order to work, the key itself and a deletion confirmation link, are not affected.</li>
+      <li>An email to someone who has started a trial or held a subscription, about that product: our legitimate interest in asking a small number of our own users what they thought and whether they want to continue (Article 6(1)(f)). For a trial that is two automated messages, one shortly before it ends and one shortly after, and occasionally one personal note from the developer. Every such message names us, says why you are receiving it and carries a free opt-out, and you can object at any time under Article 21(2) by using the unsubscribe link where the message has one, by replying with the word stop, or by writing to the address below. The link takes effect immediately. A reply is read and acted on by hand, normally within two working days, and a message already scheduled inside that time may still arrive. After that we will not email you about the product again. The emails a license needs in order to work, the key itself and a deletion confirmation link, are not affected.</li>
       <li>The time you opted out of product email: our legitimate interest, and yours, in keeping that instruction (Article 6(1)(f)).</li>
       <li>The name of the tool you started a trial from: our legitimate interest in knowing which features lead people to try the product (Article 6(1)(f)).</li>
     </ul>
@@ -1729,7 +1743,7 @@ function deleteSecret(env: Env): string | null {
  * Step one of deletion: email a signed, expiring confirmation link.
  *
  * This used to delete on a bare unauthenticated form post, which meant anyone
- * who knew a customer's address could revoke that customer's licence and leave
+ * who knew a customer's address could revoke that customer's license and leave
  * them broken until their next renewal webhook rebuilt the row. It also erased
  * the trial fingerprint, handing out a second free trial.
  *
@@ -1764,7 +1778,7 @@ async function handleDeleteRequest(
   const sameAnswer = html(`
     <h1>Check your email</h1>
     <p>If <strong>${escapeHtml(email)}</strong> has data here, a confirmation link is on its way. It is valid for one hour.</p>
-    <p>Deleting is not reversible, so the link is the confirmation step: nobody can remove your licence by typing your address into this form.</p>
+    <p>Deleting is not reversible, so the link is the confirmation step: nobody can remove your license by typing your address into this form.</p>
   `, headers, 200, { title: "Check your email", noindex: true });
 
   const secret = deleteSecret(env);
@@ -1814,9 +1828,9 @@ async function handleDeleteRequest(
       htmlContent: `
         <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
           <h1 style="font-size:20px">Confirm deletion</h1>
-          <p>Someone asked to delete the asc-mcp licence data for this address. If that was you, confirm here:</p>
+          <p>Someone asked to delete the asc-mcp license data for this address. If that was you, confirm here:</p>
           <p><a href="${link}">Delete my data</a></p>
-          <p>The link expires in one hour. Your licence key stops working the moment you confirm, and if you have an active subscription you should cancel it separately at polar.sh.</p>
+          <p>The link expires in one hour. Your license key stops working the moment you confirm, and if you have an active subscription you should cancel it separately at polar.sh.</p>
           <p style="color:#666;font-size:14px">If this was not you, ignore this email. Nothing has been deleted, and nobody can delete your data without this link.</p>
         </div>`,
     }),
@@ -1892,7 +1906,7 @@ async function handleUnsubscribe(
     const action = `/unsubscribe?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
     return html(
       `<h1>Stop asc-mcp emails?</h1>
-    <p>This stops reminders and product notes to <strong>${escapeHtml(email)}</strong>. Your licence keeps working, and you would still get a key or a deletion link if you ask for one.</p>
+    <p>This stops reminders and product notes to <strong>${escapeHtml(email)}</strong>. Your license keeps working, and you would still get a key or a deletion link if you ask for one.</p>
     <form method="POST" action="${escapeHtml(action)}"><button type="submit">Yes, stop emailing me</button></form>`,
       headers,
       200,
@@ -1907,7 +1921,7 @@ async function handleUnsubscribe(
     .run();
 
   return html(
-    `<h1>Done</h1><p>No more reminders or product notes will go to <strong>${escapeHtml(email)}</strong>. Your licence is untouched.</p>`,
+    `<h1>Done</h1><p>No more reminders or product notes will go to <strong>${escapeHtml(email)}</strong>. Your license is untouched.</p>`,
     headers,
     200,
     page,
@@ -1950,7 +1964,7 @@ function html(
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230E1116'/%3E%3Cpath d='M8 21l4.6-11h1.9L19 21h-2.2l-1-2.6h-4.6L10.2 21H8zm4-4.4h3.2l-1.6-4.3-1.6 4.3z' fill='%23F0A828'/%3E%3Ccircle cx='24' cy='11' r='2.5' fill='%233DC48F'/%3E%3C/svg%3E">${
     opts.canonical ? `\n<link rel="canonical" href="${opts.canonical}">` : ""
   }${opts.head ?? ""}
-<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:17px;max-width:600px;margin:40px auto;padding:0 16px;background:#0e1116;color:#e7ecf2;line-height:1.65;-webkit-font-smoothing:antialiased}
+<style>*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:17px;max-width:600px;margin:40px auto;padding:0 16px;background:#0e1116;color:#e7ecf2;line-height:1.65;-webkit-font-smoothing:antialiased}
 a{color:#e7ecf2;text-decoration-color:#f0a828;text-underline-offset:3px}a:focus-visible{outline:2px solid #f0a828;outline-offset:3px}
 h1{color:#e7ecf2;line-height:1.2;font-size:1.7rem}h2{color:#e7ecf2;font-size:1.05rem;margin-top:28px}
 code,pre{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;overflow-wrap:anywhere}pre{color:#95a1b0;overflow-wrap:normal}
@@ -1958,9 +1972,9 @@ label{display:block;margin-bottom:6px;color:#95a1b0;font-size:14px}
 input:focus-visible,button:focus-visible{outline:2px solid #f0a828;outline-offset:2px}
 button{min-height:44px;padding:10px 20px;font-size:16px;font-weight:600;background:#f0a828;color:#0e1116;border:0;border-radius:8px;cursor:pointer}input{min-height:44px}
 .muted{color:#95a1b0;font-size:14px}.muted a{display:inline-block;padding:12px 2px}</style></head><body>${body}
-<p class="muted" style="margin-top:40px">&larr; <a href="https://asc-mcp.pages.dev/">asc-mcp</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="mailto:povkonop@gmail.com">povkonop@gmail.com</a></p>
+<p class="muted" style="margin-top:40px;display:flex;flex-wrap:wrap;gap:0 16px"><a href="https://asc-mcp.pages.dev/">asc-mcp</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:povkonop@gmail.com">povkonop@gmail.com</a></p>
 </body></html>`;
-  // These pages take an email address and hand back a licence key, so they get
+  // These pages take an email address and hand back a license key, so they get
   // the same baseline the landing page has had all along. The style is inline,
   // which is why style-src allows it; nothing else loads, and nothing here may
   // be framed.

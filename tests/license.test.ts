@@ -87,7 +87,7 @@ describe("license key placeholder from an .mcpb install", () => {
 });
 
 /**
- * A licence-server outage must not demote a paying customer.
+ * A license-server outage must not demote a paying customer.
  *
  * Validation used to return "free" on any non-ok response and on any network
  * error, and the only cache was in memory, so every new session during an
@@ -175,7 +175,7 @@ describe("a key with stray whitespace around it", () => {
   });
 });
 
-describe("when the licence server gives no answer", () => {
+describe("when the license server gives no answer", () => {
   const realHome = process.env.HOME;
   beforeEach(() => {
     clearLicenseCache();

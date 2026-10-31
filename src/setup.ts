@@ -202,7 +202,7 @@ export function writeServerBlock(path: string, env: Record<string, string>): str
   //
   // Replacing the block wholesale meant a paying customer who re-ran
   // `init --write` to correct their Issuer ID, and pressed Enter at the
-  // optional licence-key prompt, silently lost ASC_LICENSE_KEY and dropped to
+  // optional license-key prompt, silently lost ASC_LICENSE_KEY and dropped to
   // the free tier with no message saying so. Anything the user typed this time
   // wins; anything they did not is left alone.
   const previous = (servers["appstore-connect"] as { env?: Record<string, string> } | undefined)?.env;
@@ -251,7 +251,7 @@ export function injectLicenseKey(
     for (const block of serverMaps(parsed).flatMap((servers) => Object.values(servers))) {
       if (!block || typeof block !== "object") continue;
       // Match the command exactly, or as the final path segment. A substring
-      // test wrote the licence key into any unrelated server whose binary path
+      // test wrote the license key into any unrelated server whose binary path
       // merely contained "asc-mcp" (a wrapper, a proxy, a local checkout),
       // handing a paid key to a process that has no business holding it.
       if (!launchesThisServer(block)) continue;

@@ -103,6 +103,8 @@ export async function setAgeRating(
   // declaration has to be read off the editable record or the PATCH 409s.
   const { infos, included } = await fetchAppInfos(client, args.app_id, {
     include: "ageRatingDeclaration",
+    // The default field list leaves relationships out, and the id is on one.
+    "fields[appInfos]": "appStoreState,state,ageRatingDeclaration",
   });
   const appInfo = pickEditableAppInfo(infos);
   if (!appInfo) return noEditableAppInfoMessage(infos, "the age rating");

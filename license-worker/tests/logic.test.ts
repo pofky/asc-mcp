@@ -1,5 +1,5 @@
 /**
- * Regression tests for the licence worker's decision logic.
+ * Regression tests for the license worker's decision logic.
  *
  * Every rule in logic.ts is annotated with the incident that produced it, and
  * until now none of them had a test: the worker shipped with no test suite at

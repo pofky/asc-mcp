@@ -118,7 +118,7 @@ describe("the free preview of Pro read tools", () => {
   });
 
   for (const reason of ["trial_expired", "revoked", "canceled"]) {
-    it(`gives no preview to someone the licence server reports as ${reason}`, async () => {
+    it(`gives no preview to someone the license server reports as ${reason}`, async () => {
       const home = freshHome();
       vi.spyOn(globalThis, "fetch").mockResolvedValue(
         new Response(JSON.stringify({ valid: false, tier: "free", reason }), { status: 200 }),
@@ -130,7 +130,7 @@ describe("the free preview of Pro read tools", () => {
   }
 
   /**
-   * A subscriber on a machine that has never validated, while our licence
+   * A subscriber on a machine that has never validated, while our license
    * server is down: tier falls back to free, but this is not a free user.
    */
   it("gives no preview, and names no price, to a key that could not be checked", () => {
@@ -230,7 +230,7 @@ describe("the preview as a client sees it", () => {
     return repo;
   }
 
-  async function releaseNotesReplies(calls: number, licence: "none" | "pro"): Promise<{ replies: string[]; home: string }> {
+  async function releaseNotesReplies(calls: number, license: "none" | "pro"): Promise<{ replies: string[]; home: string }> {
     server = createServer((req, res) => {
       req.on("data", () => {});
       req.on("end", () => {
@@ -250,7 +250,7 @@ describe("the preview as a client sees it", () => {
         ASC_KEY_ID: "x",
         ASC_ISSUER_ID: "x",
         ASC_PRIVATE_KEY_PATH: "/dev/null",
-        ASC_LICENSE_KEY: licence === "pro" ? "ASC-PAID" : undefined,
+        ASC_LICENSE_KEY: license === "pro" ? "ASC-PAID" : undefined,
         ASC_INSTALL: undefined,
         ASC_LICENSE_API_URL: `http://127.0.0.1:${port}`,
       },

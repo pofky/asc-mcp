@@ -215,7 +215,7 @@ export async function runDoctor(): Promise<DoctorReport> {
         });
       }
     } else {
-      // The licence server says WHY, and the reasons want different answers. A
+      // The license server says WHY, and the reasons want different answers. A
       // finished trial is not a broken key, and sending that person to look up
       // a key that is working exactly as designed both wastes their time and
       // hides the one thing they need at that moment, which is the price and
@@ -239,14 +239,14 @@ export async function runDoctor(): Promise<DoctorReport> {
         revoked: {
           detail:
             "This subscription is no longer active. The usual cause is a renewal payment that did not go through.",
-          fix: `Start it again at ${UPGRADE_URL}; you get a new key by email in seconds and swap it into the same ASC_LICENSE_KEY line. If you believe this is wrong, reply to your licence email and a person will look.`,
+          fix: `Start it again at ${UPGRADE_URL}; you get a new key by email in seconds and swap it into the same ASC_LICENSE_KEY line. If you believe this is wrong, reply to your license email and a person will look.`,
         },
         inactive: {
           detail: "This subscription is not active right now, so the Pro tools are locked.",
           fix: `Check the card on file, or start again at ${UPGRADE_URL}. Already resubscribed? Retrieve the current key at ${LICENSE_API_URL}/key.`,
         },
         expired: {
-          detail: "This licence has expired.",
+          detail: "This license has expired.",
           fix: `Renew at ${UPGRADE_URL}, or retrieve your current key at ${LICENSE_API_URL}/key.`,
         },
       };
@@ -266,9 +266,7 @@ export async function runDoctor(): Promise<DoctorReport> {
         detail: known?.detail ?? "A license key is set but did not validate as Pro.",
         fix:
           known?.fix ??
-          `Check the key (retrieve it at ${LICENSE_API_URL}/key). ` +
-            "If the key is right, the license server may be unreachable: validation falls back to " +
-            "the free tier on a network error, so retry once you are online.",
+          `Check the key, or have it emailed again at ${LICENSE_API_URL}/key.`,
       });
     }
   }

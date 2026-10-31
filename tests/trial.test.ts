@@ -84,7 +84,7 @@ describe("renewal grace applies to subscriptions, never to trials", () => {
   const twoDaysLater = new Date("2026-08-03T00:00:00.000Z");
   const sixDaysLater = new Date("2026-08-07T00:00:00.000Z");
 
-  it("keeps a paid licence alive inside the grace window", () => {
+  it("keeps a paid license alive inside the grace window", () => {
     const v = isLicenseUsable({ expires_at: expired, active: 1, source: "polar" }, twoDaysLater);
     expect(v.usable).toBe(true);
     expect(v.grace).toBe(true);
@@ -102,7 +102,7 @@ describe("renewal grace applies to subscriptions, never to trials", () => {
     expect(v.grace).toBeUndefined();
   });
 
-  it("still ends a paid licence once grace runs out", () => {
+  it("still ends a paid license once grace runs out", () => {
     expect(isLicenseUsable({ expires_at: expired, active: 1, source: "polar" }, sixDaysLater).usable).toBe(false);
     expect(GRACE_DAYS).toBe(4);
   });
@@ -253,7 +253,7 @@ describe("requestTrial sends a digest, never the issuer id", () => {
     }
   });
 
-  it("never throws when the licence server is unreachable", async () => {
+  it("never throws when the license server is unreachable", async () => {
     globalThis.fetch = (async () => {
       throw new Error("ECONNREFUSED");
     }) as never;
@@ -276,7 +276,7 @@ describe("the gate message", () => {
     expect(msg).toContain("Submitting for review requires Pro");
     expect(msg.indexOf("$9/month")).toBeLessThan(msg.indexOf("asc_start_trial"));
     expect(msg).toContain("/go?tool=submit_for_review");
-    // The direct link survives a licence-server outage.
+    // The direct link survives a license-server outage.
     expect(msg).toContain(CHECKOUT_URL);
   });
 
@@ -366,7 +366,7 @@ describe("the deletion confirmation link", () => {
   });
 
   /**
-   * The whole point: /delete used to remove a paying customer's licence on a
+   * The whole point: /delete used to remove a paying customer's license on a
    * bare form post, so anyone who knew their address could revoke their access.
    */
   it("cannot be forged without the secret", async () => {
@@ -496,7 +496,7 @@ describe("injectLicenseKey only touches blocks that really are this server", () 
   }
 
   /**
-   * A substring test on the command wrote the paid licence key into any server
+   * A substring test on the command wrote the paid license key into any server
    * whose binary path merely contained "asc-mcp": a wrapper, a proxy, a local
    * checkout. That hands a paid key to a process with no claim to it.
    */
@@ -554,7 +554,7 @@ describe("init --write never costs a paying customer their key", () => {
   /**
    * writeServerBlock replaced the whole env block. A subscriber who re-ran
    * `init --write` to correct their Issuer ID, and pressed Enter at the
-   * optional licence prompt, silently lost ASC_LICENSE_KEY and dropped to the
+   * optional license prompt, silently lost ASC_LICENSE_KEY and dropped to the
    * free tier with nothing telling them why.
    */
   it("keeps env vars this run did not ask about", () => {

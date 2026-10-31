@@ -94,11 +94,11 @@ describe("isLicenseUsable", () => {
     expect(isLicenseUsable({ expires_at: future, active: 1 }, now)).toEqual({ usable: true });
   });
 
-  it("validates a licence with no expiry set", () => {
+  it("validates a license with no expiry set", () => {
     expect(isLicenseUsable({ expires_at: null, active: 1 }, now)).toEqual({ usable: true });
   });
 
-  it("keeps a just-expired licence usable through the grace window, flagged", () => {
+  it("keeps a just-expired license usable through the grace window, flagged", () => {
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
     expect(isLicenseUsable({ expires_at: yesterday, active: 1 }, now)).toEqual({
       usable: true,
@@ -118,7 +118,7 @@ describe("isLicenseUsable", () => {
   // path writes it for any lapsed period, including a renewal that is merely
   // late, so revocation is now identified by `revoked_at`, which only the
   // revoke path stamps and nothing clears.
-  it("never validates a revoked licence, even inside the grace window", () => {
+  it("never validates a revoked license, even inside the grace window", () => {
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
     expect(
       isLicenseUsable({ expires_at: yesterday, active: 0, revoked_at: "2026-08-01" }, now),
@@ -174,7 +174,7 @@ describe("webhookSecrets", () => {
 
 /**
  * The signature check is the single point where a paying customer either gets a
- * licence key or silently gets nothing, and it has already broken once over the
+ * license key or silently gets nothing, and it has already broken once over the
  * exact byte derivation of the HMAC key. A dashboard secret is `polar_whs_...`
  * and keys off the raw UTF-8 of the whole string; an API-minted one is
  * `whsec_<base64>` and keys off the decoded remainder. Both must verify.
@@ -252,7 +252,7 @@ describe("verifyPolarSignature", () => {
 /**
  * Polar fans every event out to EVERY webhook endpoint in the organization, so
  * an endpoint in a shared org sees the other products' sales. That has already
- * minted stray licences plus welcome emails in a sibling project on this
+ * minted stray licenses plus welcome emails in a sibling project on this
  * account, so a subscription for someone else's product must never provision
  * asc-mcp Pro.
  */
@@ -296,7 +296,7 @@ describe("isOwnProduct", () => {
  * Polar's own cancellation emits `subscription.canceled` and
  * `subscription.revoked` back to back (observed in the sandbox, 2026-08-02), and
  * activation events are retried. So the status alone cannot decide the flag: a
- * late `updated` would resurrect a licence that `revoked` had just switched off.
+ * late `updated` would resurrect a license that `revoked` had just switched off.
  */
 describe("shouldBeActive", () => {
   const now = new Date("2026-08-02T12:00:00Z");
@@ -312,7 +312,7 @@ describe("shouldBeActive", () => {
     expect(shouldBeActive("canceled", future, now)).toBe(1);
   });
 
-  it("never resurrects a licence once the paid period is over", () => {
+  it("never resurrects a license once the paid period is over", () => {
     expect(shouldBeActive("active", past, now)).toBe(0);
     expect(shouldBeActive("canceled", past, now)).toBe(0);
   });

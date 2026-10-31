@@ -147,6 +147,17 @@ describe("each failing rule clears with the fix the report names", () => {
     info.included.find((x) => x.type === "ageRatingDeclarations")!.attributes = {};
     await loop(apple, "app.age", (c) => setAgeRating(c, { app_id: APP, declarations: { violenceCartoonOrFantasy: "NONE" } }, "pro"));
   });
+  it("app.age asks Apple for the relationship it needs, which the default field list leaves out", async () => {
+    const info = apple.routes.get(`/v1/apps/${APP}/appInfos`)!({}) as { data: Array<Record<string, unknown>>; included: unknown[] };
+    const relationships = info.data[0].relationships;
+    apple.routes.set(`/v1/apps/${APP}/appInfos`, (params) => ({
+      ...info,
+      data: [{ ...info.data[0], relationships: String(params["fields[appInfos]"] ?? "").includes("ageRatingDeclaration") || !params["fields[appInfos]"] ? relationships : {} }],
+    }));
+    const { client, writes } = stateful(apple);
+    await setAgeRating(client, { app_id: APP, declarations: { violenceCartoonOrFantasy: "NONE" } }, "pro");
+    expect(writes.map((w) => w.path)).toEqual(["/v1/ageRatingDeclarations/age1"]);
+  });
   it("review.contact, when no detail exists yet", async () => {
     apple.fail(`/v1/appStoreVersions/${VERSION}/appStoreReviewDetail`, 404);
     await loop(apple, "review.contact", (c) => setReviewContact(c, { app_id: APP, first_name: "A", last_name: "B", phone: "+1", email: "a@test.invalid" }, "pro"));

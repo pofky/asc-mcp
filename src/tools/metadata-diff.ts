@@ -126,7 +126,7 @@ export async function metadataDiff(
   const newerVersion = pendingVersion || versions[0];
 
   if (olderVersion.id === newerVersion.id) {
-    return "Could not find two distinct versions to compare. Only one active version exists.";
+    return "This app has only one version, so there is nothing to compare yet.";
   }
 
   let result = `## Metadata Diff\n\n`;

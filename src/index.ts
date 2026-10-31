@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { ASCClient } from "./client.js";
-import { validateLicense, clearLicenseCache, lastLicenseStatus, saveLicenseKey, savedLicenseKey, savedLicenseKeyPath } from "./license.js";
+import { LICENSE_API_URL, validateLicense, clearLicenseCache, lastLicenseStatus, saveLicenseKey, savedLicenseKey, savedLicenseKeyPath } from "./license.js";
 import { requestTrial } from "./trial.js";
 import { registerPrompts } from "./prompts.js";
 import { installSkill, uninstallSkill } from "./skill-installer.js";
@@ -212,7 +212,9 @@ async function main() {
     const unchecked = Boolean(process.env.ASC_LICENSE_KEY) && after === null;
     console.error(
       unchecked
-        ? `asc-mcp ${SERVER_VERSION}: A license key is set and the license server gave no answer, so Pro tools are locked for now. Restart to retry.`
+        ? `asc-mcp ${SERVER_VERSION}: A license key is set and the license server gave no answer, so Pro tools are locked for now. It asks again on your next tool call.`
+        : after && !after.valid && !ended && process.env.ASC_LICENSE_KEY
+          ? `asc-mcp ${SERVER_VERSION}: Free tier. This license key was not recognized: have it emailed again at ${LICENSE_API_URL}/key.`
         : ended
           ? `asc-mcp ${SERVER_VERSION}: Free tier, this license has ended. Pro is ${PRO_PRICE}: ${UPGRADE_URL}`
           : `asc-mcp ${SERVER_VERSION}: Free tier. Call asc_start_trial for 7 days of Pro, no card. Or subscribe at ${UPGRADE_URL}`,
@@ -237,6 +239,25 @@ async function main() {
 
   const tool = annotated(server);
 
+  /**
+   * `tier` was decided once, at startup. A key that got no answer then stayed on
+   * the free path for the whole session after the server came back: a subscriber
+   * was counted down free calls and offered a trial. So a key with no verdict asks
+   * again, at most this often, and any verdict reached since startup is adopted.
+   */
+  const LICENSE_RETRY_MS = 30_000;
+  let lastLicenseRetry = 0;
+  async function refreshTier(): Promise<void> {
+    const key = process.env.ASC_LICENSE_KEY;
+    if (tier === "pro" || !key) return;
+    if (lastLicenseStatus() === null && Date.now() - lastLicenseRetry >= LICENSE_RETRY_MS) {
+      lastLicenseRetry = Date.now();
+      tier = await validateLicense(key);
+    } else if (lastLicenseStatus()?.valid && lastLicenseStatus()?.tier === "pro") {
+      tier = "pro";
+    }
+  }
+
   /** Wrap a tool handler so API errors return messages instead of crashing. */
   function safe(fn: (...a: any[]) => Promise<string>) {
     // Each call runs in its own preview scope, so a preview the gate grants
@@ -244,6 +265,7 @@ async function main() {
     return (...a: any[]) =>
       previewScope.run({ grant: null }, async () => {
         try {
+          await refreshTier();
           const body = await fn(...a);
           // Only ever non-null for a free-tier call the gate let through as a
           // preview. A Pro reply is returned exactly as the tool produced it.

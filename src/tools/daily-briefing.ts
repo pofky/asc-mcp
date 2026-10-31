@@ -48,7 +48,7 @@ export async function dailyBriefing(
   const gate = requirePro(tier, "Daily briefing", "daily_briefing");
   if (gate) return gate;
 
-  if (args.days !== undefined && !(args.days >= 1)) return "Error: days must be 1 or more.";
+  if (args.days !== undefined && !(args.days >= 1 && args.days <= 90)) return "Error: days must be between 1 and 90.";
   const lookbackDays = args.days ?? 3;
   const now = new Date();
   const today = now.toISOString().split("T")[0];
@@ -110,7 +110,9 @@ export async function dailyBriefing(
         );
         if (inReview.length > 0) {
           for (const v of inReview) {
-            result += `- **Action needed**: v${v.attributes.versionString} is ${formatState(v.attributes.appStoreState)}\n`;
+            result += v.attributes.appStoreState === "PENDING_DEVELOPER_RELEASE"
+              ? `- **Action needed**: v${v.attributes.versionString} is approved and waiting for you. release_version puts it on the store.\n`
+              : `- **With Apple**: v${v.attributes.versionString} is ${formatState(v.attributes.appStoreState)}. Nothing for you to do.\n`;
           }
         }
 
@@ -122,8 +124,11 @@ export async function dailyBriefing(
         );
         if (rejected.length > 0) {
           for (const v of rejected) {
-            result += `- **REJECTED**: v${v.attributes.versionString} - check App Store Connect for details\n`;
+            result += `- **Action needed**: v${v.attributes.versionString} was rejected. Read the reasons in App Store Connect, because Apple's API does not give them.\n`;
           }
+        }
+        for (const v of versions.filter((x) => x.attributes.appStoreState === "DEVELOPER_REJECTED")) {
+          result += `- v${v.attributes.versionString} is withdrawn from review. submit_for_review sends it again when it is ready.\n`;
         }
       }
     } catch {

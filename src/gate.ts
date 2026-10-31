@@ -8,7 +8,7 @@ import { isReadTool } from "./tool-meta.js";
 
 /**
  * The direct Polar checkout link. Kept in the package even though the normal
- * path is the counted redirect below, so a licence-server outage costs us
+ * path is the counted redirect below, so a license-server outage costs us
  * attribution rather than the sale. Moving the product to a different Polar
  * organization changes it, and the old link keeps working, so a missed copy
  * silently sells into the wrong org: `scripts/set-checkout-url.mjs` rewrites
@@ -40,7 +40,7 @@ export const UPGRADE_URL = upgradeUrl();
 export const PRO_PRICE = "$9/month (VAT included; in the US, Canada and India sales tax is added at checkout)";
 
 /**
- * How many Pro calls work on this machine with no licence, as a preview.
+ * How many Pro calls work on this machine with no license, as a preview.
  *
  * Until 1.9.14 the gate came down on the second useful call: reviews, sales and
  * build status were all locked, so nobody on the free tier saw the product do
@@ -52,7 +52,7 @@ export const PREVIEW_CALLS = 5;
 
 /**
  * Pro tools that read but are not part of the preview. The first two work
- * through the client's own model (MCP sampling) and report a missing licence
+ * through the client's own model (MCP sampling) and report a missing license
  * inside a structured result rather than by returning the gate. The next two
  * return Apple's manual steps for a submission; they show nothing of the
  * product, and spending a preview call on a checklist would be a poor trade.
@@ -156,7 +156,7 @@ export function requirePro(
 
   // Someone whose trial has already run out must not be told to start one. They
   // would call asc_start_trial, be refused, and reasonably conclude the thing is
-  // broken. `reason` comes from the licence server's last verdict on their key.
+  // broken. `reason` comes from the license server's last verdict on their key.
   const spent = lastLicenseStatus()?.reason === "trial_expired";
 
   // A former subscriber must not be offered a free trial either. Someone whose
@@ -213,7 +213,7 @@ export function requirePro(
 /**
  * The last line of the gate message.
  *
- * A key that is set but never validated means the licence server could not be
+ * A key that is set but never validated means the license server could not be
  * reached, and validation fails open to the free tier. Telling that person to
  * "set ASC_LICENSE_KEY" sends a paying customer to check a config that is
  * already correct, during an outage that is ours.
