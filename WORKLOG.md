@@ -1,6 +1,11 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**1.10.2: the product explained in plain words on the site, README and listings (2026-10-31).**
+
+The operator liked a first-grader explanation and asked for it wherever the product is distributed. Review caught two
+overclaims before release: reviews read as free, and "stops and asks" as covering a first price. Both reworded.
+
 **1.10.1 live: a flow audit after 1.10.0 found a key disclosure and client bugs, all fixed (2026-10-31).**
 
 Two independent testers and a stateful fix-loop test. `/key` and `/trial` gave any subscriber's key to anyone

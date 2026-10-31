@@ -4,8 +4,10 @@ Updated 2026-10-31. Branch `master`.
 
 ## Where things stand
 
+**31 October, last: v1.10.2 says what the product does in plain words.** No tool changed. Landing section `#plain`, README, llms.txt, JSON-LD FAQ, npm, registry, plugin and bundle descriptions, GitHub repo description. Paste-ready listing copy for directories I cannot edit: `launch/plain-explainer-long.txt`, `launch/plain-explainer-short.txt`, `launch/glama-description.txt`. PRD `tasks/0003-prd-plain-words-explainer.md`, flow F7. Legal, SEO+CRO+AEO, slop and completeness PASS. Live claims rule: reviews are Pro, and "stops and asks" means changing a price, not a first price.
+
 **31 October, later: a flow audit after 1.10.0 found real bugs. All fixed and live as 1.10.1:
-npm `latest`, tag `v1.10.1`, GitHub release with `.mcpb`, MCP registry, plugin pin, site `bb5762e6`,
+tag `v1.10.1`, GitHub release with `.mcpb`, MCP registry at the time, site `bb5762e6` then,
 worker `da0c4ecc`.**
 
 - **Driven on the published package as a free user, clean HOME, Apple writes guarded:** 41 tools,
