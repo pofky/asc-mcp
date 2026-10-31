@@ -658,7 +658,7 @@ try {
   fetch(
     'https://asc-mcp-license.remewdy.workers.dev/b?p=' + encodeURIComponent(location.pathname),
     { mode: 'no-cors', keepalive: true, cache: 'no-store' }
-  );
+  ).catch(function () { /* blocked or offline: nothing to report */ });
 } catch (e) { /* a counter must never be able to break the page */ }
 </script>
 </body>
