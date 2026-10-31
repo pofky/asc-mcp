@@ -164,7 +164,7 @@ These tools write to App Store Connect. Every outward-facing action (submit, rel
 
 The whole flow chains: `setup_app_store_signing` to `build_and_archive` to `upload_binary` to `wait_for_build` (blocks until VALID) to `attach_build` to `update_version_metadata` to `upload_screenshots` to `set_app_metadata`/`set_app_price`/`set_app_availability`/`set_age_rating`/`set_review_contact` to `release_preflight` to `submit_for_review` to `release_version`. The `/asc-ship-release` slash command drives it for you.
 
-`release_preflight` is the single source of truth for "is this submittable": it checks every API-addressable field and ends with a tailored "Manual steps to finish" list for the few things Apple only allows in the website (first-IAP bundling, App Privacy nutrition labels, EU trader status).
+`release_preflight` is the check to run before you submit: it reads every API-addressable field, loads the support, privacy and terms links in the record, and with `project_path` checks privacy manifests, required-reason APIs, listed SDKs and purpose strings on your machine. Every rule ends in PASS, WARN, FAIL or UNKNOWN, and any UNKNOWN withholds the clean verdict, so a check that could not run never reads as a pass. It ends with the manual steps for the few things Apple only allows in the website (first-IAP bundling, App Privacy nutrition labels, EU trader status). It is not a prediction of App Review's decision.
 
 [Get Pro](https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj) | [Retrieve your license key](https://asc-mcp-license.remewdy.workers.dev/key)
 
@@ -173,7 +173,7 @@ The whole flow chains: `setup_app_store_signing` to `build_and_archive` to `uplo
 A handful of things Apple does not expose to API keys. The MCP never pretends otherwise: it either returns the exact website steps plus a deep link, or detects the case and aborts so nothing is half-done. Full detail in [LIMITATIONS.md](LIMITATIONS.md) (and `asc_guide topic:limitations`):
 
 - **Create an app record / App Group.** `POST /v1/apps` is forbidden for API keys; do it once in the website.
-- **App Privacy nutrition label.** Not in the API. `set_privacy_nutrition` returns the checklist plus a deep link.
+- **App Privacy nutrition label.** Not in the API (`/v1/appDataUsages` still 404s, re-probed 2026-10-31). `set_privacy_nutrition` returns the checklist plus a deep link, and `release_preflight` with `project_path` lists the data types your manifests declare to check it against.
 - **EU DSA trader status.** Not in the API. `set_eu_trader_status` returns the steps. Legal decision.
 - **An app's first IAPs/subscriptions.** Must be submitted with the version in the website; `submit_for_review` aborts rather than orphan the version. Later products submit via the API.
 - **Certificate creation / cloud signing.** Least-privilege keys can't; `setup_app_store_signing` uses manual-signing profiles instead.
@@ -217,26 +217,32 @@ Works on macOS, Linux, and Windows. To remove: `npx @pofky/asc-mcp uninstall-ski
 
 ## Real Output Examples
 
-**"Run a preflight check before I submit"**
+**"Run a preflight check before I submit"** (real output, on one of our own unfinished apps, shortened)
 ```
-Release Preflight: v2.3
+## Release Preflight: Adaptale
 
-State: PREPARE_FOR_SUBMISSION
-Platform: IOS
+BLOCKED: 13 failures
 
-PASS (with 1 warning)
+Auditing v1.0 (iOS), state PREPARE_FOR_SUBMISSION
 
-Warnings (recommended):
-- Missing screenshot set for APP_IPHONE_67. May be required.
+### Failures
 
-Passing checks: 4
-- [en-US] Description OK (3874/4000 chars).
-- [en-US] Keywords OK (96/100 chars).
-- 2 screenshot set(s) found across 1 locale(s).
-- Build 40 attached and valid.
+FAIL  shots.required  [en-US]
+Saw:  This app runs on iPad, going by the build's iPad icon, and there is no APP_IPAD_PRO_3GEN_129 set with images.
+Rule: required device sizes (Screenshot specifications, verified 2026-10-31)
+Fix:  upload_screenshots
 
-Total: 4 pass, 1 warn, 0 fail
+FAIL  build.attached
+Saw:  Build 1 has expired. Upload a new one.
+Rule: Guideline 2.1(a), final versions (App Review Guidelines, verified 2026-10-31)
+Fix:  attach_build
+
+FAIL  app.price
+Saw:  No price has been set, not even free.
+Rule: price schedule (App information reference, verified 2026-10-31)
+Fix:  set_app_price price_usd (0 for free)
 ```
+Fix what it names, re-run, and the clean line reads: `NO BLOCKING ISSUES FOUND: 32 rules checked. This is not a prediction of App Review's decision.`
 
 **"Morning briefing"**
 ```
@@ -300,6 +306,7 @@ Your `.p8` private key never leaves your machine:
 - The `.p8` private key is read locally. JWT tokens are generated on your computer, and name your Key ID and Issuer ID to Apple, as Apple's API requires.
 - API calls go directly from your machine to `api.appstoreconnect.apple.com`.
 - The license server is sent your license key string when one is set and, if you start a trial, your email address, a one-way hash of your Issuer ID and the name of the tool you started from. No Apple data and no credentials.
+- `release_preflight` requests the support, marketing, privacy policy and terms addresses in your own App Store Connect record, from your machine with no key or token, and never one that resolves to a private network. If you pass `project_path` it reads that folder (on a Mac, `nm` and `plutil` on a built app there), writes nothing and runs nothing from the project; its reply carries paths and line numbers, not file contents.
 - `~/.asc-mcp/preview.json` holds one number, how many of the 5 free preview calls have been used on this machine. It is never sent anywhere.
 - Starting a trial, or fetching a paid key with `asc_start_trial`, saves the license key in plain text in `~/.asc-mcp/license.json` (owner-only permissions on macOS and Linux) and adds it as `ASC_LICENSE_KEY` to every asc-mcp entry found in your Claude Desktop, Claude Code (`~/.claude.json`, including per-project entries), `./.mcp.json`, Cursor, Windsurf and Cline configs. Nothing else in those files is changed, and each edited file gets a one-time `.bak` copy beside it, which holds whatever the file held. `~/.asc-mcp/last-verdict.json` holds the last license check and a hash of the key. Delete the file and the `ASC_LICENSE_KEY` lines to remove the key.
 - Fully open source. [Read the code.](https://github.com/pofky/asc-mcp)

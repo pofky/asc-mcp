@@ -107,6 +107,7 @@ describe("beaconPage", () => {
     expect(beaconPage("/writing/license-server")).toBe("writing_license_server");
     expect(beaconPage("/writing/app-store-connect-api-limits/")).toBe("writing_api_limits");
     expect(beaconPage("/writing/app-store-connect-api-limits")).toBe("writing_api_limits");
+    expect(beaconPage("/writing/itms-91053/")).toBe("writing_itms_91053");
   });
 
   it("ignores a query string and a fragment", () => {

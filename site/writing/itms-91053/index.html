@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ITMS-91053: Missing API declaration, how to fix it | asc-mcp</title>
+<meta name="description" content="What Apple's ITMS-91053 email means, how to find the API and SDK behind it, the reason codes to declare, and how to check before you upload.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://asc-mcp.pages.dev/writing/itms-91053/">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://asc-mcp.pages.dev/writing/itms-91053/">
+<meta property="og:title" content="ITMS-91053: Missing API declaration, and how to fix it">
+<meta property="og:description" content="What Apple's ITMS-91053 email means, how to find the API and SDK behind it, the reason codes to declare, and how to check before you upload.">
+<meta property="og:image" content="https://asc-mcp.pages.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ITMS-91053: Missing API declaration, and how to fix it">
+<meta name="twitter:description" content="What Apple's ITMS-91053 email means, how to find the API and SDK behind it, the reason codes to declare, and how to check before you upload.">
+<meta name="twitter:image" content="https://asc-mcp.pages.dev/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230E1116'/%3E%3Cpath d='M8 21l4.6-11h1.9L19 21h-2.2l-1-2.6h-4.6L10.2 21H8zm4-4.4h3.2l-1.6-4.3-1.6 4.3z' fill='%23F0A828'/%3E%3Ccircle cx='24' cy='11' r='2.5' fill='%233DC48F'/%3E%3C/svg%3E">
+<style>
+:root{
+  --ink:#0e1116; --panel:#161b22; --panel-2:#1b2129; --line:#232a33;
+  /* --dim is lightened from the homepage value #6d7986, which measures 4.26:1
+     on --ink and fails WCAG AA for the small text it is used on. */
+  --text:#e7ecf2; --muted:#95a1b0; --dim:#7d8b9a;
+  --amber:#f0a828; --green:#3dc48f; --flag:#e0705a;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --measure:66ch;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--ink);color:var(--text);font-family:var(--sans);
+  font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(240,168,40,.28)}
+a{color:var(--text);text-decoration:none;border-bottom:1px solid var(--line)}
+a:hover{border-bottom-color:var(--amber)}
+a:focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:3px}
+h1,h2,h3{font-weight:700;letter-spacing:-.022em;line-height:1.14;margin:0}
+h1{font-size:clamp(1.95rem,6.4vw,3rem)}
+h2{font-size:clamp(1.3rem,4vw,1.75rem);letter-spacing:-.018em;margin:0 0 6px}
+h3{font-size:1.02rem;letter-spacing:-.008em;margin:0 0 6px}
+p{margin:0 0 1.05rem}
+.wrap{width:100%;max-width:960px;margin:0 auto;padding:0 20px}
+.narrow{max-width:var(--measure)}
+.eyebrow{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 14px;display:block;
+}
+.top{padding:4px 0;font-family:var(--mono);font-size:.78rem;color:var(--muted);
+  display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.top a{border:0;color:var(--muted);display:inline-flex;align-items:center;min-height:44px}
+.top a:hover{color:var(--text)}
+.mark{color:var(--text);font-weight:600;letter-spacing:.02em}
+.mark b{color:var(--amber);font-weight:600}
+.ver{margin-left:auto;color:var(--dim)}
+
+header.hero{padding:22px 0 8px}
+.meta{font-family:var(--mono);font-size:.76rem;color:var(--dim);margin:16px 0 0}
+.standfirst{font-size:1.12rem;color:var(--muted);margin:20px 0 0}
+
+article{padding:44px 0 0}
+.case{border-top:1px solid var(--line);padding:38px 0 4px}
+.case .n{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--amber);display:block;margin:0 0 10px;
+}
+.cost{
+  border-left:2px solid var(--flag);padding:2px 0 2px 14px;margin:0 0 1.05rem;
+  color:var(--muted);font-size:.95rem;
+}
+.cost b{color:var(--text);font-weight:600}
+pre{
+  font-family:var(--mono);font-size:.79rem;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:13px 14px;overflow-x:auto;margin:0 0 1.05rem;color:#c9d3de;line-height:1.55;
+}
+code{font-family:var(--mono);font-size:.88em;color:var(--text)}
+p code,li code{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+ul{margin:0 0 1.05rem;padding-left:1.1rem}
+li{margin:0 0 .5rem}
+.rule{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;margin:0 0 1.05rem;
+}
+.rule .lbl{
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--green);display:block;margin:0 0 6px;
+}
+.rule p{margin:0}
+section.q{border-top:1px solid var(--line);padding:52px 0 0}
+.qa{margin:0 0 26px}
+.qa p{margin:0}
+.cta{
+  border:1px solid var(--line);background:var(--panel-2);border-radius:12px;
+  padding:22px 22px 8px;margin:46px 0 0;
+}
+footer{border-top:1px solid var(--line);padding:34px 0 54px;color:var(--dim);font-size:.86rem;margin-top:54px}
+footer a{color:var(--muted)}
+.foot-links{display:flex;flex-wrap:wrap;gap:0 18px;font-family:var(--mono);font-size:.78rem;margin-bottom:10px}
+.foot-links a{display:inline-flex;align-items:center;min-height:44px}
+@media(max-width:560px){
+  .top{gap:0 14px}
+  .ver{display:none}
+  body{font-size:16.5px}
+}
+</style>
+<script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "App Store Connect MCP", "item": "https://asc-mcp.pages.dev/"}, {"@type": "ListItem", "position": 2, "name": "ITMS-91053: Missing API declaration", "item": "https://asc-mcp.pages.dev/writing/itms-91053/"}]}, {"@type": "BlogPosting", "headline": "ITMS-91053: Missing API declaration, and how to fix it", "description": "What Apple's ITMS-91053 email means, how to find the API and SDK behind it, the reason codes to declare, and how to check before you upload.", "url": "https://asc-mcp.pages.dev/writing/itms-91053/", "datePublished": "2026-10-31", "dateModified": "2026-10-31", "inLanguage": "en", "author": {"@type": "Person", "name": "Povilas Konopackas"}, "publisher": {"@type": "Organization", "name": "asc-mcp", "url": "https://asc-mcp.pages.dev/"}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://asc-mcp.pages.dev/writing/itms-91053/"}, "keywords": "ITMS-91053, ITMS-91061, Missing API declaration, privacy manifest, PrivacyInfo.xcprivacy, required reason API, NSPrivacyAccessedAPITypes"}, {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What does ITMS-91053 Missing API declaration mean?", "acceptedAnswer": {"@type": "Answer", "text": "Your upload contains code that calls an API on Apple's required reason list, and no privacy manifest in the app declares why. The email names the file and the API category. Add the category to PrivacyInfo.xcprivacy with one of Apple's reason codes, or update the SDK that makes the call."}}, {"@type": "Question", "name": "Where does the fix go if an SDK causes ITMS-91053?", "acceptedAnswer": {"@type": "Answer", "text": "In the SDK's own privacy manifest. Apple says a third-party SDK cannot rely on the app's manifest, or another SDK's, to report its use. Update to a version that ships one. If the SDK is linked statically into your app, the email names your app's own file, so check your dependencies as well as your code."}}, {"@type": "Question", "name": "What is the difference between ITMS-91053 and ITMS-91061?", "acceptedAnswer": {"@type": "Answer", "text": "ITMS-91053 is a required reason API with no declared reason. ITMS-91061 is a missing privacy manifest for an SDK on Apple's list of commonly used SDKs, and it applies to new apps and to updates that add one of those SDKs."}}, {"@type": "Question", "name": "Which reason code should I use for UserDefaults?", "acceptedAnswer": {"@type": "Answer", "text": "CA92.1 if the data is only read and written by the app itself, 1C8F.1 if it is shared across an App Group. Declare what is true of your use: Apple says declared reasons must accurately reflect it."}}]}]}</script>
+</head>
+<body>
+
+<div class="wrap">
+  <nav class="top">
+    <a href="/" class="mark" style="border:0">asc<b>-</b>mcp</a>
+    <a href="/#pipeline">Pipeline</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/#faq">Limits</a>
+    <a href="https://github.com/pofky/asc-mcp">GitHub</a>
+    <span class="ver">v1.10.0</span>
+  </nav>
+</div>
+<main>
+<header class="hero">
+  <div class="wrap narrow">
+    <span class="eyebrow">Field notes</span>
+    <h1>ITMS-91053: Missing API declaration, and how to fix it</h1>
+    <p class="standfirst">Your upload called an API on Apple's required reason list, and no privacy manifest says why. The fix is a few lines in <code>PrivacyInfo.xcprivacy</code>, in the right bundle, with a reason code that is true of your code.</p>
+    <p class="meta">31 October 2026 &middot; Povilas Konopackas &middot; lists read from Apple's pages that day</p>
+  </div>
+</header>
+
+<article>
+<div class="wrap narrow">
+
+<h2>What the email tells you</h2>
+<p>The notice names a file and at least one category, such as <code>NSPrivacyAccessedAPICategoryUserDefaults</code>. Both matter. The category tells you which manifest entry is missing, and the file tells you which code made the call. Apple's rule is per bundle: <a href="https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api">for each executable or dynamic library that uses one of these APIs, the bundle that includes it needs a manifest that reports it</a>.</p>
+
+<h2>Step 1: find who made the call</h2>
+<p>If the file is your app's own executable, the call is in your code or in a library linked statically into it. If it is a framework, that framework's maker owes the declaration. To see what a built binary imports:</p>
+<pre><code>nm -u MyApp.app/MyApp | grep -E 'stat$|mach_absolute_time|NSUserDefaults|UserDefaults'</code></pre>
+<p>A source search misses statically linked SDKs, which is why the binary is worth reading.</p>
+
+<h2>Step 2: declare it in the right manifest</h2>
+<p>Your own code goes in your app's <code>PrivacyInfo.xcprivacy</code>, and the file must be a member of the app target or it never reaches the bundle. For an SDK, update to a version that ships its own manifest. Apple is explicit that a third-party SDK cannot rely on the app's manifest, or another SDK's, to report its use.</p>
+<pre><code>&lt;key&gt;NSPrivacyAccessedAPITypes&lt;/key&gt;
+&lt;array&gt;
+  &lt;dict&gt;
+    &lt;key&gt;NSPrivacyAccessedAPIType&lt;/key&gt;
+    &lt;string&gt;NSPrivacyAccessedAPICategoryUserDefaults&lt;/string&gt;
+    &lt;key&gt;NSPrivacyAccessedAPITypeReasons&lt;/key&gt;
+    &lt;array&gt;&lt;string&gt;CA92.1&lt;/string&gt;&lt;/array&gt;
+  &lt;/dict&gt;
+&lt;/array&gt;</code></pre>
+
+<h2>Step 3: pick a code that is true</h2>
+<p>These summaries are short. Read <a href="https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype">Apple's full text</a> before choosing, since several codes also limit what you may do with the data, such as sending it off the device.</p>
+<section class="case">
+<h3>File timestamps: <code>NSPrivacyAccessedAPICategoryFileTimestamp</code></h3>
+<p>APIs: creationDate, modificationDate, fileModificationDate, contentModificationDateKey, creationDateKey, stat, fstat, fstatat, lstat, the getattrlist family.</p>
+<ul><li><code>C617.1</code>: files inside your app or app group container, or your CloudKit container</li><li><code>DDA9.1</code>: showing timestamps to the person using the device</li><li><code>3B52.1</code>: files the person specifically gave you access to</li><li><code>0A2A.1</code>: an SDK wrapping the API for the app</li></ul>
+</section>
+<section class="case">
+<h3>System boot time: <code>NSPrivacyAccessedAPICategorySystemBootTime</code></h3>
+<p>APIs: systemUptime, mach_absolute_time().</p>
+<ul><li><code>35F9.1</code>: measuring time elapsed between events in the app</li><li><code>8FFB.1</code>: calculating absolute timestamps for events in the app</li><li><code>3D61.1</code>: an optional bug report the person chooses to send</li></ul>
+</section>
+<section class="case">
+<h3>Disk space: <code>NSPrivacyAccessedAPICategoryDiskSpace</code></h3>
+<p>APIs: volumeAvailableCapacityKey and its two variants, volumeTotalCapacityKey, systemFreeSize, systemSize, statfs, statvfs, fstatfs, fstatvfs, the getattrlist family.</p>
+<ul><li><code>E174.1</code>: checking there is room to write, or that space is low so you can clean up</li><li><code>85F4.1</code>: showing disk space to the person</li><li><code>7D9E.1</code>: an optional bug report</li><li><code>B728.1</code>: a health research app warning participants</li></ul>
+</section>
+<section class="case">
+<h3>Active keyboards: <code>NSPrivacyAccessedAPICategoryActiveKeyboards</code></h3>
+<p>APIs: activeInputModes.</p>
+<ul><li><code>54BD.1</code>: presenting the correct customized interface</li><li><code>3EC4.1</code>: a custom keyboard app</li></ul>
+</section>
+<section class="case">
+<h3>User defaults: <code>NSPrivacyAccessedAPICategoryUserDefaults</code></h3>
+<p>APIs: UserDefaults (and @AppStorage, which uses it).</p>
+<ul><li><code>CA92.1</code>: data only this app reads and writes</li><li><code>1C8F.1</code>: data shared within your App Group</li><li><code>C56D.1</code>: an SDK wrapping the API for the app</li><li><code>AC6B.1</code>: reading managed app configuration set by MDM</li></ul>
+</section>
+
+<h2>ITMS-91061 is a different email</h2>
+<p>ITMS-91061 is about <a href="https://developer.apple.com/support/third-party-SDK-requirements/">Apple's list of commonly used SDKs</a>. A manifest is required for any listed SDK in a new app, or in an update that adds one. Signatures are also required where a listed SDK is a binary dependency. The list includes Alamofire, Firebase modules, Kingfisher, Lottie, SDWebImage and about eighty more, in any version, and any SDK that repackages them.</p>
+
+<h2>Check before you upload</h2>
+<p>asc-mcp's <code>release_preflight</code> does this from your coding agent. Pass it your project folder and it reads the manifests, the source and any built app on your machine, and reports each category in use with no valid reason, each listed SDK whose manifest it cannot see, and each permission with no purpose string. It prints a path and a line, runs nothing from the project, and sends nothing from it anywhere. It also loads the support, privacy and terms links in your App Store Connect record.</p>
+<p>It cannot promise a result. It checks what can be checked, says what it could not, and is not a prediction of App Review's decision. What Apple's own tools report on upload is the final word for this email.</p>
+<p><a href="/#pricing">See pricing</a>, or ask your agent to run it: the free tier includes five calls at Pro read tools like this one.</p>
+
+<h2>Questions</h2>
+<h3>What does ITMS-91053 Missing API declaration mean?</h3><p>Your upload contains code that calls an API on Apple's required reason list, and no privacy manifest in the app declares why. The email names the file and the API category. Add the category to PrivacyInfo.xcprivacy with one of Apple's reason codes, or update the SDK that makes the call.</p><h3>Where does the fix go if an SDK causes ITMS-91053?</h3><p>In the SDK's own privacy manifest. Apple says a third-party SDK cannot rely on the app's manifest, or another SDK's, to report its use. Update to a version that ships one. If the SDK is linked statically into your app, the email names your app's own file, so check your dependencies as well as your code.</p><h3>What is the difference between ITMS-91053 and ITMS-91061?</h3><p>ITMS-91053 is a required reason API with no declared reason. ITMS-91061 is a missing privacy manifest for an SDK on Apple's list of commonly used SDKs, and it applies to new apps and to updates that add one of those SDKs.</p><h3>Which reason code should I use for UserDefaults?</h3><p>CA92.1 if the data is only read and written by the app itself, 1C8F.1 if it is shared across an App Group. Declare what is true of your use: Apple says declared reasons must accurately reflect it.</p>
+
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-links">
+      <a href="/">Home</a>
+      <a href="https://www.npmjs.com/package/@pofky/asc-mcp">npm</a>
+      <a href="https://github.com/pofky/asc-mcp">GitHub</a>
+      <a href="/writing/app-store-connect-api-limits/">API limits</a>
+      <a href="https://asc-mcp-license.remewdy.workers.dev/terms">Terms</a>
+      <a href="https://asc-mcp-license.remewdy.workers.dev/privacy">Privacy</a>
+      <a href="/llms.txt">llms.txt</a>
+    </div>
+    <p style="margin:0">asc-mcp v1.10.0, MIT licensed. Built and maintained by Povilas Konopackas, sole trader,
+      Lithuania. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, Xcode and iOS are trademarks of Apple Inc.
+      Polar is a trademark of its respective owner.</p>
+    <p style="margin:8px 0 0">Last updated 31 October 2026.</p>
+  </div>
+</footer>
+<script>
+// One request, once per page load, to our own licence worker. It sends the
+// path and nothing else: no cookie, no identifier, no third party, no library.
+// It exists so the funnel has a denominator; see /privacy on that host.
+try {
+  fetch(
+    'https://asc-mcp-license.remewdy.workers.dev/b?p=' + encodeURIComponent(location.pathname),
+    { mode: 'no-cors', keepalive: true, cache: 'no-store' }
+  );
+} catch (e) { /* a counter must never be able to break the page */ }
+</script>
+</body>
+</html>
