@@ -198,8 +198,8 @@ export function requirePro(
         `Pro is ${PRO_PRICE}, cancel any time:\n` +
         `  ${upgradeUrl(tool)}\n` +
         `  (direct link: ${CHECKOUT_URL})\n\n` +
-        "If you already subscribed, call `asc_start_trial` with the same email and it will fetch " +
-        "your paid key and save it on this machine.\n"
+        "If you already subscribed, call `asc_start_trial` with the same email and your paid key " +
+        "is emailed to that address.\n"
       : (previewSpent ? `You have used the ${PREVIEW_CALLS} free Pro calls on this machine. ` : "") +
         `Pro is ${PRO_PRICE}, cancel any time:\n` +
         `  ${upgradeUrl(tool)}\n` +

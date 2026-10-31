@@ -402,7 +402,8 @@ export function pickLookupRow(rows: LookupRow[], now: Date): LookupRow | null {
  * started on a paying customer's address is never created, and the only trial
  * that precedes a purchase is the one the buyer tried first. And the
  * subscription must be unclaimed, or claimed by the machine that ran the trial,
- * the same fingerprint rule /trial uses to decide who gets a paid key inline.
+ * the same fingerprint a pre-31-October claim recorded. A trial minted on a future
+ * buyer's address by someone else also passes this: tracked in the bug queue.
  *
  * Both timestamps can be either ISO shape (see `TRIAL_REMINDER_SQL`), so both
  * sides go through `replace` before they are compared.

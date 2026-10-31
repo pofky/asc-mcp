@@ -46,7 +46,7 @@ The server process itself makes network requests to these places:
 - **Apple's App Store Connect API** (`api.appstoreconnect.apple.com`), authenticated with a token signed on your machine from your `.p8` key. This is where every App Store read and write goes. Screenshot files are sent to the upload addresses Apple returns for them.
 - **Apple's iTunes Search API** (`itunes.apple.com`), for the public store data behind `keyword_insights` and `competitor_snapshot`. The request carries the search term or app ID and nothing about your account.
 - **The asc-mcp licence server** (`asc-mcp-license.remewdy.workers.dev`), only in the two cases described under Privacy Policy below.
-- **The web addresses in your own App Store Connect record**, only when you call `release_preflight`: the support, marketing, privacy policy and terms links, to see whether they load, following their redirects. Those sites see an ordinary request from your machine, with no key or token. Addresses that resolve to a private network are not requested.
+- **The web addresses in your own App Store Connect record**, only when you call `release_preflight`: the support, marketing and privacy policy links and any description link that looks like Terms of Use, to see whether they load, following their redirects. Those sites see an ordinary request from your machine, with no key or token. Addresses that resolve to a private network are not requested.
 
 Some tools run other programs on your machine when you call them:
 

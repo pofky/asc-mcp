@@ -9,7 +9,7 @@
  *   GET  /health         - liveness check
  *   GET  /success        - post-checkout redirect
  *   GET  /key            - key retrieval form
- *   POST /key            - key lookup by email (rate-limited)
+ *   POST /key            - emails the key to the address, if it has one (rate-limited)
  *   GET  /admin/stats    - intent + trial funnel (ADMIN_TOKEN)
  *   POST /delete         - request deletion; emails a signed confirmation link
  *   GET  /delete/confirm - the signed link; this is what actually deletes
@@ -128,6 +128,26 @@ function rateLimit(request: Request, scope: string): boolean {
     return true;
   }
   keyLookupAttempts.set(bucket, { count: 1, resetAt: now + KEY_LOOKUP_WINDOW_MS });
+  return true;
+}
+
+/**
+ * Mailing a key on request is the point, and a stranger can trigger it, so a
+ * given address hears from this at most this many times per window. Per instance
+ * like the limiter above; it stops a loop filling someone's inbox, nothing more.
+ */
+const KEY_MAILS_PER_ADDRESS = 3;
+const keyMailsByAddress = new Map<string, { count: number; resetAt: number }>();
+
+function mayMailKey(email: string): boolean {
+  const now = Date.now();
+  const entry = keyMailsByAddress.get(email);
+  if (entry && now < entry.resetAt) {
+    if (entry.count >= KEY_MAILS_PER_ADDRESS) return false;
+    entry.count++;
+    return true;
+  }
+  keyMailsByAddress.set(email, { count: 1, resetAt: now + KEY_LOOKUP_WINDOW_MS });
   return true;
 }
 
@@ -423,7 +443,7 @@ async function handleValidate(
     return json({ valid: false, tier: "free", error: "bad_request" }, headers, 400);
   }
 
-  if (!body.key || typeof body.key !== "string") {
+  if (!body?.key || typeof body.key !== "string") {
     return json({ valid: false, tier: "free" }, headers, 400);
   }
 
@@ -945,26 +965,13 @@ async function handleTrial(
     // them, and it was found by a paying customer (me) running the documented
     // flow on a new install.
     //
-    // Requiring a *trial* fingerprint was the wrong check. Requiring none at
-    // all made this a JSON API that reads out a paying customer's key to anyone
-    // who knows their email address, which is worse than it sounds: /key is at
-    // least a browser form, this is one curl.
-    //
-    // So the first machine to claim a subscription is remembered, and that
-    // machine keeps getting the key inline forever. A claim from any other
-    // machine does not get refused, because refusing is how the original bug
-    // hurt people; it gets the key emailed to the address already on the
-    // subscription. The customer always ends up with their key. Someone who
-    // guessed the email gets a response with no key in it, and the real owner
-    // gets an email telling them it happened.
-    const firstClaim = !paid.claim_fingerprint;
-    if (firstClaim) {
-      await env.DB.prepare("UPDATE licenses SET claim_fingerprint = ? WHERE key = ?")
-        .bind(fingerprint, paid.key)
-        .run();
-    }
-
-    if (firstClaim || paid.claim_fingerprint === fingerprint) {
+    // The key goes to the address on the subscription, which is what proves the
+    // caller is its owner. Until 31 October 2026 the first machine to ask got it
+    // inline, on the reasoning that later machines were the risk. That read out
+    // every subscriber who had never used this path to anyone holding their email
+    // address, with one curl, and pinned their claim to the stranger's machine. A
+    // fingerprint recorded before then is still honoured: it was that owner's.
+    if (paid.claim_fingerprint === fingerprint) {
       return json(
         {
           ok: true,
@@ -978,16 +985,16 @@ async function handleTrial(
       );
     }
 
-    const mailed = await sendLicenseEmail(env, email, paid.key);
+    const mailed = !mayMailKey(email) || (await sendLicenseEmail(env, email, paid.key));
     return json(
       {
         ok: false,
         subscription: true,
         message: mailed
-          ? `This subscription is already set up on another machine, so the key was not returned here. ` +
+          ? `This address has a subscription, so its key is sent by email and not returned here. ` +
             `It has been emailed to ${email}. Paste it in as ASC_LICENSE_KEY, or into the extension's License key field.`
-          : `This subscription is already set up on another machine, so the key was not returned here, ` +
-            "and the email could not be sent just now. Retrieve it at https://asc-mcp-license.remewdy.workers.dev/key .",
+          : `This address has a subscription, so its key is sent by email and not returned here, ` +
+            "and the email could not be sent just now. Try again in a few minutes, or write to povkonop@gmail.com.",
       },
       headers,
     );
@@ -1286,25 +1293,6 @@ async function handleAdminAnnounce(
  * Returns true on success. No-ops (returns false) if BREVO_API_KEY is unset,
  * so the worker is safe to deploy before email is configured.
  */
-/**
- * A complete, paste-ready server block. Sending only the `ASC_LICENSE_KEY` line
- * assumed the customer already had a working config; someone who buys before
- * installing had nothing to paste it into. `npx` (not a bare `asc-mcp`) so it
- * launches without a global install.
- */
-const CONFIG_SNIPPET = (key: string) => `{
-  "mcpServers": {
-    "appstore-connect": {
-      "command": "npx",
-      "args": ["-y", "@pofky/asc-mcp"],
-      "env": {
-        "ASC_ISSUER_ID": "YOUR_ISSUER_ID",
-        "ASC_LICENSE_KEY": "${key}"
-      }
-    }
-  }
-}`;
-
 async function sendLicenseEmail(
   env: Env,
   email: string,
@@ -1437,8 +1425,8 @@ const EMAIL_FIELD = (label: string, button: string, colour = "#4f46e5") => `
 function handleSuccess(headers: Record<string, string>): Response {
   return html(`
     <h1>Subscription confirmed</h1>
-    <p>Your key is being generated now, and it usually takes a few seconds. It is also emailed to you, so you do not have to keep this page.</p>
-    ${EMAIL_FIELD("The email you used at checkout", "Get my license key")}
+    <p>Your key is being emailed to the address you checked out with. It usually takes a few seconds, so look in spam if it is not there. Nothing yet? Send it again:</p>
+    ${EMAIL_FIELD("The email you used at checkout", "Email me my key")}
 
     <h2>Then what</h2>
     <p>On Claude for macOS or Windows there is no config file to edit: <a href="https://github.com/pofky/asc-mcp/releases/latest">download the .mcpb bundle</a>, open it, and paste the key into the extension's own License key field.</p>
@@ -1451,8 +1439,8 @@ function handleSuccess(headers: Record<string, string>): Response {
 function handleKeyPage(headers: Record<string, string>): Response {
   return html(`
     <h1>Retrieve your license key</h1>
-    <p>Enter the email you subscribed with, or the one you started a trial with.</p>
-    ${EMAIL_FIELD("Your email address", "Look up my key")}
+    <p>Enter the email you subscribed with, or the one you started a trial with, and we will send the key there.</p>
+    ${EMAIL_FIELD("Your email address", "Email me my key")}
   `, headers, 200, { title: "Retrieve your license key", noindex: true });
 }
 
@@ -1506,28 +1494,23 @@ async function handleKeyLookup(
 
   const row = pickLookupRow(candidates.results ?? [], new Date());
 
-  if (!row) {
+  // One answer whether or not this address has a licence, and never the key on
+  // the page: this form used to print any subscriber's key to anyone who typed
+  // their address. The mail is the proof of owning it.
+  if (row && mayMailKey(email) && !(await sendLicenseEmail(env, email, row.key))) {
+    console.error("key lookup: the licence mail could not be sent");
     return html(`
-      <h1>No active license found</h1>
-      <p>No active Pro license found for <strong>${escapeHtml(email)}</strong>.</p>
-      <p>If you just purchased, it may take a minute for the webhook to process. <a href="/key">Try again</a>.</p>
-      <p>Still nothing after a few minutes? Email <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a> with the email you checked out with and we will sort it out quickly.</p>
-      <p>Never had one? Pro is ${PRO_PRICE}, and there is a free 7-day trial you start from inside your agent by asking it to run <code>asc_start_trial</code>. <a href="${CHECKOUT_URL}">Subscribe here</a>.</p>
-    `, headers, 200, { title: "No active license found", noindex: true });
+      <h1>The email could not be sent</h1>
+      <p>Try again in a few minutes. Still stuck? Write to <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a> from the address you subscribed with.</p>
+    `, headers, 503, { title: "The email could not be sent", noindex: true });
   }
 
   return html(`
-    <h1>Your License Key</h1>
-    <div style="background:#1a1a2e;padding:20px;border-radius:8px;border:1px solid #333;margin:20px 0;font-family:monospace;font-size:20px;letter-spacing:2px;text-align:center">
-      ${escapeHtml(row.key)}
-    </div>
-    <p><strong>Claude for macOS or Windows:</strong> there is no config file. <a href="https://github.com/pofky/asc-mcp/releases/latest">Download the .mcpb bundle</a>, open it, then paste this key into Settings &rsaquo; Extensions &rsaquo; asc-mcp &rsaquo; Configure &rsaquo; License key and Save.</p>
-    <p><strong>Every other client</strong>, add this to your MCP server configuration:</p>
-    <pre style="background:#1a1a2e;padding:15px;border-radius:8px;overflow-x:auto">${CONFIG_SNIPPET(escapeHtml(row.key))}</pre>
-    <p>Not set up yet? Drop your <code>.p8</code> into <code>~/.appstoreconnect/private_keys/</code> and run <code>npx @pofky/asc-mcp init --write</code>, which asks for your Issuer ID and this key and writes the config for you.</p>
-    <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.) so it reloads with the key. Then ask it to run asc_setup_check; the License line says Pro.</p>
-    <p style="color:#888;font-size:14px">Keep this key private. It unlocks Pro tools on your machine.</p>
-  `, headers, 200, { title: "Your license key", noindex: true });
+    <h1>Check your email</h1>
+    <p>If <strong>${escapeHtml(email)}</strong> has an active licence, the key is on its way from license@brewist.app, with the steps to set it up. It usually takes a few seconds, so look in spam if it is not there.</p>
+    <p>Nothing after a few minutes? It may be a different address: use the one you checked out with, or write to <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a>.</p>
+    <p>Never had one? Pro is ${PRO_PRICE}, and there is a free 7-day trial you start from inside your agent by asking it to run <code>asc_start_trial</code>.</p>
+  `, headers, 200, { title: "Check your email", noindex: true });
 }
 
 function handlePrivacy(headers: Record<string, string>): Response {
@@ -1541,7 +1524,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
       <li>Your email address (from the checkout provider)</li>
       <li>A generated license key</li>
       <li>Your subscription ID (for managing renewals and cancellations)</li>
-      <li>If you later use <code>asc_start_trial</code> to fetch your paid key onto a machine, the same one-way fingerprint described below, recorded once so that a second person who knows your email address cannot read your key out of the API</li>
+      <li>If you used <code>asc_start_trial</code> to fetch your paid key before 31 October 2026, the same one-way fingerprint described below, recorded once. Since then a paid key is only ever sent to the email address on the subscription, and no new fingerprint is recorded for it</li>
     </ul>
     <p>When you start a free 7-day trial with the <code>asc_start_trial</code> tool, we store:</p>
     <ul>
@@ -1556,7 +1539,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
 
     <h2>The trial fingerprint, specifically</h2>
     <p>A trial gives away paid software, so we need to know that one person cannot take an unlimited number of them. The anchor we use is your App Store Connect Issuer ID, because it identifies an Apple developer account rather than a person.</p>
-    <p><strong>Your Issuer ID is not sent to us.</strong> It is hashed with SHA-256 on your own machine and only the resulting digest is transmitted. It is sent only when you call <code>asc_start_trial</code>, whether that is to begin a trial or to fetch a paid key onto a new machine, so a subscriber who never trialled can still have one recorded. It is never sent on startup and never sent during normal use of any other tool.</p>
+    <p><strong>Your Issuer ID is not sent to us.</strong> It is hashed with SHA-256 on your own machine and only the resulting digest is transmitted. It is sent only when you call <code>asc_start_trial</code>, whether that is to begin a trial or to ask for a paid key by email. It is never sent on startup and never sent during normal use of any other tool.</p>
     <p>The digest cannot be turned back into your Issuer ID by anyone who obtains it. It is not anonymous, though: the hashing recipe is public in our open-source code, so somebody who already knows a specific Issuer ID could confirm a digest matches it. We treat it as pseudonymous personal data, and everything below applies to it.</p>
 
     <h2>What we don't collect</h2>
@@ -1589,8 +1572,8 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <h2>What the preflight audit reads and requests</h2>
     <p>These happen on your machine, when you call <code>release_preflight</code>, and none of it comes to us.</p>
     <ul>
-      <li><strong>Web addresses.</strong> It requests the support, marketing, privacy policy and terms addresses in your own App Store Connect record, to see whether they load, following their redirects. Those sites receive an ordinary web request from your machine, with your IP address and a user agent naming asc-mcp, and no key or token. Addresses that resolve to a private network are not requested.</li>
-      <li><strong>Your project folder, only if you pass <code>project_path</code>.</strong> It reads source files, property lists, dependency lists and any built app there, using Apple's <code>nm</code> and <code>plutil</code> for built apps on a Mac. It writes nothing, runs nothing from the project, and keeps nothing after the reply. The reply goes to your MCP client and the model you use with it, and holds file paths, line numbers and setting names, not file contents.</li>
+      <li><strong>Web addresses.</strong> It requests the support, marketing and privacy policy addresses in your own App Store Connect record and any link in your description that looks like Terms of Use, to see whether they load, following their redirects, which may lead to other sites. Those sites receive an ordinary web request from your machine, with your IP address and a user agent naming asc-mcp, and no key or token. Addresses that resolve to a private network are not requested.</li>
+      <li><strong>Your project folder, only if you pass <code>project_path</code>.</strong> It reads source files, property lists, dependency lists and any built app there, using Apple's <code>nm</code> and <code>plutil</code> for built apps on a Mac. It writes nothing, runs nothing from the project, and keeps nothing after the reply. The reply goes to your MCP client and the model you use with it, and holds file paths, line numbers, setting names and short values from privacy manifests, such as a declared reason code, and no other file contents.</li>
     </ul>
 
     <h2>Data storage</h2>
@@ -1614,7 +1597,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <ul>
       <li>Your email, licence key and subscription id, for a paid subscription: performance of the contract you entered into when you subscribed (GDPR Article 6(1)(b)). We cannot deliver or validate a licence without them.</li>
       <li>Your email and licence key, for a free trial: taking steps at your request before entering a contract (Article 6(1)(b)).</li>
-      <li>The one-way Issuer ID fingerprint: our legitimate interest in not giving the same person an unlimited number of free trials, and in not reading a paying customer's key out to a stranger who guessed their email address (Article 6(1)(f)). We considered doing this with the email alone and rejected it, because that would let anyone burn a stranger's trial by typing their address.</li>
+      <li>The one-way Issuer ID fingerprint: our legitimate interest in not giving the same person an unlimited number of free trials (Article 6(1)(f)). We considered doing this with the email alone and rejected it, because that would let anyone burn a stranger's trial by typing their address.</li>
       <li>The user agent, prefetch headers and IP address that reach our server while a page view or a buy-link click is being counted: our legitimate interest in knowing how many real people arrive, and in keeping automated traffic out of a payment funnel (Article 6(1)(f)). None of it is stored, and what is stored is a count that identifies nobody.</li>
       <li>An email to someone who has started a trial or held a subscription, about that product: our legitimate interest in asking a small number of our own users what they thought and whether they want to continue (Article 6(1)(f)). For a trial that is two automated messages, one shortly before it ends and one shortly after, and occasionally one personal note from the developer. Every such message names us, says why you are receiving it and carries a free opt-out, and you can object at any time under Article 21(2) by using the unsubscribe link where the message has one, by replying with the word stop, or by writing to the address below. The link takes effect immediately. A reply is read and acted on by hand, normally within two working days, and a message already scheduled inside that time may still arrive. After that we will not email you about the product again. The emails a licence needs in order to work, the key itself and a deletion confirmation link, are not affected.</li>
       <li>The time you opted out of product email: our legitimate interest, and yours, in keeping that instruction (Article 6(1)(f)).</li>
@@ -1738,7 +1721,12 @@ async function handleDeleteRequest(
     );
   }
 
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return html("<h1>Bad request</h1><p>This endpoint takes the form on <a href='/delete'>/delete</a>.</p>", headers, 400);
+  }
   const email = ((formData.get("email") as string) || "").trim().toLowerCase();
 
   if (!isValidEmail(email)) {
@@ -1778,7 +1766,10 @@ async function handleDeleteRequest(
   const token = await signDeleteToken(secret, email, Date.now() + DELETE_TOKEN_TTL_MS);
   const link = `https://asc-mcp-license.remewdy.workers.dev/delete/confirm?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
 
-  await fetch("https://api.brevo.com/v3/smtp/email", {
+  const unsent = "<h1>Not available right now</h1><p>The email could not be sent. Email povkonop@gmail.com and your data will be deleted manually, same day.</p>";
+  let sent = false;
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
       "api-key": env.BREVO_API_KEY,
@@ -1801,7 +1792,12 @@ async function handleDeleteRequest(
           <p style="color:#666;font-size:14px">If this was not you, ignore this email. Nothing has been deleted, and nobody can delete your data without this link.</p>
         </div>`,
     }),
-  });
+    });
+    sent = res.ok;
+  } catch (err) {
+    console.error("delete: the confirmation mail failed", err);
+  }
+  if (!sent) return html(unsent, headers, 503);
 
   return sameAnswer;
 }

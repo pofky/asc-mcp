@@ -224,7 +224,7 @@ export async function runDoctor(): Promise<DoctorReport> {
       const ended: Record<string, { detail: string; fix: string }> = {
         trial_expired: {
           detail: "Your 7-day trial has ended, so the write, control and intelligence tools are locked.",
-          fix: `Pro is ${PRO_PRICE}, cancel any time: ${UPGRADE_URL}. Already subscribed? Run \`asc_start_trial\` with the same email and it fetches your paid key.`,
+          fix: `Pro is ${PRO_PRICE}, cancel any time: ${UPGRADE_URL}. Already subscribed? Run \`asc_start_trial\` with the same email and your paid key is emailed to you.`,
         },
         canceled: {
           detail: "This subscription was cancelled and the paid period has ended.",

@@ -197,6 +197,9 @@ footer a{color:var(--muted)}
   .stage:nth-child(8){animation-delay:.35s}
   @keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 }
+
+/* 44px targets for links that stand alone. Links inside a sentence stay inline. */
+nav.top a,.foot-links a{display:inline-flex;align-items:center;min-height:44px;min-width:44px}
 </style>
 </head>
 <body>
@@ -604,7 +607,7 @@ When the trial ends, Pro is $9/month (VAT included; in the US, Canada and India 
     </div>
     <p style="margin:0">asc-mcp v1.10.0, MIT licensed. Built and maintained by Povilas Konopackas, sole trader,
       Lithuania. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, Xcode and iOS are trademarks of Apple Inc.</p>
-    <p style="margin:8px 0 0">Last updated 18 October 2026.</p>
+    <p style="margin:8px 0 0">Last updated 31 October 2026.</p>
   </div>
 </footer>
 
