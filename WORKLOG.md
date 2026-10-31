@@ -1,13 +1,13 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
-**A flow audit after 1.10.0 found a key disclosure and client bugs; worker fixed, 1.10.1 waiting on the security key (2026-10-31).**
+**1.10.1 live: a flow audit after 1.10.0 found a key disclosure and client bugs, all fixed (2026-10-31).**
 
 Two independent testers and a stateful fix-loop test. `/key` and `/trial` gave any subscriber's key to anyone
 holding their address; the worker now only mails it, all 6 live keys validated. Client fixes are committed as
-1.10.1 (553 + 139 tests, security, legal and completeness PASS) and unpublished: three npm approval links expired
+1.10.1 (553 + 139 tests, security, legal and completeness PASS), published after three npm approval links expired
 unattended. A one-trial-per-address rule added in this round broke the recorded no-email-anchor decision and was
-reverted in `6a45672`, worker `a340a56e`. HANDOFF has the steps.
+reverted in `6a45672`, worker `a340a56e`. Npm, tag, release, registry, plugin pin and site `504108d1` all at 1.10.1.
 
 **1.10.0: Preflight v2 live (2026-10-31).**
 

@@ -4,19 +4,16 @@ Updated 2026-10-31. Branch `master`.
 
 ## Where things stand
 
-**31 October, later: a flow audit after 1.10.0 found real bugs. Every fix is committed and
-tested, the worker is live, and v1.10.1 is NOT on npm: it needs the operator's security key.**
+**31 October, later: a flow audit after 1.10.0 found real bugs. All fixed and live as 1.10.1:
+npm `latest`, tag `v1.10.1`, GitHub release with `.mcpb`, MCP registry, plugin pin, site `504108d1`,
+worker `a340a56e`.**
 
-- **The one thing left, operator at the key:** npm approval links die in about two minutes and
-  have expired unattended three times. Do not loop on them. When the operator says go:
-  `(printf '\n'; tail -f /dev/null) | BROWSER=echo script -q <log> npm publish --access public --auth-type=web`,
-  read `https://www.npmjs.com/auth/cli/...` from the log, open it in Chrome. Then in this order: wait
-  until npm serves 1.10.1, `git tag -a v1.10.1 -m v1.10.1`, push master, push the tag,
-  `gh release create v1.10.1 build/asc-mcp-1.10.1.mcpb` with title and body from `RELEASE_NOTES.md`,
-  check the registry workflow, `npx wrangler pages deploy site --project-name asc-mcp --branch master`,
-  drive the published package and the live site. Do not push master or deploy the site first:
-  the plugin pin and site strings say 1.10.1. Local `master` is ahead of origin; backup is
-  branch `release/1.10.1`. `build/asc-mcp-1.10.1.mcpb` is built from the code at `6a45672`.
+- **Driven on the published package as a free user, clean HOME, Apple writes guarded:** 41 tools,
+  real app audited, bad app id gives an Error, missing `project_path` reads NOT CONFIRMED, a write
+  is refused with the price. The new `confirm` and platform paths are covered by tests, not by a
+  real Apple write. npm trap: a publish can succeed without a browser key touch shortly after a
+  recent approval, so read the log before opening a link. Branch `release/1.10.1` is left on
+  origin, now redundant: a hook blocks deleting remote branches.
 - **Live, worker `a340a56e`:** `/key` and `/trial` only ever mail a paid key (hole open until
   `b6186d5d`; rows 17, 21, 24, 84 were exposed, no log says whether anyone used it, keys not
   rotated, operator's call). An address with a paid row gets the price instead of a new trial.
@@ -26,7 +23,7 @@ tested, the worker is live, and v1.10.1 is NOT on npm: it needs the operator's s
   trial. One trial per Apple account; Terms, policy, `FLOWS.md` F3 and code agree. Retraction:
   commit `e67716d` refused any second trial on an address and the policy told victims to write in;
   that broke this decision and `6a45672` reverted it.
-- **In 1.10.1, not live until the publish:** export compliance answers the attached build; write
+- **In 1.10.1:** export compliance answers the attached build; write
   tools refuse to guess on two-platform apps; `submit_for_review` takes the version's platform;
   startup no longer hangs on a hung license server (8.1s, driven), and a server that recovers is
   adopted within 30s; offline renewal grace; `set_app_price` refuses negative and nearest prices;
