@@ -16,7 +16,7 @@ Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. 
 
 | You say | What happens |
 |---------|-------------|
-| "Run a preflight check on my app" | Audits metadata, character limits, screenshots, build status. Catches the issues that cause 40% of rejections. |
+| "Run a preflight check on my app" | Audits metadata, character limits, screenshots and build status, and says plainly when a check could not run. |
 | "Give me a morning briefing" | Summarizes all your apps: who's in review, who got rejected, new low-rating reviews, action items. |
 | "Generate release notes from my git history" | Reads commits since last tag, categorizes them, and gives you structured data to write "What's New" text. |
 | "Is my app in review?" | Exact review state with context ("typical time: 24-48 hours") |
@@ -121,7 +121,7 @@ $9 per month, VAT included; in the US, Canada and India sales tax is added at ch
 |------|-------------|----------------|
 | `list_reviews` | Customer reviews filtered by rating, territory, sort order | See what users say without opening the portal |
 | `sales_report` | Daily/weekly/monthly downloads and revenue by territory | Know your numbers instantly |
-| `release_preflight` | Pre-submission audit: metadata, char limits, screenshots, builds | Catches 40%+ of common rejection causes before you submit |
+| `release_preflight` | Pre-submission audit: metadata, char limits, screenshots, builds | Finds submission blockers before you press Submit, and names any check it could not run |
 | `daily_briefing` | Morning summary across all apps: status, reviews, rejections | One call replaces 10 minutes of portal clicking |
 | `release_notes` | Git commits since last tag, categorized for writing "What's New" | Your AI agent writes release notes from your actual changes |
 | `keyword_insights` | Analyze keywords against iTunes search competition, difficulty ratings | See which keywords are worth targeting at a glance |
