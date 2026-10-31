@@ -4,39 +4,43 @@ Updated 2026-10-31. Branch `master`.
 
 ## Where things stand
 
-**31 October, later: a flow audit after 1.10.0 found real bugs. The licence worker
-fix is live; the client fixes are v1.10.1, committed and NOT on npm.**
+**31 October, later: a flow audit after 1.10.0 found real bugs. Every fix is committed and
+tested, the worker is live, and v1.10.1 is NOT on npm: it needs the operator's security key.**
 
-- **To finish, operator at the keyboard:** local `master` is 10+ ahead of origin, with
-  `release: v1.10.1` done (backup branch `release/1.10.1`). `npm publish --access public
-  --auth-type=web` from the repo root (pty wrapper in memory `asc-mcp-npm-publish-needs-2fa`),
-  open the link, security key. It dies in about two minutes, and it did once. Then in order:
-  wait until npm serves it, `git tag -a v1.10.1 -m v1.10.1`, push master, push the tag,
-  `gh release create v1.10.1 build/asc-mcp-1.10.1.mcpb` with the title and body from
-  `RELEASE_NOTES.md`, `npx wrangler pages deploy site --project-name asc-mcp --branch master`.
-  Do not push master or deploy the site first: the plugin pin and site say 1.10.1.
-  Until then the site's 404 page, 320px overflow fix and link sizes are not live either.
-- **Live, worker `b6186d5d`:** `POST /key` and `/trial` used to give any subscriber's key to
-  anyone who typed their address; rows 17, 21, 24, 84 had no claim, so were exposed. Now the
-  key only goes by mail to that address. Verified live: same page for an unknown address, all 6
-  live keys still validate, a real send to the operator's address answered 200, inbox not read.
-  Not known whether anyone used the hole: no such log exists. Keys were not rotated, because
-  that would disturb subscribers. Whether to rotate is the operator's call.
-- **In 1.10.1, not live:** export compliance answered the newest upload rather than the attached
-  build; write tools wrote to the first platform on two-platform apps; `submit_for_review` assumed
-  iOS; startup could hang 5 minutes on a hung licence server (8.1s now, driven for real); offline
-  verdict ignored the renewal grace; `set_app_price` charged the nearest price and went negative;
-  price changes and turning territories off now take `confirm:true`; Podfile read as evidence.
-  Not on real Apple: any two-platform path, none in this account. No writes were run on real apps.
-- **Still ungated by choice:** the other write tools have no confirm. They edit drafts, and are
-  the preflight fix loop. `create_iap` and `create_subscription` are the ones to reconsider.
-- **Correction to the Pro diff below:** the 1.10.0 tool list also differs in one instruction
-  sentence, 4 prompts and the `upload_screenshots` example, all preflight related; 51 of 55 read
-  replies and all 31 write replies matched 1.9.15 on the published package. 1.10.1 has not been
-  through that diff; it adds `platform` and `confirm` to 7 schemas.
-- **Queued, not fixed:** `.autopilot/queues/bug-queue.md`, 4 new items. The one that matters: a
-  trial minted on an address before its owner buys validates as their subscription.
-- Tests at `ff987e6`: root 533, worker 116. Security, legal and completeness PASS by independent review.
+- **The one thing left, operator at the key:** npm approval links die in about two minutes and
+  have expired unattended three times. Do not loop on them. When the operator says go:
+  `(printf '\n'; tail -f /dev/null) | BROWSER=echo script -q <log> npm publish --access public --auth-type=web`,
+  read `https://www.npmjs.com/auth/cli/...` from the log, open it in Chrome. Then in this order: wait
+  until npm serves 1.10.1, `git tag -a v1.10.1 -m v1.10.1`, push master, push the tag,
+  `gh release create v1.10.1 build/asc-mcp-1.10.1.mcpb` with title and body from `RELEASE_NOTES.md`,
+  check the registry workflow, `npx wrangler pages deploy site --project-name asc-mcp --branch master`,
+  drive the published package and the live site. Do not push master or deploy the site first:
+  the plugin pin and site strings say 1.10.1. Local `master` is ahead of origin; backup is
+  branch `release/1.10.1`. `build/asc-mcp-1.10.1.mcpb` is built from the code at `6a45672`.
+- **Live, worker `a340a56e`:** `/key` and `/trial` only ever mail a paid key (hole open until
+  `b6186d5d`; rows 17, 21, 24, 84 were exposed, no log says whether anyone used it, keys not
+  rotated, operator's call). An address with a paid row gets the price instead of a new trial.
+  Pages share the site's palette, no overflow at 320/375. All 6 live keys validated after
+  `3eb44a9f`; not re-run after `a340a56e`, which changed only the trial refusal and the policy text.
+- **Decision, kept:** the email is not a trial anchor, so a typed address cannot burn a stranger's
+  trial. One trial per Apple account; Terms, policy, `FLOWS.md` F3 and code agree. Retraction:
+  commit `e67716d` refused any second trial on an address and the policy told victims to write in;
+  that broke this decision and `6a45672` reverted it.
+- **In 1.10.1, not live until the publish:** export compliance answers the attached build; write
+  tools refuse to guess on two-platform apps; `submit_for_review` takes the version's platform;
+  startup no longer hangs on a hung license server (8.1s, driven), and a server that recovers is
+  adopted within 30s; offline renewal grace; `set_app_price` refuses negative and nearest prices;
+  `confirm:true` on price changes, turning territories off, `create_iap`, `create_subscription`;
+  `set_age_rating` no longer fails on every app (reached PATCH on real Apple under a write guard);
+  Podfile and import evidence in preflight; site 404 page, 320px overflow, 44px links.
+- **Accepted, disclosed:** a stranger's trial on an address that buys within 14 days validates as
+  that subscription. Needs foresight and exposes nothing. `ADMIN_TOKEN` is the one open queue item:
+  the classifier refused the secret write, operator command in `.autopilot/rotate-admin-token.txt`.
+- **Not testable here:** two-platform apps on real Apple (none in this account), a low-role key,
+  Claude Desktop rendering, real review content, reading the real mail.
+- **Tests at `6a45672`:** root 553, worker 139, tsc clean. Security, legal, completeness PASS by
+  independent review. Real Apple: 11 apps, no false FAIL or WARN per the tester, before the last fixes.
+- **Check later:** rows 21 and 24 on 2 Nov, row 84 on 18 Nov.
 
 **31 October: Preflight v2 is live as 1.10.0 on every surface.**
 `release_preflight` now reports what it could not check, and can read a local
