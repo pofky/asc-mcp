@@ -72,7 +72,17 @@ describe("the defects the old tool had", () => {
     expect(out).toContain(`v2.0`);
     expect(out).toContain(state);
     expect(out).not.toContain("No version is being prepared");
-    expect(out).toContain("review_status");
+    expect(out).toContain("UNKNOWN  version.rejected");
+    expect(out).toMatch(/NOT CONFIRMED|BLOCKED/);
+    expect(out).not.toMatch(CLEAN_VERDICT);
+  });
+
+  it("a version the developer withdrew has no rejection to read", async () => {
+    const apple = clean();
+    apple.set(`/v1/apps/${APP}/appStoreVersions`, { data: [version(VERSION, "IOS", "2.0", "DEVELOPER_REJECTED")] });
+    const out = await run(apple);
+    expect(out).toMatch(CLEAN_VERDICT);
+    expect(out).not.toContain("version.rejected");
   });
 
   it("D4: an app with iOS and macOS versions gets a section for each", async () => {

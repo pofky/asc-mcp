@@ -248,7 +248,7 @@ export function registerPrompts(server: McpServer): PromptRegistration[] {
               "6. `upload_screenshots` for each display type I provide.",
               "7. MANUAL: run `set_privacy_nutrition` and `set_eu_trader_status`, give me the deep links, and WAIT for me to confirm I set them in the website.",
               "8. If the app has in-app purchases or subscriptions, create them (`create_iap` / `create_subscription` + `set_iap_review_screenshot`). Then MANUAL: the FIRST products must be submitted WITH the version in the ASC website. Give me those steps and do NOT try to submit the version alone.",
-              `9. Call \`release_preflight\` with \`app_id: "${app_id}"\`, passing \`project_path\` if you know the local project folder, and fix every FAIL and resolve every UNKNOWN before continuing.`,
+              `9. Call \`release_preflight\` with \`app_id: "${app_id}"\`, passing \`project_path\` if you know the local project folder, and fix every FAIL and confirm every UNKNOWN by hand before continuing.`,
               "10. Only after I confirm (and only if no first-IAP block applies), call `submit_for_review` with `confirm: true`.",
               "11. After approval, ask whether to `release_version` (confirm:true) or `manage_phased_release` start.",
               "",

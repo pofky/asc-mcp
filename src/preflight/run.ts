@@ -87,7 +87,7 @@ export async function runPreflight(client: ASCClient, args: PreflightArgs, deps:
   const perVersion = record.versions.map((v) => ({
     v,
     findings: [
-      ...checkVersion(v, primaryLocale, project, today),
+      ...checkVersion(v, primaryLocale, project, today, args.app_id),
       ...checkSubscriptionTerms(record, v),
       ...checkVersionUrls(v, hasSubscriptions, probes, checkedAt),
     ],

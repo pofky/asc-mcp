@@ -71,6 +71,7 @@ export const LIMITS = {
 } as const;
 
 export const RULES = {
+  "version.rejected": { family: "Version", source: "guidelines", clause: "the reasons in Apple's rejection notice" },
   "locale.present": { family: "Metadata", source: "metadataRef", clause: "at least one localization", fixTool: "update_version_metadata" },
   "meta.description": { family: "Metadata", source: "metadataRef", clause: "description, required, 4000 characters", fixTool: "update_version_metadata", fixHint: "description" },
   "meta.keywords": { family: "Metadata", source: "metadataRef", clause: "keywords, 100 characters", fixTool: "update_version_metadata", fixHint: "keywords" },

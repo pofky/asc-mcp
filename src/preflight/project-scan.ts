@@ -18,6 +18,11 @@ import { failedPart, okPart, type ApiUse, type ProjectInput, type ProjectManifes
 
 const MESSAGE_CHARS = 120;
 
+/** Files that say a folder is an app project, even with no source in it yet. */
+const PROJECT_MARKER = /^(project\.pbxproj|Package\.swift|project\.ya?ml|Podfile\.lock|pubspec\.lock|app\.json|PrivacyInfo\.xcprivacy|Info\.plist)$/;
+
+class NoProjectHere extends Error {}
+
 const sdkByLowerName = new Map(LISTED_SDKS.map((s) => [s.toLowerCase(), s]));
 const message = (err: unknown) => String(err instanceof Error ? err.message : err).slice(0, MESSAGE_CHARS);
 
@@ -85,6 +90,18 @@ function deviceFamilyFor(pbxproj: string, bundleId: string): boolean | null {
     answer = (answer ?? false) || universal;
   }
   return answer;
+}
+
+/** Every bundle id a project file builds, with variables resolved where the file defines them. */
+function bundleIdsIn(text: string): string[] {
+  const ids: string[] = [];
+  for (const m of text.matchAll(/PRODUCT_BUNDLE_IDENTIFIER["']?\s*[:=]\s*"?([^";\n]+)"?/g)) {
+    const raw = m[1].trim();
+    const variable = raw.match(/^\$[({](\w+)[)}]$/)?.[1];
+    const id = variable ? text.match(new RegExp(`\\b${variable}["']?\\s*[:=]\\s*"?([\\w.-]+)"?`))?.[1] : raw;
+    if (id && !id.includes("$")) ids.push(id);
+  }
+  return ids;
 }
 
 function dependenciesIn(file: ProjectFile, text: string): Array<{ name: string; via: string; repo: string }> {
@@ -177,6 +194,7 @@ async function scanProject(root: string, bundleId: string | null): Promise<Proje
     binarySkipped: null,
     binaryUnreadable: null,
     truncated: null,
+    otherApp: null,
     plistIssue: null,
   };
   const { files, truncated } = await walkProject(root);
@@ -189,6 +207,7 @@ async function scanProject(root: string, bundleId: string | null): Promise<Proje
   const dependencies = new Map<string, { via: string; repo: string }>();
   const projectFiles: string[] = [];
   const skippedLarge: string[] = [];
+  const builtIds: string[] = [];
 
   for (const file of files) {
     const text = await readBounded(file.path);
@@ -220,6 +239,7 @@ async function scanProject(root: string, bundleId: string | null): Promise<Proje
       if (file.name === "project.pbxproj" || /^project\.ya?ml$/.test(file.name) || file.name.endsWith(".xcconfig") || file.name === "app.json") {
         readBuildSettingKeys(text, scan.purposeKeys);
         projectFiles.push(text);
+        builtIds.push(...bundleIdsIn(text));
       }
       if (file.name === "project.pbxproj" && bundleId) {
         const family = deviceFamilyFor(text, bundleId);
@@ -240,6 +260,13 @@ async function scanProject(root: string, bundleId: string | null): Promise<Proje
 
   await scanBuiltApp(root, scan, apis, sdks);
 
+  // A folder with nothing to judge must not read as five passes.
+  const foundProject = files.some((f) => SOURCE_FILE.test(f.name) || PROJECT_MARKER.test(f.name)) || scan.builtApp !== null;
+  if (!foundProject && !truncated) throw new NoProjectHere();
+  if (bundleId && builtIds.length && !builtIds.includes(bundleId)) {
+    scan.otherApp = `This folder builds ${[...new Set(builtIds)].slice(0, 3).join(", ")}, and this app is ${bundleId}, so these results may belong to another app.`;
+  }
+
   scan.apis = [...apis.values()];
   scan.purposes = [...purposes.values()];
   scan.sdks = [...sdks.values()];
@@ -255,12 +282,14 @@ export async function readProjectInput(projectPath: string | undefined, bundleId
   try {
     info = await stat(root);
   } catch (err) {
-    return { provided: true, error: `Path not found: ${root} (${(err as NodeJS.ErrnoException).code ?? "unreadable"})` };
+    const missing = (err as NodeJS.ErrnoException).code === "ENOENT";
+    return { provided: true, error: missing ? `Path not found: ${root}` : `Could not open ${root}: ${message(err)}` };
   }
   if (!info.isDirectory()) return { provided: true, error: `Not a folder: ${root}` };
   try {
     return { provided: true, scan: await scanProject(root, bundleId) };
   } catch (err) {
+    if (err instanceof NoProjectHere) return { provided: true, error: `No Xcode project or source found in ${root}. Pass the folder holding the .xcodeproj.` };
     return { provided: true, error: `Could not read ${root}: ${message(err)}` };
   }
 }

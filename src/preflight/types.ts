@@ -153,6 +153,8 @@ export interface ProjectScan {
   binaryUnreadable: string | null;
   /** Set when a scan limit was reached, so absence of a finding proves nothing. */
   truncated: string | null;
+  /** Set when this folder builds other bundle ids, so its results may be another app's. */
+  otherApp: string | null;
   /** An Info.plist that could not be read, which leaves only the plist rules unsure. */
   plistIssue: string | null;
 }

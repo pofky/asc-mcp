@@ -55,6 +55,24 @@ describe("skipped states", () => {
     expect(f[0].status).toBe("unknown");
     expect(f[0].saw).toContain("Path not found");
   });
+  it("a folder with no project is not five passes", async () => {
+    write("notes.txt", "hello");
+    const f = findings(await scan());
+    expect(f).toHaveLength(1);
+    expect(f[0].status).toBe("unknown");
+    expect(f[0].saw).toContain("No Xcode project");
+  });
+  it("a project building another app says so, and gives no checklist from it", async () => {
+    write("App.xcodeproj/project.pbxproj", "PRODUCT_BUNDLE_IDENTIFIER = com.other.app;\n");
+    write("App/PrivacyInfo.xcprivacy", manifest({}, ["NSPrivacyCollectedDataTypeUserID"]));
+    const input = await scan();
+    expect(findings(input).find((x) => x.status === "unknown")?.saw).toContain("com.other.app");
+    expect(declaredDataTypes(input)).toEqual([]);
+  });
+  it("a project building this app, through a variable, raises nothing", async () => {
+    write("project.yml", "settings:\n  APP_ID: com.test.app\ntargets:\n  App:\n    settings:\n      PRODUCT_BUNDLE_IDENTIFIER: $(APP_ID)\n");
+    expect(findings(await scan()).filter((x) => x.status === "unknown")).toEqual([]);
+  });
   it("a file instead of a folder says so", async () => {
     const f = findings(await readProjectInput(write("a.txt", "x"), null));
     expect(f[0].saw).toContain("Not a folder");
@@ -305,6 +323,21 @@ describe("what it stays away from", () => {
   });
 });
 
+describe("the demo account reminder", () => {
+  const seen = async () => {
+    const input = await scan();
+    return input.provided && "scan" in input ? input.scan.signInSeenAt : "no scan";
+  };
+  it("notices a password login", async () => {
+    write("App/Login.swift", "try await client.auth.signInWithPassword(email: e, password: p)\n");
+    expect(await seen()).toContain("App/Login.swift:1");
+  });
+  it("leaves Sign in with Apple alone", async () => {
+    write("App/Login.swift", "let p = ASAuthorizationAppleIDProvider()\nSignInWithAppleButton(.signIn) { _ in }\n");
+    expect(await seen()).toBeNull();
+  });
+});
+
 describe("the App Privacy checklist", () => {
   it("lists declared data types, since Apple's API cannot show the label", async () => {
     write("App/PrivacyInfo.xcprivacy", manifest({}, ["NSPrivacyCollectedDataTypeEmailAddress", "NSPrivacyCollectedDataTypeUserID"]));
@@ -340,6 +373,7 @@ describe("the built app", () => {
     mkdirSync(sim, { recursive: true });
     writeFileSync(join(sim, "Info.plist"), infoPlist({ CFBundleExecutable: "Thing" }));
     mkdirSync(join(root, "build/Debug-iphoneos/Empty.app"), { recursive: true });
+    write("App/Main.swift", "let x = 1\n");
     const f = findings(await scan());
     expect(f.find((x) => x.status === "skipped")?.saw).toContain("No built app");
   });

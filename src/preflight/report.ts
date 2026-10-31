@@ -8,9 +8,6 @@ export const platformLabel = (p: string) => PLATFORM_LABEL[p] ?? p;
 
 const LABEL: Record<Status, string> = { fail: "FAIL", unknown: "UNKNOWN", warn: "WARN", pass: "PASS", skipped: "SKIPPED" };
 
-/** States where Apple has rejected the version, which sends the reader to its message. */
-const REJECTED_STATES = new Set(["REJECTED", "METADATA_REJECTED", "INVALID_BINARY"]);
-
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export function verdictLine(all: Finding[]): string {
@@ -70,12 +67,10 @@ function skippedLines(findings: Finding[]): string {
   return "\n" + findings.map((f) => `SKIPPED  ${f.scope ?? f.rule}  ${f.saw}`).join("\n") + "\n";
 }
 
-export function describeVersion(v: VersionSnapshot, appId: string): string {
+export function describeVersion(v: VersionSnapshot): string {
   const label = platformLabel(v.platform);
   if (v.auditingLive) return `No version is being prepared. This audits the live v${v.versionString} (${label}); create_version starts the next one.`;
-  const base = `Auditing v${v.versionString} (${label}), state ${v.state}`;
-  if (REJECTED_STATES.has(v.state)) return `${base}. review_status with app_id ${appId} shows Apple's message.`;
-  return base;
+  return `Auditing v${v.versionString} (${label}), state ${v.state}`;
 }
 
 function closingLine(record: RecordSnapshot, now: Date): string {
@@ -105,7 +100,7 @@ export function renderReport(input: {
   const all = sections.flatMap((s) => s.findings);
   const name = record.app.ok ? record.app.value.name : `app ${record.appId}`;
   let out = `## Release Preflight: ${name}\n\n${verdictLine(all)}\n\n`;
-  out += record.versions.map((v) => describeVersion(v, record.appId)).join("\n") + "\n";
+  out += record.versions.map((v) => describeVersion(v)).join("\n") + "\n";
   out += staleNotice(now);
   for (const s of sections) {
     const merged = merge(s.findings);

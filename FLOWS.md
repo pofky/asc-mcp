@@ -40,7 +40,8 @@ Success: `NO BLOCKING ISSUES FOUND: ... This is not a prediction of App Review's
 - No built app, or not a Mac: `SKIPPED  built app  <reason>`. Source and plist rules ran. A built app that cannot be read: `UNKNOWN`.
 - A read fails: `UNKNOWN  rule`, `Saw:  Apple returned 403. Your key's role may be too low (App Manager or higher).`
 - A link blocks robots or times out: `UNKNOWN`, with `Open it in a browser and confirm.`
-- Rejected version: selected, with `review_status with app_id <id> shows Apple's message.`
+- Apple rejected the version: selected, with `UNKNOWN  version.rejected` and a link to App Store Connect, because Apple's API does not give the reasons. The verdict stays NOT CONFIRMED until it is resubmitted.
+- Folder with no project: `UNKNOWN`, `No Xcode project or source found in <path>`. Folder building other bundle ids: `UNKNOWN`, and no data type checklist from it.
 - Several platforms: `## App-wide`, then `## v2.0 (iOS)`, `## v3.0 (macOS)`.
 - Nothing in progress: `No version is being prepared. This audits the live v2.2 (iOS); create_version starts the next one.`
 - App Store Connect down, bad app id, no versions: a reply starting `Error:`, with no verdict.

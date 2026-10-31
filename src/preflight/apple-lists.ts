@@ -134,14 +134,15 @@ export const SDK_PACKAGE_ALIASES: Readonly<Record<string, string>> = {
   "onesignal-xcframework": "OneSignal",
 };
 
-/** Code that suggests a login screen, for the demo account reminder. */
+/**
+ * Code that suggests a password or email login, for the demo account reminder.
+ * Sign in with Apple and Google are left out: a reviewer uses their own account,
+ * and on a real app with optional Apple sign-in this warned for nothing.
+ */
 export const SIGN_IN_PATTERNS: readonly RegExp[] = [
-  /\bSignInWithAppleButton\b/,
-  /\bASAuthorizationAppleIDProvider\b/,
-  /\bGIDSignIn\b/,
-  /\bLoginManager\b/,
   /\bAuth\.auth\(\)\.signIn\b/,
-  /\bsignInWith(Password|Email|OAuth)\b/,
+  /\bsignInWith(Password|Email|OTP)\b/,
+  /\bsignIn\(\s*email\s*:/,
 ];
 
 /** Sample values left behind in Info.plist. Google's published test AdMob app id leads. */

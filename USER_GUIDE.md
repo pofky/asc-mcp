@@ -58,7 +58,7 @@ Steps:
    MANUAL: App Privacy nutrition label. Not in the API. Run `set_privacy_nutrition` for the exact checklist + deep link, then set it in the ASC website.
    MANUAL: EU DSA trader status. Not in the API. Run `set_eu_trader_status` for steps + deep link; it's a legal decision, set it in the website.
 11. If the app has in-app purchases or subscriptions, create them now (topic:iap / topic:subscriptions). The FIRST ones must be submitted WITH the version (next step).
-12. `release_preflight` with `project_path` if you have the Xcode project - fix every FAIL and re-run until no FAIL or UNKNOWN is left. It ends with the manual steps for this app's state.
+12. `release_preflight` with `project_path` if you have the Xcode project - fix every FAIL, confirm anything UNKNOWN by hand, and re-run. It ends with the manual steps for this app's state.
 13. MANUAL (if first IAPs exist): the app's very first in-app purchases CANNOT be bundled with the version via the API. In the ASC website, open the version, Add for Review, tick the products, and submit them together. `submit_for_review` detects this and ABORTS rather than orphaning the version. After the first release is live, later IAPs submit via the API fine.
 14. `submit_for_review` with confirm:true (only if there are no first-IAPs blocking; otherwise submit in the website per the step above).
 15. After approval: `release_version` (confirm:true) to go live now, or `manage_phased_release` start for a 7-day rollout.
@@ -83,7 +83,7 @@ Steps:
 4. Upload the new build (`upload_binary` confirm:true, or Xcode/Transporter; see topic:binary), `wait_for_build` to VALID, then `attach_build`.
 5. `upload_screenshots` only if they changed.
 6. Later IAPs/subscriptions (not the first ever) can be created and will submit via the API.
-7. `release_preflight` with `project_path` if you have the Xcode project - fix every FAIL and re-run until no FAIL or UNKNOWN is left.
+7. `release_preflight` with `project_path` if you have the Xcode project - fix every FAIL, confirm anything UNKNOWN by hand, and re-run.
 8. `submit_for_review` confirm:true.
 9. After approval: `release_version` confirm:true, or `manage_phased_release` start.
 10. Use `metadata_diff` any time to see exactly what changed between live and pending across locales.

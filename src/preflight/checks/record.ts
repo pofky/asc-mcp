@@ -1,6 +1,9 @@
 import { DUO_REQUIRED_FROM, DUO_SDK_FROM, IPAD_REQUIRED_SET, IPHONE_ACCEPTED_SETS, LIMITS, PLACEHOLDER_PATTERNS, PLATFORM_REQUIRED_SET, TERMS_LINK_PATTERN, type RuleId } from "../rules.js";
 import type { BuildInfo, Finding, Part, ProjectInput, RecordSnapshot, ScreenshotSet, Status, VersionLocalization, VersionSnapshot } from "../types.js";
 
+/** Apple's own rejections. DEVELOPER_REJECTED is the developer withdrawing it, which has no reasons to read. */
+export const REJECTED_STATES: ReadonlySet<string> = new Set(["REJECTED", "METADATA_REJECTED", "INVALID_BINARY"]);
+
 const finding = (rule: RuleId, status: Status, saw: string, scope?: string): Finding => ({ rule, status, saw, scope });
 
 /** A read that failed says so for every rule that depended on it. */
@@ -183,8 +186,13 @@ function checkReview(v: VersionSnapshot, project: ProjectInput): Finding[] {
 }
 
 /** Rules for one version of the app. */
-export function checkVersion(v: VersionSnapshot, primaryLocale: string | null, project: ProjectInput, today: string): Finding[] {
+export function checkVersion(v: VersionSnapshot, primaryLocale: string | null, project: ProjectInput, today: string, appId: string): Finding[] {
   const out: Finding[] = [];
+  // Apple's API gives the state and not the reasons, so this report cannot know
+  // whether they were dealt with, and a clean line here would read as "resubmit".
+  if (REJECTED_STATES.has(v.state)) {
+    out.push(finding("version.rejected", "unknown", `Apple rejected this version (${v.state}), and its API does not give the reasons, so this report cannot check them. Read them in App Store Connect and confirm each is dealt with: https://appstoreconnect.apple.com/apps/${appId}/distribution`));
+  }
   if (v.localizations.ok) {
     if (!v.localizations.value.length) out.push(finding("locale.present", "fail", "This version has no localizations."));
     else out.push(finding("locale.present", "pass", `${v.localizations.value.length} locale(s).`));

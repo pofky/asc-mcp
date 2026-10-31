@@ -106,6 +106,7 @@ export function checkProject(project: ProjectInput): Finding[] {
     // A partial scan cannot vouch for what it did not read.
     for (const rule of PROJECT_RULES) out.push(finding(rule, "unknown", `The scan was partial: ${scan.truncated}.`));
   }
+  if (scan.otherApp) out.push(finding("manifest.present", "unknown", scan.otherApp, "project.*"));
   if (scan.plistIssue) out.push(finding("plist.purpose", "unknown", scan.plistIssue));
   if (scan.binaryUnreadable) out.push(finding("manifest.reasons", "unknown", scan.binaryUnreadable, "built app"));
   if (scan.binarySkipped) out.push(finding("manifest.reasons", "skipped", scan.binarySkipped, "built app"));
@@ -114,7 +115,8 @@ export function checkProject(project: ProjectInput): Finding[] {
 
 /** Data types declared in the manifests, for the App Privacy page Apple's API cannot reach. */
 export function declaredDataTypes(project: ProjectInput): string[] {
-  if (!project.provided || !("scan" in project)) return [];
+  // Another app's data types would make a wrong checklist for this one.
+  if (!project.provided || !("scan" in project) || project.scan.otherApp) return [];
   const types = new Set<string>();
   for (const m of project.scan.manifests) {
     if (m.parsed.ok) m.parsed.value.collectedDataTypes.forEach((t) => types.add(t.replace("NSPrivacyCollectedDataType", "")));
