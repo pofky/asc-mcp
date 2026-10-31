@@ -889,7 +889,7 @@ export function licenseEmailContent(key: string): EmailContent {
   const html = `
     <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
       <h1 style="font-size:20px">Your asc-mcp Pro license</h1>
-      <p>Thanks for subscribing. Here is your license key:</p>
+      <p>Here is your license key. It is sent when you subscribe and when someone asks for it on the license page, always to this address only. If you did not ask for it, nothing has changed and you can ignore this.</p>
       <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
       <p>If a license key is already set in your client config or in the extension's License key field, replace it with this one, because that setting wins after a restart.</p>
       <p>To set it: if your <code>.p8</code> is in <code>~/.appstoreconnect/private_keys/</code>, this block is complete once you fill in your Issuer ID. If the key lives somewhere else, add <code>ASC_PRIVATE_KEY_PATH</code> to the same env block. On Claude for macOS or Windows there is no config file: paste the key into the extension's own License key field. In the Claude Code plugin it is the License key option in the plugin's settings. Otherwise the block goes in your client's MCP config: <code>~/.claude.json</code> for Claude Code, <code>~/.cursor/mcp.json</code> for Cursor, <code>~/.codeium/windsurf/mcp_config.json</code> for Windsurf.</p>
@@ -903,7 +903,7 @@ export function licenseEmailContent(key: string): EmailContent {
   const text = [
     "Your asc-mcp Pro license",
     "",
-    "Thanks for subscribing. Here is your license key:",
+    "Here is your license key. It is sent when you subscribe and when someone asks for it on the license page, always to this address only. If you did not ask for it, nothing has changed and you can ignore this.",
     "",
     `  ${key}`,
     "",
