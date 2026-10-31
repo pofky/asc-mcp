@@ -27,7 +27,7 @@ set_age_rating works. Its lookup dropped the field it needed, so on every app it
 
 A key that got no answer at startup now asks again on your next tool call, and adopts Pro when the server is back.
 
-One trial per address, as the Terms say, and an ended subscription gets the price rather than a new trial.
+An address that once had a paid subscription gets the price, not a new trial.
 
 daily_briefing only says "Action needed" when something is yours to do. assign_build_to_group and invite_beta_tester check the group exists before asking you to confirm. set_app_availability refuses a territory code Apple does not know. competitor_snapshot says its results are the App Store's closest, not exact matches, and asc_guide's topic is now free text.
 

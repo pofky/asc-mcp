@@ -1062,10 +1062,11 @@ async function handleTrial(
     return json(trialRefused(email), headers, 409);
   }
 
-  // The Terms promise one trial per address, and a subscription that has ended is
-  // not a new customer. Both used to get a fresh 7 days from a second Apple account.
-  const earlier = await env.DB.prepare("SELECT id FROM licenses WHERE email = ? LIMIT 1").bind(email).first<{ id: number }>();
-  if (earlier) return json(trialRefused(email), headers, 409);
+  // A subscription that has ended is not a new customer, and the gate tells them
+  // so. Only a paid row counts: an earlier trial on this address must not, for the
+  // reasons above, and nobody can fake a paid row by typing a stranger's address.
+  const lapsed = await env.DB.prepare("SELECT id FROM licenses WHERE email = ? AND source = 'polar' LIMIT 1").bind(email).first<{ id: number }>();
+  if (lapsed) return json(trialRefused(email), headers, 409);
 
   // Checked only on the path that actually creates a row, so a legitimate
   // repeat caller is never turned away by someone else's abuse.
@@ -1639,7 +1640,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <ul>
       <li>Your email, license key and subscription id, for a paid subscription: performance of the contract you entered into when you subscribed (GDPR Article 6(1)(b)). We cannot deliver or validate a license without them.</li>
       <li>Your email and license key, for a free trial: taking steps at your request before entering a contract (Article 6(1)(b)).</li>
-      <li>The one-way Issuer ID fingerprint: our legitimate interest in not giving the same person an unlimited number of free trials, and in honouring a key request a machine made before 31 October 2026 (Article 6(1)(f)). The address is checked as well, because the Terms allow one trial per address. We do not rely on it alone, because that would let anyone burn a stranger's trial by typing their address.</li>
+      <li>The one-way Issuer ID fingerprint: our legitimate interest in not giving the same person an unlimited number of free trials, and in honouring a key request a machine made before 31 October 2026 (Article 6(1)(f)). We considered doing this with the email alone and rejected it, because that would let anyone burn a stranger's trial by typing their address.</li>
       <li>The user agent, prefetch headers and IP address that reach our server while a page view or a buy-link click is being counted: our legitimate interest in knowing how many real people arrive, and in keeping automated traffic out of a payment funnel (Article 6(1)(f)). None of it is stored, and what is stored is a count that identifies nobody.</li>
       <li>An email to someone who has started a trial or held a subscription, about that product: our legitimate interest in asking a small number of our own users what they thought and whether they want to continue (Article 6(1)(f)). For a trial that is two automated messages, one shortly before it ends and one shortly after, and occasionally one personal note from the developer. Every such message names us, says why you are receiving it and carries a free opt-out, and you can object at any time under Article 21(2) by using the unsubscribe link where the message has one, by replying with the word stop, or by writing to the address below. The link takes effect immediately. A reply is read and acted on by hand, normally within two working days, and a message already scheduled inside that time may still arrive. After that we will not email you about the product again. The emails a license needs in order to work, the key itself and a deletion confirmation link, are not affected.</li>
       <li>The time you opted out of product email: our legitimate interest, and yours, in keeping that instruction (Article 6(1)(f)).</li>
@@ -1664,7 +1665,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
 function handleTerms(headers: Record<string, string>): Response {
   return html(`
     <h1>Terms of Service</h1>
-    <p><em>Last updated: October 18, 2026</em></p>
+    <p><em>Last updated: October 31, 2026</em></p>
 
     <h2>What this is</h2>
     <p>asc-mcp is an independent developer tool that connects AI coding agents to Apple's App Store Connect API. It runs locally on your machine. It is not affiliated with, endorsed by, or sponsored by Apple Inc.</p>
@@ -1681,7 +1682,7 @@ function handleTerms(headers: Record<string, string>): Response {
 
     <h2>Free trial</h2>
     <p>You can unlock every Pro tool for 7 days at no cost by calling the <code>asc_start_trial</code> tool from your agent. No card is required, nothing renews, and there is nothing to cancel: the key simply stops working when the 7 days are up.</p>
-    <p>One trial per Apple developer account and per email address. The account is identified by a one-way fingerprint of your Issuer ID, described in the <a href="/privacy">privacy policy</a>. We may decline or withdraw a trial where it is being used to avoid paying for continued use, for example by cycling accounts or addresses.</p>
+    <p>One trial per Apple developer account. An address that has had a paid subscription does not get a new trial. The account is identified by a one-way fingerprint of your Issuer ID, described in the <a href="/privacy">privacy policy</a>. We may decline or withdraw a trial where it is being used to avoid paying for continued use, for example by cycling accounts or addresses.</p>
 
     <h2>Subscriptions</h2>
     <p>Pro subscriptions are billed monthly through Polar at ${PRO_PRICE}, which Polar calculates and shows at checkout before you pay. You can cancel anytime through Polar's subscription management. Polar is the merchant of record: it takes the payment, calculates and collects the tax, and issues the receipt. Polar's terms of service apply to the payment process.</p>

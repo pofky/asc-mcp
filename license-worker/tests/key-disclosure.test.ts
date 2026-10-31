@@ -149,13 +149,11 @@ describe("bad bodies get a 400, not the catch-all 500", () => {
   });
 });
 
-describe("POST /trial, one per address", () => {
-  it("refuses a second Apple account on an address that already had a trial", async () => {
+describe("POST /trial, one per Apple account", () => {
+  it("lets a second Apple account trial on the same address, so a typed address cannot burn it", async () => {
     const email = nextAddress();
     expect(((await (await trial(email, OWNER)).json()) as { ok: boolean }).ok).toBe(true);
-    const res = await trial(email, STRANGER);
-    expect(res.status).toBe(409);
-    expect(await res.text()).not.toContain("ASC-");
+    expect(((await (await trial(email, STRANGER)).json()) as { ok: boolean }).ok).toBe(true);
   });
   it("gives an ended subscription the price, not a new trial", async () => {
     const email = nextAddress();

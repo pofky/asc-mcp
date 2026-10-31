@@ -12,6 +12,9 @@ The interface is the agent conversation. The "labels" below are the report's exa
 | F1 | Preflight loop | "Run a preflight before I submit" | A report that can be trusted, then fixes in the same conversation | Conversion, retention | tasks/0002 |
 | F2 | Preflight as first look | A free user asks for an audit | The product shown on the user's own app | Activation | tasks/0002 |
 | F3 | A subscriber gets their key | Checkout, `/key`, or `asc_start_trial` | The key, and only in the owner's mailbox | Retention | v1.10.1 |
+| F4 | Starting a trial | `asc_start_trial`, or the instructions when a call is refused | 7 days of every tool in the running session | Conversion | v1.10.1 |
+| F5 | A license that is not answered or has ended | Startup, any tool | The truth about the key, and no offer the server would refuse | Retention | v1.10.1 |
+| F6 | Creating or changing something on sale | `create_iap`, `create_subscription`, `set_app_price`, `set_app_availability` | A second call before anything customers can see changes | Trust | v1.10.1 |
 
 ---
 
@@ -91,4 +94,43 @@ Success: the key arrives in the mailbox on the subscription, they paste it in, r
 - Mail failed: `/key` answers 503, `The email could not be sent`, with an address to write to. `asc_start_trial` says the same in its reply.
 - More than 3 requests for one address in 15 minutes: the same page, and no further mail until the window ends.
 - A machine that fetched its key before 31 October 2026: `asc_start_trial` still returns the key inline, because its fingerprint is on the row.
-- A trial key on a machine whose owner then subscribed: nothing to do, `/validate` answers it as the subscription.
+- A trial key on a machine whose owner subscribed within 14 days of starting it: nothing to do, `/validate` answers it as the subscription. Later than that, the key ends with the trial, and the gate says `asc_start_trial` emails the paid key.
+- Asked for again within a few minutes: `It was already emailed to <address> in the last few minutes.`
+
+## F4. Starting a trial
+
+Who: a free user with an Apple key.
+Goal: every tool for 7 days, with no card, without restarting.
+Entry: `asc_start_trial` with their address, usually after a refused call.
+Success: `Pro trial started`, and the refused call works when retried.
+
+### States on this flow
+
+- Same machine again during the trial: the same key, `already_started`.
+- This Apple account has already trialled, or the address once had a paid subscription: `No new trial is available for <address>`, the price, and a checkout link. A second Apple account on the same address may trial: the email is deliberately not an anchor, so nobody can use up a stranger's trial by typing their address.
+- A live subscription on the address: F3.
+- Daily cap reached: `Trials are temporarily unavailable`, and an address to write to.
+
+## F5. A license that is not answered or has ended
+
+Who: someone with a key set.
+Success: every surface says the same thing, and a paying customer is never sold to.
+
+### States on this flow
+
+- No answer at startup, no earlier verdict here: startup `A license key is set and the license server gave no answer`, instructions say not to offer a price or trial, `asc_setup_check` warns, the gate says `could not be checked`. Startup waits 8 seconds at most.
+- The server comes back: the next tool call asks again, at most every 30 seconds, and adopts Pro in the same session.
+- No answer, Pro confirmed here within 14 days and not past its expiry plus the 4-day renewal grace: stays Pro. A trial gets no grace.
+- Trial ended, or subscription revoked or cancelled and past its period: `Free tier, this license has ended`, instructions say no trial or preview, the gate leads with the price.
+- Key not recognized: `This license key was not recognized`, and `/key` to have it emailed again.
+
+## F6. Creating or changing something on sale
+
+Who: anyone whose agent is about to change what customers can buy.
+Success: the first call says exactly what would happen and changes nothing, and `confirm: true` does it.
+
+### States on this flow
+
+- `create_iap`, `create_subscription`: `This creates ... at $<price> ... Nothing was changed. Re-run with confirm: true`. Bad arguments are reported first.
+- `set_app_price`: a first price needs no confirm, so preflight's fix is one call. Changing an existing price needs it. Negative: `Refusing`. Not a price point: `The nearest is $<price>. Nothing was changed.`
+- `set_app_availability`: first setup and widening need no confirm. A territory that is on going off needs it. An unknown code: `Nothing was changed: <code> is not a territory`.
