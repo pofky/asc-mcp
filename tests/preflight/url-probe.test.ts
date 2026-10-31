@@ -141,7 +141,7 @@ describe("the private address guard, with no test seam", () => {
     expect(seenHeaders).toHaveLength(1);
   });
   it("calls the metadata address and the private ranges private", () => {
-    for (const a of ["169.254.169.254", "10.0.0.1", "172.16.0.1", "192.168.1.1", "127.0.0.1", "0.0.0.0", "100.64.0.1", "::1", "fe80::1", "fc00::1", "::ffff:10.0.0.1", "::ffff:7f00:1", "64:ff9b::7f00:1"]) {
+    for (const a of ["169.254.169.254", "10.0.0.1", "172.16.0.1", "192.168.1.1", "127.0.0.1", "0.0.0.0", "100.64.0.1", "::1", "fe80::1", "fc00::1", "::ffff:10.0.0.1", "::ffff:7f00:1", "64:ff9b::7f00:1", "::7f00:1", "2002:7f00:1::"]) {
       expect(isPrivateAddress(a), a).toBe(true);
     }
     for (const a of ["17.253.144.10", "8.8.8.8", "2606:4700:4700::1111"]) {

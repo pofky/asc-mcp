@@ -475,7 +475,7 @@ async function main() {
 
   tool(
     "release_preflight",
-    "Pre-submission audit: metadata, screenshots, build, price, contact, products, and whether the support, privacy and terms links actually load. With project_path, also privacy manifests, required-reason APIs, listed SDKs and purpose strings, read locally. Every rule ends in PASS, WARN, FAIL or UNKNOWN, and any UNKNOWN withholds the clean verdict. Fix each FAIL with the tool it names, then re-run. Pro feature.",
+    "Pre-submission audit: metadata, screenshots, build, price, contact, products, and whether the support, privacy and terms links actually load. With project_path, also privacy manifests, required-reason APIs, listed SDKs and purpose strings, read locally. Every rule ends in PASS, WARN, FAIL or UNKNOWN, and any UNKNOWN withholds the clean verdict; project files are checked only with project_path. Fix each FAIL with the tool it names, then re-run. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       project_path: z.string().optional().describe("Local folder of the app's Xcode project. Optional. Read only, nothing from it is executed or sent anywhere. Omit to audit the App Store Connect record alone."),

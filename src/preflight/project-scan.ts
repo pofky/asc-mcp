@@ -13,7 +13,7 @@ import {
 } from "./apple-lists.js";
 import { findBuiltApp, listEmbeddedFrameworks, plistAsXml, scanExecutable } from "./binary-scan.js";
 import { parsePlist, readManifest, type PlistValue } from "./plist.js";
-import { lineAt, readBounded, SOURCE_FILE, stripComments, walkProject, type ProjectFile } from "./project-files.js";
+import { containsFile, lineAt, readBounded, SOURCE_FILE, stripComments, walkProject, type ProjectFile } from "./project-files.js";
 import { failedPart, okPart, type ApiUse, type ProjectInput, type ProjectManifest, type ProjectScan, type PurposeUse, type SdkUse } from "./types.js";
 
 const MESSAGE_CHARS = 120;
@@ -120,8 +120,9 @@ async function sdkManifestOnDisk(root: string, name: string, repo: string): Prom
     .flatMap((e) => [join(root, e.name, "SourcePackages", "checkouts", repo), join(root, e.name, "checkouts", repo)]);
   const dir = [join(root, "Pods", name), ...checkouts].find((p) => existsSync(p));
   if (!dir) return "not_on_disk";
-  const { files } = await walkProject(dir);
-  return files.some((f) => f.name === "PrivacyInfo.xcprivacy") ? "present" : "absent";
+  const found = await containsFile(dir, "PrivacyInfo.xcprivacy");
+  if (found === null) return "not_on_disk";
+  return found ? "present" : "absent";
 }
 
 async function scanBuiltApp(root: string, scan: ProjectScan, apis: Map<string, ApiUse>, sdks: Map<string, SdkUse>): Promise<void> {
@@ -141,7 +142,7 @@ async function scanBuiltApp(root: string, scan: ProjectScan, apis: Map<string, A
       apis.set(category, { category, strength: "strong", where: `the built app ${rel}` });
     }
   } catch (err) {
-    scan.binarySkipped = `The built app's symbols could not be read: ${message(err)}`;
+    scan.binaryUnreadable = `The built app's symbols could not be read: ${message(err)}`;
   }
   try {
     const infoPath = [join(app, "Info.plist"), join(app, "Contents", "Info.plist")].find((p) => existsSync(p));
@@ -156,7 +157,7 @@ async function scanBuiltApp(root: string, scan: ProjectScan, apis: Map<string, A
       if (listed) sdks.set(listed, { name: listed, via: fw.rel, manifest: fw.hasManifest ? "present" : "absent" });
     }
   } catch (err) {
-    scan.binarySkipped = `The built app could not be fully read: ${message(err)}`;
+    scan.binaryUnreadable = `The built app could not be fully read: ${message(err)}`;
   }
 }
 
@@ -174,6 +175,7 @@ async function scanProject(root: string, bundleId: string | null): Promise<Proje
     signInSeenAt: null,
     builtApp: null,
     binarySkipped: null,
+    binaryUnreadable: null,
     truncated: null,
     plistIssue: null,
   };

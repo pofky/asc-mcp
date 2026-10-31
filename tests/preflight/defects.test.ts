@@ -169,6 +169,17 @@ describe("the defects the old tool had", () => {
     expect(out).toContain("url.privacy.set");
   });
 
+  it("D7: a missing privacy URL in a second language warns, and in the primary language fails", async () => {
+    const apple = clean();
+    apple.set(`/v1/appInfos/info1/appInfoLocalizations`, { data: [
+      { id: "a", attributes: { locale: "en-US", name: "Test App", subtitle: null, privacyPolicyUrl: `${base}/privacy` } },
+      { id: "b", attributes: { locale: "de-DE", name: "Test App", subtitle: null, privacyPolicyUrl: null } },
+    ] });
+    const out = await run(apple);
+    expect(out).toMatch(CLEAN_VERDICT);
+    expect(out).toContain("WARN  url.privacy.set  [de-DE]");
+  });
+
   it("D8: a first release numbered 2.0 is not failed for an empty What's New", async () => {
     expect(await run(clean())).toMatch(CLEAN_VERDICT);
   });
@@ -235,6 +246,12 @@ describe("the defects the old tool had", () => {
       const out = await run(apple);
       expect(out).toMatch(/NOT CONFIRMED/);
       expect(out).toContain("sub.terms");
+    });
+
+    it("a link that does not look like Terms is a warning, since only a person can tell", async () => {
+      const out = await run(withSubscription(`Great app, read everything here.\nMore: ${base}/conditions`));
+      expect(out).toMatch(CLEAN_VERDICT);
+      expect(out).toContain("WARN  sub.terms");
     });
 
     it("a dead terms link fails", async () => {

@@ -80,15 +80,26 @@ function checkPlist(scan: ProjectScan): Finding[] {
       : finding("plist.purpose", "fail", `This code uses ${use.api} at ${use.where}, and no ${use.keys[0]} was found.`));
   }
   if (!bad) out.push(finding("plist.purpose", "pass", scan.purposes.length ? "Each permission in use has its purpose string." : "No API that needs a purpose string was found."));
-  for (const p of scan.placeholderKeys) out.push(finding("plist.placeholder", "fail", `${p.key} holds a sample value.`, p.where));
+  for (const p of scan.placeholderKeys) out.push(finding("plist.placeholder", "fail", `${p.key.replace(/[^\w.-]/g, "").slice(0, 60)} holds a sample value.`, p.where));
   if (!scan.placeholderKeys.length) out.push(finding("plist.placeholder", "pass", "No sample values found."));
   return out;
 }
 
+/**
+ * File and key names come from a folder that may have been cloned from anyone,
+ * and an agent reads this report. One line each, printable, and short.
+ */
+const printable = (f: Finding): Finding => ({
+  ...f,
+  saw: f.saw.replace(/[^\x20-\x7e]/g, "").slice(0, 400),
+  scope: f.scope?.replace(/[^\x20-\x7e]/g, "").slice(0, 120),
+});
+
 /** The project rules, or one line each saying why they did not run. */
 export function checkProject(project: ProjectInput): Finding[] {
   if (!project.provided) return [finding("manifest.present", "skipped", "Pass project_path to check privacy manifests and purpose strings.", "project.*")];
-  if ("error" in project) return [finding("manifest.present", "skipped", project.error, "project.*")];
+  // The caller asked for these rules and they did not run, so it is not clean.
+  if ("error" in project) return [finding("manifest.present", "unknown", `Project rules did not run. ${project.error}`, "project.*")];
   const scan = project.scan;
   const out = [...checkManifests(scan), ...checkSdks(scan), ...checkPlist(scan)];
   if (scan.truncated) {
@@ -96,8 +107,9 @@ export function checkProject(project: ProjectInput): Finding[] {
     for (const rule of PROJECT_RULES) out.push(finding(rule, "unknown", `The scan was partial: ${scan.truncated}.`));
   }
   if (scan.plistIssue) out.push(finding("plist.purpose", "unknown", scan.plistIssue));
+  if (scan.binaryUnreadable) out.push(finding("manifest.reasons", "unknown", scan.binaryUnreadable, "built app"));
   if (scan.binarySkipped) out.push(finding("manifest.reasons", "skipped", scan.binarySkipped, "built app"));
-  return out;
+  return out.map(printable);
 }
 
 /** Data types declared in the manifests, for the App Privacy page Apple's API cannot reach. */

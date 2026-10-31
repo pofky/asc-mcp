@@ -19,7 +19,7 @@ const TEST_DIR = /(Tests?|UITests?|Specs?)$|^Test|Testing$/;
 const OPAQUE_DIR = /\.(xcassets|xcarchive|app|framework|xcframework|bundle|lproj|xcworkspace)$/;
 
 /** Bounds for a large monorepo. Hitting one is reported, since absence then proves nothing. */
-export const SCAN_LIMITS = { maxFiles: 20_000, maxDepth: 12, maxFileBytes: 2 * 1024 * 1024 } as const;
+export const SCAN_LIMITS = { maxFiles: 20_000, maxDepth: 12, maxFileBytes: 2 * 1024 * 1024, maxMillis: 20_000 } as const;
 
 export const SOURCE_FILE = /\.(swift|m|mm|c|cc|cpp)$/;
 const INTERESTING_FILE =
@@ -42,8 +42,13 @@ export async function walkProject(root: string): Promise<WalkResult> {
   const files: ProjectFile[] = [];
   let truncated: string | null = null;
   let seen = 0;
+  const started = Date.now();
   const visit = async (dir: string, depth: number): Promise<void> => {
     if (truncated) return;
+    if (Date.now() - started > SCAN_LIMITS.maxMillis) {
+      truncated = `the scan stopped after ${SCAN_LIMITS.maxMillis / 1000} seconds`;
+      return;
+    }
     if (depth > SCAN_LIMITS.maxDepth) {
       truncated = `folders deeper than ${SCAN_LIMITS.maxDepth} levels were not read`;
       return;
@@ -69,6 +74,32 @@ export async function walkProject(root: string): Promise<WalkResult> {
   };
   await visit(root, 0);
   return { files, truncated };
+}
+
+/**
+ * Whether a file of this name sits anywhere under a folder. For an SDK's own
+ * folder, where the manifest is usually inside a .bundle or .xcframework that the
+ * source walk rightly skips. Symlinks are still not followed. Null when the
+ * search ran out, because then "not found" would be a guess.
+ */
+export async function containsFile(dir: string, name: string): Promise<boolean | null> {
+  let budget = SCAN_LIMITS.maxFiles;
+  const visit = async (current: string, depth: number): Promise<boolean | null> => {
+    if (depth > SCAN_LIMITS.maxDepth) return null;
+    let incomplete = false;
+    for (const entry of await readdir(current, { withFileTypes: true })) {
+      if (entry.isSymbolicLink()) continue;
+      if (--budget < 0) return null;
+      if (entry.isFile() && entry.name === name) return true;
+      if (entry.isDirectory()) {
+        const found = await visit(join(current, entry.name), depth + 1);
+        if (found) return true;
+        if (found === null) incomplete = true;
+      }
+    }
+    return incomplete ? null : false;
+  };
+  return visit(dir, 0);
 }
 
 /** Reads a file only if it is a regular file within the size bound; otherwise null. */

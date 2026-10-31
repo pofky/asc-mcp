@@ -23,7 +23,8 @@ export function verdictLine(all: Finding[]): string {
   if (fails) return `BLOCKED: ${plural(fails, "failure")}${unknowns ? `, ${unknownText}` : ""}`;
   if (unknowns) return `NOT CONFIRMED: no failures, ${unknownText}`;
   const rules = new Set(findings.filter((f) => f.status !== "skipped").map((f) => f.rule)).size;
-  return `NO BLOCKING ISSUES FOUND: ${plural(rules, "rule")} checked${warns ? `, ${plural(warns, "warning")}` : ""}. ${NOT_A_PREDICTION}`;
+  const projectSkipped = findings.some((f) => f.status === "skipped" && f.scope === "project.*");
+  return `NO BLOCKING ISSUES FOUND: ${plural(rules, "rule")} checked${warns ? `, ${plural(warns, "warning")}` : ""}${projectSkipped ? ", project files not checked" : ""}. ${NOT_A_PREDICTION}`;
 }
 
 /** Same result on many locales reads as one finding with a list of locales. */

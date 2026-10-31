@@ -129,7 +129,6 @@ export const SDK_PACKAGE_ALIASES: Readonly<Record<string, string>> = {
   "abseil-cpp-binary": "Abseil",
   "abseil-cpp": "Abseil",
   "grpc-binary": "grpcpp",
-  "swift-protobuf": "Protobuf",
   "facebook-ios-sdk": "FBSDKCoreKit",
   "onesignal-ios-sdk": "OneSignal",
   "onesignal-xcframework": "OneSignal",

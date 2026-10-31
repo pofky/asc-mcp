@@ -1589,7 +1589,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <h2>What the preflight audit reads and requests</h2>
     <p>These happen on your machine, when you call <code>release_preflight</code>, and none of it comes to us.</p>
     <ul>
-      <li><strong>Web addresses.</strong> It requests the support, marketing, privacy policy and terms addresses in your own App Store Connect record, to see whether they load. Those sites receive an ordinary web request from your machine, with your IP address and a user agent naming asc-mcp, and no key or token. Addresses that resolve to a private network are not requested.</li>
+      <li><strong>Web addresses.</strong> It requests the support, marketing, privacy policy and terms addresses in your own App Store Connect record, to see whether they load, following their redirects. Those sites receive an ordinary web request from your machine, with your IP address and a user agent naming asc-mcp, and no key or token. Addresses that resolve to a private network are not requested.</li>
       <li><strong>Your project folder, only if you pass <code>project_path</code>.</strong> It reads source files, property lists, dependency lists and any built app there, using Apple's <code>nm</code> and <code>plutil</code> for built apps on a Mac. It writes nothing, runs nothing from the project, and keeps nothing after the reply. The reply goes to your MCP client and the model you use with it, and holds file paths, line numbers and setting names, not file contents.</li>
     </ul>
 

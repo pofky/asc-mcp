@@ -32,6 +32,14 @@ describe("the verdict", () => {
   it("a skipped rule does not block and is not counted as checked", () => {
     expect(verdictLine([f("pass"), f("skipped", "manifest.present")])).toContain("1 rule checked");
   });
+  it("the clean line says when project files were not checked", () => {
+    expect(verdictLine([f("pass"), f("skipped", "manifest.present", "project.*")])).toContain("1 rule checked, project files not checked.");
+  });
+  it("a project_path that cannot be read withholds the clean verdict", async () => {
+    const out = await runPreflight(fakeApple({ support: "https://a.test/s", privacy: "https://a.test/p" }).client, { app_id: APP, project_path: "/no/such/folder" }, { now: () => NOW, probe: offline });
+    expect(out).toContain("Path not found");
+    expect(out).not.toContain("NO BLOCKING ISSUES FOUND");
+  });
   it("counts as printed: one problem on many locales is one failure", () => {
     expect(verdictLine([f("fail", "url.support.set", "en-US"), f("fail", "url.support.set", "de-DE")])).toBe("BLOCKED: 1 failure");
   });

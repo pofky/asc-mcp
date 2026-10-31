@@ -147,8 +147,10 @@ export interface ProjectScan {
   runsOnIpad: boolean | null;
   signInSeenAt: string | null;
   builtApp: string | null;
-  /** Why built-app rules did not run, when they did not. */
+  /** Nothing to read here: no built app, or not a Mac. Source rules still ran. */
   binarySkipped: string | null;
+  /** A built app was found and could not be read, so a requested check did not run. */
+  binaryUnreadable: string | null;
   /** Set when a scan limit was reached, so absence of a finding proves nothing. */
   truncated: string | null;
   /** An Info.plist that could not be read, which leaves only the plist rules unsure. */

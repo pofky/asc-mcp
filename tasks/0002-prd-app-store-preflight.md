@@ -369,3 +369,5 @@ Read-only probes with the real key, across all 11 apps on the account, changed t
 Defects confirmed on the old tree (`00a9fa8`) by tests asserting each bug directly: D1, D2, D3, D4, D5, D6, D8, D9, D10, D11, D12, plus the price and expired-build false passes. One assertion was wrong: a 403 on the review detail did not reach "Ready" but printed a false "contact not set" warning. `tests/preflight/defects.test.ts` on that tree: 36 of 38 fail, many on wording alone, which is why the direct run was added.
 
 Not run: a low-role key against Apple (simulated by 403s), a rival, a real ITMS-91053 mail.
+
+**After independent review, same day.** A bad `project_path` was `SKIPPED` per section 3 and could still read as clean; the caller asked for those rules, so it is now `UNKNOWN`, and the clean verdict says `project files not checked` when no path was given. `url.privacy.set` fails only on the primary language, since Apple does not state a per-language rule. A description with a link that does not look like Terms is a warning, and no link at all stays a failure. An unverifiable certificate chain is `UNKNOWN`, because a company proxy causes it.

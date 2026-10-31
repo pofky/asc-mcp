@@ -35,7 +35,7 @@ function buildBlockList(): BlockList {
     ["198.51.100.0", 24], ["203.0.113.0", 24], ["224.0.0.0", 4], ["240.0.0.0", 4],
   ] as const) list.addSubnet(net, bits, "ipv4");
   for (const [net, bits] of [
-    ["::", 128], ["::1", 128], ["fc00::", 7], ["fe80::", 10], ["fec0::", 10], ["ff00::", 8], ["2001:db8::", 32], ["64:ff9b::", 96], ["100::", 64],
+    ["::", 96], ["2002::", 16], ["2001::", 32], ["fc00::", 7], ["fe80::", 10], ["fec0::", 10], ["ff00::", 8], ["2001:db8::", 32], ["64:ff9b::", 96], ["100::", 64],
   ] as const) list.addSubnet(net, bits, "ipv6");
   return list;
 }
@@ -147,6 +147,9 @@ function outcomeForError(code: string, refused: boolean): ProbeOutcome {
   if (refused) return { kind: "inconclusive", detail: "it points at a private address, so it was not requested" };
   if (code === "ENOTFOUND") return { kind: "dead", detail: "the domain does not resolve" };
   if (code === "ECONNREFUSED") return { kind: "dead", detail: "the server refused the connection" };
+  // A company proxy re-signs traffic, so an unknown issuer may be this machine's
+  // network and not the site. An expired or wrong-name certificate is the site's.
+  if (/SELF_SIGNED|UNABLE_TO_(VERIFY|GET)/.test(code)) return { kind: "inconclusive", detail: "its TLS certificate could not be verified from this network" };
   if (/CERT|SSL|TLS/i.test(code)) return { kind: "dead", detail: "its TLS certificate is not valid" };
   if (code === "AbortError" || code === "ABORT_ERR" || code === "ETIMEDOUT") return { kind: "inconclusive", detail: "it did not answer in time" };
   return { kind: "inconclusive", detail: `the connection failed (${code.replace(/[^A-Za-z0-9_]/g, "").slice(0, 40)})` };

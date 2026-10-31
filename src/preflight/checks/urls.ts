@@ -73,7 +73,13 @@ export function checkPrivacyUrls(record: RecordSnapshot, probes: ProbeResults, c
   for (const l of record.appInfo.value.localizations) {
     const url = l.privacyPolicyUrl?.trim();
     if (!url) {
-      out.push(finding("url.privacy.set", "fail", "No privacy policy URL.", l.locale));
+      // Guideline 5.1.1(i) requires the link. Whether each extra language needs its
+      // own is not something Apple states, so only the primary language is a failure.
+      const primary = record.app.ok ? record.app.value.primaryLocale : null;
+      const blocking = !primary || primary === l.locale;
+      out.push(blocking
+        ? finding("url.privacy.set", "fail", "No privacy policy URL.", l.locale)
+        : finding("url.privacy.set", "warn", "No privacy policy URL in this language.", l.locale));
       continue;
     }
     out.push(finding("url.privacy.set", "pass", "Set.", l.locale));

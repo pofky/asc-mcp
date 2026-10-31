@@ -265,6 +265,9 @@ export function checkSubscriptionTerms(record: RecordSnapshot, v: VersionSnapsho
   const missing = v.localizations.value.filter((l) => !termsLinksIn(l.description).length);
   if (!missing.length) return [finding("sub.terms", "pass", "A Terms of Use link is in the description.")];
   return missing.map((l) =>
-    finding("sub.terms", "fail", "This app has subscriptions, no custom licence agreement, and no Terms of Use link in the description. Apple's standard one is https://www.apple.com/legal/internet-services/itunes/dev/stdeula/", l.locale),
+    // A link with an unusual address may still be the Terms, and only a person can tell.
+    /https?:\/\//i.test(l.description ?? "")
+      ? finding("sub.terms", "warn", "This app has subscriptions and no custom licence agreement, and no link in the description looks like Terms of Use. If one of them is, label it \"Terms of Use\" on its line.", l.locale)
+      : finding("sub.terms", "fail", "This app has subscriptions, no custom licence agreement, and no Terms of Use link in the description. Apple's standard one is https://www.apple.com/legal/internet-services/itunes/dev/stdeula/", l.locale),
   );
 }

@@ -35,9 +35,9 @@ Success: `NO BLOCKING ISSUES FOUND: ... This is not a prediction of App Review's
 
 ### States on this flow
 
-- No `project_path`: `SKIPPED  project.*  Pass project_path to check privacy manifests and purpose strings.` Does not block.
-- Bad path: `SKIPPED  project.*  Path not found: <path>`. The audit continues.
-- No built app, or not a Mac: `SKIPPED  built app  <reason>`. Source and plist rules ran.
+- No `project_path`: `SKIPPED  project.*  Pass project_path to check privacy manifests and purpose strings.` Does not block, and the clean verdict says `project files not checked`.
+- Bad path: `UNKNOWN  manifest.present  [project.*]`, `Saw:  Project rules did not run. Path not found: <path>`. The audit continues, and the verdict is NOT CONFIRMED.
+- No built app, or not a Mac: `SKIPPED  built app  <reason>`. Source and plist rules ran. A built app that cannot be read: `UNKNOWN`.
 - A read fails: `UNKNOWN  rule`, `Saw:  Apple returned 403. Your key's role may be too low (App Manager or higher).`
 - A link blocks robots or times out: `UNKNOWN`, with `Open it in a browser and confirm.`
 - Rejected version: selected, with `review_status with app_id <id> shows Apple's message.`
