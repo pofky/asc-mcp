@@ -20,6 +20,13 @@ worker `da0c4ecc`.**
   target under 44px, links resolve (npm 403 and GitHub 429 are those hosts refusing the checker).
   Trap: `fetch` fails for every URL in the Playwright MCP browser, same-origin too; real Chrome sends
   the beacon. Do not read that console error as a site bug. Site `bb5762e6`, worker `da0c4ecc`.
+- **Payment check, 31 Oct:** new org read through Polar's API: product $9/month active, checkout link and
+  webhook endpoint correct, all 12 deliveries ever 200. Those 12 real payloads replayed through the current
+  handler on in-memory SQLite: all 200, one key mail, the revoked sub dead, the live sub Pro to 18 Nov. Live
+  worker refuses unsigned and bad-signature webhooks (401). Row 84 matches Polar. No webhook has reached the
+  worker since these changes. Not verified: old org rows 17, 20, 21, 24 against Polar, no working token here
+  (`POLAR_READ_TOKEN` answers 401, and a wider credential search was refused). Rows 21 and 24 expire 1 Nov,
+  so their renewal is the first live proof.
 - **Live, worker `a340a56e`:** `/key` and `/trial` only ever mail a paid key (hole open until
   `b6186d5d`; rows 17, 21, 24, 84 were exposed, no log says whether anyone used it, keys not
   rotated, operator's call). An address with a paid row gets the price instead of a new trial.
