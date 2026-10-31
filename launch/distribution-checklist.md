@@ -130,3 +130,7 @@ word direct answer. That structure is what gets extracted and cited.
       cites recent content far more heavily.
 - [ ] Monthly: ask ChatGPT, Claude, Perplexity and Google AI Overviews the priority
       questions above and log who gets cited. Track citation share, not rankings.
+
+## Plain-words copy (31 Oct 2026)
+
+Use `launch/plain-explainer-long.txt` and `launch/plain-explainer-short.txt` for new listings and posts, `launch/glama-description.txt` for directory description fields. Update PulseMCP, mcpservers.org and Glama with these the next time each is touched.

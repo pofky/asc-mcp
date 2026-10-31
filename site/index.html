@@ -108,6 +108,16 @@ header.hero{padding:26px 0 56px}
 .btn.ghost:hover{border-color:var(--muted);background:transparent}
 .reassure{font-family:var(--mono);font-size:.74rem;color:var(--dim);margin:0}
 
+/* the plain version: same prompt convention as the terminals, in reading type */
+.said{list-style:none;margin:24px 0;padding:6px 18px;border:1px solid var(--line);border-radius:12px;
+  background:var(--panel);max-width:var(--measure)}
+.said li{padding:16px 0;border-top:1px solid var(--line)}
+.said li:first-child{border-top:0}
+.said b{display:block;font-family:var(--mono);font-size:.9rem;font-weight:600;color:var(--amber);margin-bottom:4px}
+.said span{color:var(--text)}
+.plain p{max-width:var(--measure)}
+.plain .aside{color:var(--muted)}
+
 /* the rail: App Store Connect's own state machine, honestly annotated */
 .rail{list-style:none;margin:28px 0 0;padding:0}
 .stage{display:grid;grid-template-columns:14px 1fr;gap:14px;padding-bottom:22px;position:relative}
@@ -235,6 +245,35 @@ nav.top a,.foot-links a{display:inline-flex;align-items:center;min-height:44px;m
     </div>
     <p class="reassure">Install, then ask your agent to run <code>asc_start_trial</code>. Every tool unlocks for 7 days,
       no card and nothing to cancel. Your .p8 key never leaves your machine. <a href="#setup">How setup works</a></p>
+  </div>
+</header>
+
+<main>
+
+<section id="plain" class="plain">
+  <div class="wrap">
+    <span class="eyebrow">In plain words</span>
+    <h2>What this does, explained like you're six</h2>
+    <p style="margin-top:14px">You made a toy and you want it in a giant toy store, the App Store. The store has a
+      strict office. Before your toy reaches the shelf, you fill out lots of forms, add pictures, set a price, and
+      wait for a helper to check it all. Forget one thing and they say "no, try again", and days are gone.</p>
+    <p>asc-mcp is a helper robot for that office. It talks to your AI assistant, so you just say what you want.</p>
+    <ul class="said">
+      <li><b>&gt; how is my toy doing?</b><span>It tells you whether the store said yes or no, and with Pro, what people wrote about your toy.</span></li>
+      <li><b>&gt; is my toy ready?</b><span>It checks your forms first, like a teacher reading your homework before you hand it in: "You forgot a picture, and this link is broken."</span></li>
+      <li><b>&gt; fix it for me</b><span>It fills in forms, adds pictures and sets prices. Before a big move, like changing a price or handing your toy to the store, it stops and asks: are you sure?</span></li>
+    </ul>
+    <p>Checking whether the store said yes or no is free, with no time limit. Everything else works free for 7 days,
+      no card, then it's $9 a month, VAT included, with sales tax added in the US, Canada and India.</p>
+    <p class="aside">The robot checks your homework, and the store still decides. For the grown-ups: the toy is your
+      app, the office is App Store Connect, and the robot is an MCP server running on your own computer.</p>
+  </div>
+</section>
+
+<section id="demo">
+  <div class="wrap">
+    <span class="eyebrow">In your agent</span>
+    <h2>What it looks like when you ask</h2>
 
     <div class="session" aria-label="Terminal output from the setup check">
       <div class="session-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
@@ -283,9 +322,7 @@ When the trial ends, Pro is $9/month (VAT included; in the US, Canada and India 
       <button type="button" data-copy="ask" aria-label="Copy the sentence that starts the trial">Copy</button>
     </div>
   </div>
-</header>
-
-<main>
+</section>
 
 <section id="pipeline">
   <div class="wrap">
@@ -640,6 +677,7 @@ async function copyHandler() {
 {"@type":"WebSite","@id":"https://asc-mcp.pages.dev/#site","url":"https://asc-mcp.pages.dev/","name":"App Store Connect MCP","publisher":{"@id":"https://asc-mcp.pages.dev/#org"},"inLanguage":"en"},
 {"@type":"SoftwareApplication","name":"App Store Connect MCP (asc-mcp)","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows (Node 18+)","softwareVersion":"1.10.1","url":"https://asc-mcp.pages.dev/","downloadUrl":"https://www.npmjs.com/package/@pofky/asc-mcp","publisher":{"@id":"https://asc-mcp.pages.dev/#org"},"description":"MCP server with 41 tools that drives App Store Connect from any MCP client: metadata, screenshots, builds, TestFlight, in-app purchases, submission, release, plus preflight audits and review intelligence.","featureList":["Release preflight audit","App Store metadata editing with Apple character-limit validation","Screenshot upload per display type","Build, sign and upload a binary locally","TestFlight groups and testers","Submit for review and release, behind an explicit confirm flag","Phased release control","Subscriptions and in-app purchases with territory availability and free trials","Customer review triage and reply drafting","Sales and download reports","Keyword and competitor intelligence"],"offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"USD","description":"Six tools with no asc-mcp account: trial starter, setup check, playbook, list apps, app details, review status. Two of them, the setup check and the playbook, need nothing at all; the other four need your own Apple API key. Ten Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total per machine with no license. Plus a 7-day free trial of all 41 tools, started in-agent with asc_start_trial, no credit card."},{"@type":"Offer","name":"Pro","price":"9","priceCurrency":"USD","description":"All 41 tools including the full write and control plane. Free for 7 days, then billed monthly through Polar, cancel any time. VAT is included; in the US, Canada and India sales tax is added at checkout.","url":"https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj"}],"datePublished":"2026-04-13","dateModified":"2026-10-31"},
 {"@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"What does asc-mcp do, in simple words?","acceptedAnswer":{"@type":"Answer","text":"It is a helper for the App Store's paperwork that works with your AI assistant. You ask how your app is doing and it tells you whether Apple said yes or no and, with Pro, what people wrote. You ask if your app is ready and it checks your forms before you send them. You ask it to fix something and it fills in forms, adds pictures and sets prices, and stops to ask before a big move like changing a price or submitting. Apple still makes the decision."}},
 {"@type":"Question","name":"How much does asc-mcp cost?","acceptedAnswer":{"@type":"Answer","text":"There is a free 7-day trial of everything, with no credit card: ask your agent to run the asc_start_trial tool and all 41 tools unlock immediately. After that Pro is $9 per month, with VAT included, and in the US, Canada and India sales tax is added at checkout, billed through Polar and cancellable any time. Six tools are free with no time limit and no asc-mcp account: asc_start_trial, asc_setup_check, asc_guide, list_apps, app_details and review_status. Two of them, the setup check and the playbook, need nothing at all; the other four need your own Apple API key. Ten Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total per machine with no license."}},
 {"@type":"Question","name":"How do I start the asc-mcp free trial?","acceptedAnswer":{"@type":"Answer","text":"Ask your coding agent to call the asc_start_trial tool with your email address. There is no website signup and no credit card. The key it returns activates in the running session, so the Pro tool you were blocked on works on the very next call without restarting your agent, and the key is saved on your machine so it survives a restart. One trial per Apple developer account."}},
 {"@type":"Question","name":"Is there a free trial of asc-mcp?","acceptedAnswer":{"@type":"Answer","text":"Yes. All 41 tools are free for 7 days, no credit card and nothing to cancel. You start it from inside your coding agent by calling the asc_start_trial tool with your email address, rather than signing up on a website. The trial activates in the running session, so the tool you were blocked on works on the next call without restarting your agent. One trial per Apple developer account."}},

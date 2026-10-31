@@ -134,3 +134,14 @@ Success: the first call says exactly what would happen and changes nothing, and 
 - `create_iap`, `create_subscription`: `This creates ... at $<price> ... Nothing was changed. Re-run with confirm: true`. Bad arguments are reported first.
 - `set_app_price`: a first price needs no confirm, so preflight's fix is one call. Changing an existing price needs it. Negative: `Refusing`. Not a price point: `The nearest is $<price>. Nothing was changed.`
 - `set_app_availability`: first setup and widening need no confirm. A territory that is on going off needs it. An unknown code: `Nothing was changed: <code> is not a territory`.
+
+## F7. A visitor who does not know the jargon reads the landing page
+
+Added by `tasks/0003-prd-plain-words-explainer.md`.
+
+1. Landing page, hero: `Ship an App Store release without leaving your agent.` with `Start free, no card` and the install command.
+2. Next section, eyebrow `In plain words`, heading `What this does, explained like you're six`: the toy store story, then three things you say (`> how is my toy doing?`, `> is my toy ready?`, `> fix it for me`) with what each does.
+3. What it costs: yes-or-no status free with no time limit, everything else 7 days with no card, then $9 a month with the tax wording. Then: the store still decides, and what the toy, office and robot really are.
+4. Next section, eyebrow `In your agent`, heading `What it looks like when you ask`: the setup check and trial terminals, then the copyable trial sentence.
+5. Works at 320px with no sideways scroll. With scripts off, the text still reads; only the copy buttons do nothing.
+

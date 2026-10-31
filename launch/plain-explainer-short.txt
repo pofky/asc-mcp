@@ -1,0 +1,1 @@
+Getting an app into the App Store is a pile of forms, and one missed box means "no, try again". asc-mcp is a helper robot for that paperwork: ask your AI assistant "is my app ready?" or "fix it for me" and it does the checking and filling in, then asks before anything big. Apple still decides. https://asc-mcp.pages.dev

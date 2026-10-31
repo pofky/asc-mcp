@@ -61,7 +61,7 @@ const manifest = {
   display_name: "asc-mcp",
   version: pkg.version,
   description:
-    "Ship an App Store release from your agent. An MCP server for App Store Connect: 41 tools for metadata, screenshots, builds, TestFlight, in-app purchases, submit and release.",
+    "Ask Claude how your app is doing, whether it is ready, or to fix it. An MCP server for App Store Connect: 41 tools for metadata, screenshots, builds, TestFlight, in-app purchases, submit and release.",
   author: { name: "Povilas Konopackas", url: "https://asc-mcp.pages.dev" },
   homepage: "https://asc-mcp.pages.dev",
   documentation: "https://github.com/pofky/asc-mcp/blob/master/USER_GUIDE.md",

@@ -4,6 +4,20 @@
 
 [asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/month, VAT included (sales tax added in the US, Canada and India)](https://asc-mcp.pages.dev/#pricing)
 
+### In plain words
+
+You made a toy and you want it in a giant toy store, the App Store. The store has a strict office. Before your toy reaches the shelf, you fill out lots of forms, add pictures, set a price, and wait for a helper to check it all. Forget one thing and they say "no, try again", and days are gone.
+
+asc-mcp is a helper robot for that office. It talks to your AI assistant, so you just say what you want:
+
+- **"How is my toy doing?"** It tells you whether the store said yes or no, and with Pro, what people wrote about your toy.
+- **"Is my toy ready?"** It checks your forms first, like a teacher reading your homework before you hand it in: "You forgot a picture, and this link is broken."
+- **"Fix it for me."** It fills in forms, adds pictures and sets prices. Before a big move, like changing a price or handing your toy to the store, it stops and asks: are you sure?
+
+Checking whether the store said yes or no is free, with no time limit. Everything else works free for 7 days, no card, then it's $9 a month, VAT included, with sales tax added in the US, Canada and India. The robot checks your homework, and the store still decides.
+
+For the grown-ups: the toy is your app, the office is App Store Connect, and the robot is an MCP server running on your own computer.
+
 **Claude Desktop, one click:** download the latest [`asc-mcp.mcpb`](https://github.com/pofky/asc-mcp/releases/latest) and open it. Claude asks for your Issuer ID and lets you pick your `.p8` with a file picker. No JSON, no restart hunt.
 
 **Everything else** (Claude Code, Cursor, Windsurf, Cline), one command:
