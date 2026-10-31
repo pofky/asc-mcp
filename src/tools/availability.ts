@@ -3,6 +3,8 @@ import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
 
 export interface AppAvailabilityArgs {
+  /** Required to turn territories off on an app that already has availability set. */
+  confirm?: boolean;
   app_id: string;
   /**
    * Territory ids to make the app available in (e.g. ["USA","GBR"]). Omit to
@@ -72,6 +74,19 @@ export async function setAppAvailability(
     if (ex.data && !Array.isArray(ex.data)) availId = ex.data.id;
   } catch (err) {
     if (!(err instanceof ASCAPIError && err.status === 404)) throw err;
+  }
+
+  // Where an app already sells, turning territories off stops sales there at once,
+  // and [] takes it off the store. That is one mistyped argument, so it takes a
+  // second call. A first setup has nothing to lose, and turning on loses nothing.
+  if (availId && args.territories !== undefined && !args.confirm) {
+    const off = allIds.filter((id) => !wanted.has(id)).length;
+    return (
+      (wanted.size === 0
+        ? "This takes the app off sale in every territory."
+        : `This turns off every territory except ${[...wanted].join(", ")} (${off} of ${allIds.length}), where the app may be on sale now.`) +
+      " Nothing was changed. Re-run with confirm: true to proceed."
+    );
   }
 
   // Create path: no availability yet. Apple requires a territoryAvailability

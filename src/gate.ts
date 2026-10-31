@@ -223,7 +223,7 @@ function keyAdvice(): string {
   if (keySet && lastLicenseStatus() === null) {
     return (
       "ASC_LICENSE_KEY is set but could not be checked, so the license server is probably " +
-      "unreachable from here. Your key is fine. Retry in a moment, or check status at " +
+      "unreachable from here. That says nothing about your key. Retry in a moment, or check status at " +
       `${LICENSE_API_URL}/health`
     );
   }

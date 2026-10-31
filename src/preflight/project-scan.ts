@@ -19,7 +19,7 @@ import { failedPart, okPart, type ApiUse, type ProjectInput, type ProjectManifes
 const MESSAGE_CHARS = 120;
 
 /** Files that say a folder is an app project, even with no source in it yet. */
-const PROJECT_MARKER = /^(project\.pbxproj|Package\.swift|project\.ya?ml|Podfile\.lock|pubspec\.lock|app\.json|PrivacyInfo\.xcprivacy|Info\.plist)$/;
+const PROJECT_MARKER = /^(project\.pbxproj|Package\.swift|project\.ya?ml|Podfile(\.lock)?|pubspec\.lock|app\.json|PrivacyInfo\.xcprivacy|Info\.plist)$/;
 
 class NoProjectHere extends Error {}
 
@@ -114,6 +114,13 @@ function dependenciesIn(file: ProjectFile, text: string): Array<{ name: string; 
   if (file.name === "Podfile.lock") {
     const section = text.split(/^DEPENDENCIES:/m)[0];
     for (const m of section.matchAll(/^ {2}- "?([A-Za-z0-9_+.-]+)(?:\/[^\s"]*)?(?: \([^)]*\))?"?:?$/gm)) add(m[1], "Podfile.lock");
+  } else if (file.name === "Podfile") {
+    // A repo that does not commit its lock file has only this. Subspecs name the
+    // real library: pod 'Firebase/Analytics' ships FirebaseAnalytics.
+    for (const m of text.matchAll(/^\s*pod\s+['"]([A-Za-z0-9_+.-]+)(?:\/([A-Za-z0-9_+.-]+))?['"]/gm)) {
+      add(m[1], "Podfile");
+      if (m[2]) add(`${m[1]}${m[2]}`, "Podfile");
+    }
   } else if (file.name === "Package.resolved") {
     for (const m of text.matchAll(/"identity"\s*:\s*"([^"]+)"/g)) add(m[1], "Package.resolved");
     for (const m of text.matchAll(/"(?:repositoryURL|location)"\s*:\s*"[^"]*\/([^"/]+?)(?:\.git)?"/g)) add(m[1], "Package.resolved");

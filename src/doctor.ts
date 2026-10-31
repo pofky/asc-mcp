@@ -117,7 +117,7 @@ export async function runDoctor(): Promise<DoctorReport> {
       const token = await getToken(keyId, issuerId, keyPath);
       const res = await fetch(
         "https://api.appstoreconnect.apple.com/v1/apps?limit=1",
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15_000) },
       );
       if (res.ok) {
         checks.push({
@@ -252,7 +252,15 @@ export async function runDoctor(): Promise<DoctorReport> {
       };
 
       const known = reason ? ended[reason] : undefined;
-      checks.push({
+      // No answer at all is an outage of ours, not a finding about the key.
+      if (!lastLicenseStatus()) {
+        checks.push({
+          name: "License",
+          status: "warn",
+          detail: "A license key is set, and the license server could not be reached to check it.",
+          fix: `Retry once you are online. Server status: ${LICENSE_API_URL}/health`,
+        });
+      } else checks.push({
         name: "License",
         status: "fail",
         detail: known?.detail ?? "A license key is set but did not validate as Pro.",

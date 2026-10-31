@@ -140,6 +140,8 @@ export interface AppPriceArgs {
   app_id: string;
   /** 0 for a free app, or a USA price tier in dollars (e.g. 1.99). */
   price_usd: number;
+  /** Required to change a price the app already has. */
+  confirm?: boolean;
 }
 
 /**
@@ -155,6 +157,25 @@ export async function setAppPrice(
   const gate = requirePro(tier, "Setting the app price", "set_app_price");
   if (gate) return gate;
 
+  if (!Number.isFinite(args.price_usd) || args.price_usd < 0) {
+    return `Refusing to set a price of ${args.price_usd}. Use 0 for free, or a USA price in dollars.`;
+  }
+
+  // Setting a first price is a submission step. Changing one reaches buyers at
+  // once, and a typo here makes a paid app free, so that takes a second call.
+  if (!args.confirm) {
+    let hasPrice = false;
+    try {
+      const current = await client.get<Record<string, never>>(`/v1/appPriceSchedules/${args.app_id}/manualPrices`, { limit: "1" });
+      hasPrice = Array.isArray(current.data) ? current.data.length > 0 : Boolean(current.data);
+    } catch (err) {
+      if (!(err instanceof ASCAPIError && err.status === 404)) throw err;
+    }
+    if (hasPrice) {
+      return `This app already has a price. Changing it to $${args.price_usd} applies to everyone buying from now on. Nothing was changed. Re-run with confirm: true to proceed.`;
+    }
+  }
+
   // Find the matching USA app price point.
   const res = await client.getAll<{ customerPrice: string }>(
     `/v1/apps/${args.app_id}/appPricePoints`,
@@ -168,6 +189,12 @@ export async function setAppPrice(
     if (!best || diff < best.diff) best = { id: p.id, price: p.attributes.customerPrice, diff };
   }
   if (!best) return "No matching app price point found.";
+  // Apple only has fixed price points. Taking the nearest silently charged a price
+  // nobody asked for, so say what is close and let the caller choose. Half a cent:
+  // the points are given to the cent.
+  if (best.diff >= 0.005) {
+    return `Apple has no USA price point at $${args.price_usd}. The nearest is $${best.price}. Nothing was changed.`;
+  }
 
   const tempId = "${price-1}";
   try {

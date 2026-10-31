@@ -23,7 +23,7 @@ export const SCAN_LIMITS = { maxFiles: 20_000, maxDepth: 12, maxFileBytes: 2 * 1
 
 export const SOURCE_FILE = /\.(swift|m|mm|c|cc|cpp)$/;
 const INTERESTING_FILE =
-  /(\.(swift|m|mm|c|cc|cpp|xcprivacy|pbxproj|xcconfig|plist)|^Info\.plist|^project\.yml|^project\.yaml|^app\.json|^Package\.swift|^Package\.resolved|^Podfile\.lock|^Cartfile\.resolved|^pubspec\.lock)$/;
+  /(\.(swift|m|mm|c|cc|cpp|xcprivacy|pbxproj|xcconfig|plist)|^Info\.plist|^project\.yml|^project\.yaml|^app\.json|^Package\.swift|^Package\.resolved|^Podfile|^Podfile\.lock|^Cartfile\.resolved|^pubspec\.lock)$/;
 
 export interface ProjectFile {
   /** Absolute path, for reading. */

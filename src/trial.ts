@@ -46,6 +46,9 @@ export type TrialResponse = TrialSuccess | TrialFailure;
  * TrialFailure with something the agent can say out loud; nothing throws, so a
  * licence-server outage degrades to a readable message rather than a tool error.
  */
+/** The worker sends a mail inside this request, so it gets longer than a validation. A judgement. */
+const TRIAL_TIMEOUT_MS = 20_000;
+
 export async function requestTrial(
   args: { issuerId: string; email: string; tool?: string },
   apiUrl: string = LICENSE_API_URL,
@@ -53,6 +56,7 @@ export async function requestTrial(
   let response: Response;
   try {
     response = await fetch(`${apiUrl}/trial`, {
+      signal: AbortSignal.timeout(TRIAL_TIMEOUT_MS),
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

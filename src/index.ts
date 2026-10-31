@@ -205,8 +205,17 @@ async function main() {
             `Keep them for ${PRO_PRICE}: ${UPGRADE_URL}`,
     );
   } else {
+    // Same split as the gate: a trial or subscription that ended is refused a new
+    // trial, and a key that got no answer is an outage, not the free tier.
+    const after = lastLicenseStatus();
+    const ended = after?.reason === "trial_expired" || after?.reason === "revoked" || after?.reason === "canceled" || after?.reason === "inactive";
+    const unchecked = Boolean(process.env.ASC_LICENSE_KEY) && after === null;
     console.error(
-      `asc-mcp ${SERVER_VERSION}: Free tier. Call asc_start_trial for 7 days of Pro, no card. Or subscribe at ${UPGRADE_URL}`,
+      unchecked
+        ? `asc-mcp ${SERVER_VERSION}: A license key is set and the license server gave no answer, so Pro tools are locked for now. Restart to retry.`
+        : ended
+          ? `asc-mcp ${SERVER_VERSION}: Free tier, this license has ended. Pro is ${PRO_PRICE}: ${UPGRADE_URL}`
+          : `asc-mcp ${SERVER_VERSION}: Free tier. Call asc_start_trial for 7 days of Pro, no card. Or subscribe at ${UPGRADE_URL}`,
     );
   }
 
@@ -871,6 +880,7 @@ async function main() {
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       price_usd: z.number().describe("0 for a free app, or a USA price tier in dollars"),
+      confirm: z.boolean().optional().describe("Needed only to change a price this app already has: it applies to everyone buying from now on."),
     },
     safe((args) => setAppPrice(client, args, tier)),
   );
@@ -913,6 +923,7 @@ async function main() {
         .boolean()
         .optional()
         .describe("Auto-include future new territories (default true)"),
+      confirm: z.boolean().optional().describe("Needed to turn territories off on an app that already has availability set: it stops sales there at once."),
     },
     safe((args) => setAppAvailability(client, args, tier)),
   );
