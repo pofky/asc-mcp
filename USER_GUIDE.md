@@ -48,9 +48,9 @@ Steps:
 1. `list_apps` to get the numeric app_id.
 2. Build + upload a binary so a build exists to attach (see topic:binary), or upload via Xcode/Transporter. Then `wait_for_build` until VALID.
 3. `set_app_metadata` - primary/secondary category, copyright, content rights, export compliance (most apps: uses_non_exempt_encryption=false).
-4. `set_app_price` - price_usd:0 for free, or a tier. Required before submit.
+4. `set_app_price` - price_usd:0 for free, or an exact USA price point. Required before submit. Changing a price the app already has needs confirm:true.
 5. `update_version_metadata` - description, keywords, what's-new (note: what's-new is NOT editable on a first 1.0 with no prior release; the tool drops it and reports it skipped), promo text, marketing/support/privacy-policy URLs, name, subtitle. Char limits validated.
-6. `set_app_availability` - defaults to all ~175 territories; pass a subset to restrict.
+6. `set_app_availability` - all_territories:true, or a list of territories. Turning territories off on an app already set up needs confirm:true.
 7. `set_age_rating` - pass only the declarations that apply; the tool fetches, merges the full V2 set, and submits (it is NOT a partial PATCH).
 8. `set_review_contact` - name, phone, email, demo account if the app needs login. Required before submit.
 9. `attach_build` - newest VALID build by default.

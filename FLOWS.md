@@ -1,7 +1,7 @@
 # FLOWS.md
 
 App: asc-mcp
-Last amended: 2026-10-31 by tasks/0002-prd-app-store-preflight.md
+Last amended: 2026-10-31, v1.10.1 fixes
 
 The interface is the agent conversation. The "labels" below are the report's exact text.
 
@@ -42,7 +42,7 @@ Success: `NO BLOCKING ISSUES FOUND: ... This is not a prediction of App Review's
 - A link blocks robots or times out: `UNKNOWN`, with `Open it in a browser and confirm.`
 - Apple rejected the version: selected, with `UNKNOWN  version.rejected` and a link to App Store Connect, because Apple's API does not give the reasons. The verdict stays NOT CONFIRMED until it is resubmitted.
 - Folder with no project: `UNKNOWN`, `No Xcode project or source found in <path>`. Folder building other bundle ids: `UNKNOWN`, and no data type checklist from it.
-- Several platforms: `## App-wide`, then `## v2.0 (iOS)`, `## v3.0 (macOS)`.
+- Several platforms: `## App-wide`, then `## v2.0 (iOS)`, `## v3.0 (macOS)`. Fix lines name the version: `Fix:  update_version_metadata platform MAC_OS, description`. A fix tool called without it refuses, naming both versions, and writes nothing.
 - Nothing in progress: `No version is being prepared. This audits the live v2.2 (iOS); create_version starts the next one.`
 - App Store Connect down, bad app id, no versions: a reply starting `Error:`, with no verdict.
 - Rules over 90 days old: `Rule set verified <date>, over 90 days ago. Update asc-mcp.`
