@@ -1,6 +1,12 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+**A flow audit after 1.10.0 found a licence key disclosure; worker fixed, 1.10.1 waiting on npm 2FA (2026-10-31).**
+
+Two independent testers and a stateful fix-loop test. `/key` and `/trial` gave any subscriber's key to anyone
+holding their address; worker `b6186d5d` now only mails it, all 6 live keys still validate. Client fixes are
+committed as 1.10.1 and unpublished, because the security-key link expired: HANDOFF has the steps.
+
 **1.10.0: Preflight v2 live (2026-10-31).**
 
 `release_preflight` now separates fail, warn and could-not-check, reads a local project and probes

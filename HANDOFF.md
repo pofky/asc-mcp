@@ -4,6 +4,40 @@ Updated 2026-10-31. Branch `master`.
 
 ## Where things stand
 
+**31 October, later: a flow audit after 1.10.0 found real bugs. The licence worker
+fix is live; the client fixes are v1.10.1, committed and NOT on npm.**
+
+- **To finish, operator at the keyboard:** local `master` is 10+ ahead of origin, with
+  `release: v1.10.1` done (backup branch `release/1.10.1`). `npm publish --access public
+  --auth-type=web` from the repo root (pty wrapper in memory `asc-mcp-npm-publish-needs-2fa`),
+  open the link, security key. It dies in about two minutes, and it did once. Then in order:
+  wait until npm serves it, `git tag -a v1.10.1 -m v1.10.1`, push master, push the tag,
+  `gh release create v1.10.1 build/asc-mcp-1.10.1.mcpb` with the title and body from
+  `RELEASE_NOTES.md`, `npx wrangler pages deploy site --project-name asc-mcp --branch master`.
+  Do not push master or deploy the site first: the plugin pin and site say 1.10.1.
+  Until then the site's 404 page, 320px overflow fix and link sizes are not live either.
+- **Live, worker `b6186d5d`:** `POST /key` and `/trial` used to give any subscriber's key to
+  anyone who typed their address; rows 17, 21, 24, 84 had no claim, so were exposed. Now the
+  key only goes by mail to that address. Verified live: same page for an unknown address, all 6
+  live keys still validate, a real send to the operator's address answered 200, inbox not read.
+  Not known whether anyone used the hole: no such log exists. Keys were not rotated, because
+  that would disturb subscribers. Whether to rotate is the operator's call.
+- **In 1.10.1, not live:** export compliance answered the newest upload rather than the attached
+  build; write tools wrote to the first platform on two-platform apps; `submit_for_review` assumed
+  iOS; startup could hang 5 minutes on a hung licence server (8.1s now, driven for real); offline
+  verdict ignored the renewal grace; `set_app_price` charged the nearest price and went negative;
+  price changes and turning territories off now take `confirm:true`; Podfile read as evidence.
+  Not on real Apple: any two-platform path, none in this account. No writes were run on real apps.
+- **Still ungated by choice:** the other write tools have no confirm. They edit drafts, and are
+  the preflight fix loop. `create_iap` and `create_subscription` are the ones to reconsider.
+- **Correction to the Pro diff below:** the 1.10.0 tool list also differs in one instruction
+  sentence, 4 prompts and the `upload_screenshots` example, all preflight related; 51 of 55 read
+  replies and all 31 write replies matched 1.9.15 on the published package. 1.10.1 has not been
+  through that diff; it adds `platform` and `confirm` to 7 schemas.
+- **Queued, not fixed:** `.autopilot/queues/bug-queue.md`, 4 new items. The one that matters: a
+  trial minted on an address before its owner buys validates as their subscription.
+- Tests at `ff987e6`: root 533, worker 116. Security, legal and completeness PASS by independent review.
+
 **31 October: Preflight v2 is live as 1.10.0 on every surface.**
 `release_preflight` now reports what it could not check, and can read a local
 project (`project_path`), probe links and name the rule and fix for each finding.
