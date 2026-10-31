@@ -916,7 +916,7 @@ export function licenseEmailContent(key: string): EmailContent {
     "Next step: save your config, restart your agent, then ask it to run asc_setup_check; the",
     "License line says Pro.",
     "",
-    `You can also retrieve this key any time at ${KEY_PAGE_URL}. Keep it private; it unlocks Pro`,
+    `You can have this key emailed again any time from ${KEY_PAGE_URL}. Keep it private; it unlocks Pro`,
     "tools on your machine.",
     "",
     "Questions or trouble? Just reply to this email.",
