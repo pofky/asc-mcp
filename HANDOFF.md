@@ -5,8 +5,8 @@ Updated 2026-10-31. Branch `master`.
 ## Where things stand
 
 **31 October, later: a flow audit after 1.10.0 found real bugs. All fixed and live as 1.10.1:
-npm `latest`, tag `v1.10.1`, GitHub release with `.mcpb`, MCP registry, plugin pin, site `504108d1`,
-worker `a340a56e`.**
+npm `latest`, tag `v1.10.1`, GitHub release with `.mcpb`, MCP registry, plugin pin, site `bb5762e6`,
+worker `da0c4ecc`.**
 
 - **Driven on the published package as a free user, clean HOME, Apple writes guarded:** 41 tools,
   real app audited, bad app id gives an Error, missing `project_path` reads NOT CONFIRMED, a write
@@ -14,6 +14,12 @@ worker `a340a56e`.**
   real Apple write. npm: the 1.10.1 publish went through with its link never opened by this session,
   cause not known, so read the log before opening a link. Branch `release/1.10.1` is left on
   origin, now redundant: a hook blocks deleting remote branches.
+- **Post-release run on the published 1.10.1, Pro with the operator's own key (row 20), Apple writes
+  blocked:** all 11 real apps through preflight, app_details, review_status, list_reviews; all 20 read
+  tools; price, age rating and create refusals. Site and worker pages at 320 and 375: no overflow, no
+  target under 44px, links resolve (npm 403 and GitHub 429 are those hosts refusing the checker).
+  Trap: `fetch` fails for every URL in the Playwright MCP browser, same-origin too; real Chrome sends
+  the beacon. Do not read that console error as a site bug. Site `bb5762e6`, worker `da0c4ecc`.
 - **Live, worker `a340a56e`:** `/key` and `/trial` only ever mail a paid key (hole open until
   `b6186d5d`; rows 17, 21, 24, 84 were exposed, no log says whether anyone used it, keys not
   rotated, operator's call). An address with a paid row gets the price instead of a new trial.
