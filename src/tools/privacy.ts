@@ -10,7 +10,9 @@ export interface PrivacyArgs {
 /**
  * The App Privacy nutrition label (data collection) is NOT exposed by the
  * public App Store Connect API: `apps` has no appDataUsages relationship and
- * `/v1/appDataUsages` returns "resource does not exist" (probed live 2026-06-26).
+ * `/v1/appDataUsages` returns "resource does not exist" (probed live 2026-06-26
+ * and again 2026-10-31, 404). `release_preflight` with `project_path` lists the
+ * data types an app's manifests declare, to check against the page by hand.
  * fastlane has the same gap. So this tool returns the exact, ready-to-apply
  * steps plus a deep link instead of pretending to write.
  */
