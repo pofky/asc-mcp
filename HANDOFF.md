@@ -1,8 +1,16 @@
 # Handoff: appstore-connect-mcp
 
-Updated 2026-10-18. Branch `master`.
+Updated 2026-10-31. Branch `master`.
 
 ## Where things stand
+
+**31 October: next product work is written up, nothing built.**
+`tasks/0002-prd-app-store-preflight.md` is the full brief for Preflight v2, from
+the 29 October ideas research. Start at its section 0, which lists what that
+research got wrong, then go to architect review. Ship milestone M0 first: the
+README's unsupported "40% of rejections" claim is live. Its defect list comes
+from reading the code and is not yet reproduced against Apple.
+
 
 **18 October: the first trial-to-paid conversion, and the fix that keeps it
 working. Worker `df9c5f02` live (b80f6cc6 plus a 204 for /favicon.ico; flow-verifier PASS on every worker page).**
