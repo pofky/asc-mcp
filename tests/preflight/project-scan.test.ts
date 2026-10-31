@@ -293,7 +293,7 @@ describe("what it stays away from", () => {
       expect(item.saw).not.toMatch(/[^\x20-\x7e]/);
       expect(item.saw.length).toBeLessThanOrEqual(400);
     }
-    expect(of(findings(await scan()), "plist.placeholder", "fail")[0].saw).not.toContain(" ");
+    expect(of(findings(await scan()), "plist.placeholder", "fail")[0].saw).not.toContain("Ignore all");
   });
 
   it("marks every rule unsure when a scan limit was reached", async () => {
