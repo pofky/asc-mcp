@@ -174,3 +174,43 @@ describe("a key with stray whitespace around it", () => {
     expect(JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))).toEqual({ key: "ASC-PADDED-KEY" });
   });
 });
+
+describe("when the licence server gives no answer", () => {
+  const realHome = process.env.HOME;
+  beforeEach(() => {
+    clearLicenseCache();
+    process.env.HOME = mkdtempSync(join(tmpdir(), "asc-license-"));
+  });
+  afterEach(() => {
+    process.env.HOME = realHome;
+    vi.unstubAllGlobals();
+  });
+
+  it("does not wait forever: a server that never answers cannot hold startup", async () => {
+    const spy = vi.fn(async (_url: string, init: RequestInit) => {
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+      return { ok: true, status: 200, json: async () => ({ valid: false, tier: "free" }) };
+    });
+    vi.stubGlobal("fetch", spy);
+    await validateLicense("KEY");
+    expect(spy).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a subscriber inside the renewal grace on Pro through an outage", async () => {
+    const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
+    mockFetchOnce({ valid: true, tier: "pro", expires: twoDaysAgo, grace: true });
+    expect(await validateLicense("GRACE-KEY")).toBe("pro");
+    clearLicenseCache();
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline"); }));
+    expect(await validateLicense("GRACE-KEY")).toBe("pro");
+  });
+
+  it("does not stretch past the grace", async () => {
+    const longAgo = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockFetchOnce({ valid: true, tier: "pro", expires: longAgo });
+    await validateLicense("OLD-KEY");
+    clearLicenseCache();
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline"); }));
+    expect(await validateLicense("OLD-KEY")).toBe("free");
+  });
+});

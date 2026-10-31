@@ -98,7 +98,7 @@ export async function runPreflight(client: ASCClient, args: PreflightArgs, deps:
       ? [{ findings: [...perVersion[0].findings, ...appWide] }]
       : [
           { title: "App-wide", findings: appWide },
-          ...perVersion.map(({ v, findings }) => ({ title: `v${v.versionString} (${platformLabel(v.platform)})`, findings })),
+          ...perVersion.map(({ v, findings }) => ({ title: `v${v.versionString} (${platformLabel(v.platform)})`, platform: v.platform, findings })),
         ];
 
   return renderReport({ record, sections, manualSteps: manualSteps(record, project), now });

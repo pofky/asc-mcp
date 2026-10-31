@@ -3,6 +3,8 @@ import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
 
 export interface AppAvailabilityArgs {
+  /** Required to turn territories off on an app that already has availability set. */
+  confirm?: boolean;
   app_id: string;
   /**
    * Territory ids to make the app available in (e.g. ["USA","GBR"]). Omit to
@@ -123,6 +125,19 @@ export async function setAppAvailability(
       if (territory) rows.push({ id: t.id, territory, on: Boolean(t.attributes?.available) });
     }
     url = r.links?.next ?? null;
+  }
+
+  // Turning a territory off stops sales there at once, and [] takes the app off the
+  // store. That is one mistyped argument, so it takes a second call. First setup has
+  // nothing to lose, and widening loses nothing.
+  const stopping = rows.filter((r) => r.on && !wanted.has(r.territory));
+  if (stopping.length && !args.confirm) {
+    return (
+      (wanted.size === 0
+        ? "This takes the app off sale in every territory."
+        : `This turns off ${stopping.length} territories where the app is on sale now, keeping ${[...wanted].join(", ")}.`) +
+      " Nothing was changed. Re-run with confirm: true to proceed."
+    );
   }
 
   let turnedOn = 0;

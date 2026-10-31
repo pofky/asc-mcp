@@ -28,6 +28,17 @@ function usableKey(key?: string): key is string {
 }
 
 /**
+ * How long to wait for a verdict. The server does not connect to its client until
+ * this returns, and a licence host that accepted the connection and never answered
+ * held startup for five minutes, past every client's own limit. A judgement: the
+ * worker answers in well under a second, and this is what a dead network costs.
+ */
+export const LICENSE_TIMEOUT_MS = 8_000;
+
+/** The worker's GRACE_DAYS: a renewal webhook running late must not cost access, online or off. */
+const RENEWAL_GRACE_MS = 4 * 24 * 60 * 60 * 1000;
+
+/**
  * Validate the license key against the remote license server.
  * Returns the user's tier (free or pro).
  * Results are cached for 24 hours to avoid per-call latency.
@@ -42,6 +53,7 @@ export async function validateLicense(licenseKey?: string): Promise<Tier> {
 
   try {
     const response = await fetch(`${LICENSE_API_URL}/validate`, {
+      signal: AbortSignal.timeout(LICENSE_TIMEOUT_MS),
       method: "POST",
       headers: { "Content-Type": "application/json" },
       // Trimmed: a key pasted with a trailing space or newline is still the
@@ -54,7 +66,7 @@ export async function validateLicense(licenseKey?: string): Promise<Tier> {
     // the only cache was in memory, every new session during an outage demoted
     // them again. A 4xx IS a verdict and is honoured.
     if (response.status >= 500) {
-      console.error(`License server error ${response.status}; using the last known verdict.`);
+      console.error(`License server error ${response.status}; using the last confirmed verdict from this machine, if there is one.`);
       return offlineTier(licenseKey);
     }
 
@@ -112,7 +124,7 @@ function rememberPro(key: string, status: LicenseStatus): void {
 
 /**
  * The tier to use when the licence server could not give an answer. Free unless
- * this exact key was confirmed Pro recently and its own expiry has not passed.
+ * this exact key was confirmed Pro recently and its own expiry, with the renewal grace, has not passed.
  */
 function offlineTier(key: string): Tier {
   try {
@@ -124,7 +136,7 @@ function offlineTier(key: string): Tier {
     };
     if (cached.tier !== "pro" || cached.key !== keyDigest(key)) return "free";
     if (!cached.at || Date.now() - cached.at > OFFLINE_GRACE_MS) return "free";
-    if (cached.expires && new Date(cached.expires).getTime() < Date.now()) return "free";
+    if (cached.expires && new Date(cached.expires).getTime() + RENEWAL_GRACE_MS < Date.now()) return "free";
 
     console.error("asc-mcp: license server unreachable, honouring the last confirmed Pro verdict.");
     cachedStatus = { valid: true, tier: "pro", expires: cached.expires ?? undefined } as LicenseStatus;

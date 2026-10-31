@@ -63,9 +63,9 @@ const FLOWS: Record<Exclude<GuideTopic, "overview" | "limitations">, Flow> = {
       "`list_apps` to get the numeric app_id.",
       "Build + upload a binary so a build exists to attach (see topic:binary), or upload via Xcode/Transporter. Then `wait_for_build` until VALID.",
       "`set_app_metadata` - primary/secondary category, copyright, content rights, export compliance (most apps: uses_non_exempt_encryption=false).",
-      "`set_app_price` - price_usd:0 for free, or a tier. Required before submit.",
+      "`set_app_price` - price_usd:0 for free, or an exact USA price point. Required before submit. Changing a price the app already has needs confirm:true.",
       "`update_version_metadata` - description, keywords, what's-new (note: what's-new is NOT editable on a first 1.0 with no prior release; the tool drops it and reports it skipped), promo text, marketing/support/privacy-policy URLs, name, subtitle. Char limits validated.",
-      "`set_app_availability` - defaults to all ~175 territories; pass a subset to restrict.",
+      "`set_app_availability` - all_territories:true, or a list of territories. Turning territories off on an app already set up needs confirm:true.",
       "`set_age_rating` - pass only the declarations that apply; the tool fetches, merges the full V2 set, and submits (it is NOT a partial PATCH).",
       "`set_review_contact` - name, phone, email, demo account if the app needs login. Required before submit.",
       "`attach_build` - newest VALID build by default.",
@@ -205,7 +205,7 @@ const LIMITATIONS: { item: string; why: string; doInstead: string }[] = [
     item: "Delete or remove an app record",
     why: "DELETE /v1/apps is forbidden for API keys (probed live: apps allows GET and UPDATE only). Builds and appInfos cannot be deleted either.",
     doInstead:
-      "First take it off sale everywhere, which IS automatable: set_app_availability with territories: [] turns all ~175 territories off (Apple requires this even for an app that was never released). Also remove any in-app purchases from sale. Then, in the ASC website: Apps > your app > App Information > Additional Information > Remove App. Needs the Account Holder or Admin role, and it will not appear while the app is in Ready for Review, Waiting for Review, In Review, Metadata Rejected or Rejected. Note the SKU can never be reused in the organisation, and the bundle ID cannot be reused if a build was ever uploaded.",
+      "First take it off sale everywhere, which IS automatable: set_app_availability with territories: [] and confirm: true turns all ~175 territories off (Apple requires this even for an app that was never released). Also remove any in-app purchases from sale. Then, in the ASC website: Apps > your app > App Information > Additional Information > Remove App. Needs the Account Holder or Admin role, and it will not appear while the app is in Ready for Review, Waiting for Review, In Review, Metadata Rejected or Rejected. Note the SKU can never be reused in the organisation, and the bundle ID cannot be reused if a build was ever uploaded.",
   },
   {
     item: "Create an App Group",

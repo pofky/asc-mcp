@@ -3,11 +3,14 @@ import { basename } from "node:path";
 import { createHash } from "node:crypto";
 import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
+import { pickEditableVersion } from "../editable.js";
 import { requirePro } from "../gate.js";
 import { resolveLocalization } from "../locale.js";
 
 interface VersionAttrs {
   appStoreState: string;
+  versionString: string;
+  platform: string;
 }
 interface UploadOperation {
   method: string;
@@ -25,12 +28,6 @@ interface SetAttrs {
   screenshotDisplayType: string;
 }
 
-const EDITABLE = new Set([
-  "PREPARE_FOR_SUBMISSION",
-  "DEVELOPER_REJECTED",
-  "REJECTED",
-  "METADATA_REJECTED",
-]);
 
 /**
  * Upload one or more screenshots to a version localization for a given device
@@ -45,6 +42,7 @@ export async function uploadScreenshots(
     display_type: string;
     files: string[];
     locale?: string;
+    platform?: string;
   },
   tier: Tier,
 ): Promise<string> {
@@ -58,10 +56,11 @@ export async function uploadScreenshots(
   // 1. Find editable version + the requested localization.
   const versionsRes = await client.get<VersionAttrs>(
     `/v1/apps/${args.app_id}/appStoreVersions`,
-    { "fields[appStoreVersions]": "appStoreState", limit: "5" },
+    { "fields[appStoreVersions]": "versionString,appStoreState,platform", limit: "5" },
   );
   const versions = Array.isArray(versionsRes.data) ? versionsRes.data : [versionsRes.data];
-  const version = versions.find((v) => EDITABLE.has(v.attributes.appStoreState));
+  const { version, refusal } = pickEditableVersion(versions, args.platform);
+  if (refusal) return refusal;
   if (!version) return "No editable version. Create one with create_version first.";
 
   const locsRes = await client.get<{ locale: string }>(

@@ -105,6 +105,11 @@ footer a{color:var(--muted)}
   .ver{display:none}
   body{font-size:16.5px}
 }
+
+/* 44px targets for links that stand alone. Links inside a sentence stay inline. */
+nav.top a,.foot-links a{display:inline-flex;align-items:center;min-height:44px;min-width:44px}
+code,h1,h2,h3{overflow-wrap:anywhere}
+pre code{overflow-wrap:normal}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[
 {"@type":"BreadcrumbList","itemListElement":[

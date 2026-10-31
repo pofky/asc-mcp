@@ -2,7 +2,7 @@ import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
 import { resolveLocalization } from "../locale.js";
-import { EDITABLE_VERSION_STATES as EDITABLE } from "../editable.js";
+import { EDITABLE_VERSION_STATES as EDITABLE, pickEditableVersion } from "../editable.js";
 import { fetchAppInfos, pickEditableAppInfo, noEditableAppInfoMessage } from "../app-info.js";
 
 /**
@@ -75,6 +75,7 @@ const LIMITS: Record<string, number> = {
 
 export interface UpdateMetadataArgs {
   app_id: string;
+  platform?: string;
   locale?: string;
   description?: string;
   keywords?: string;
@@ -119,7 +120,13 @@ export async function updateVersionMetadata(
   );
   let appInfoNote = "";
   const versions = Array.isArray(versionsRes.data) ? versionsRes.data : [versionsRes.data];
-  const editable = versions.find((v) => EDITABLE.has(v.attributes.appStoreState));
+  // Name, subtitle and privacy URL belong to the app, so they do not need to know which version.
+  const touchesVersion = [args.description, args.keywords, args.whats_new, args.promotional_text, args.marketing_url, args.support_url].some((f) => f !== undefined);
+  const picked = touchesVersion || args.platform
+    ? pickEditableVersion(versions, args.platform)
+    : { version: versions.find((v) => EDITABLE.has(v.attributes.appStoreState)) ?? null };
+  if ("refusal" in picked && picked.refusal) return picked.refusal;
+  const editable = picked.version;
   if (!editable) {
     return (
       "No editable version found. The current version is locked (in review or released).\n" +

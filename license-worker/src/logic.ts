@@ -402,7 +402,8 @@ export function pickLookupRow(rows: LookupRow[], now: Date): LookupRow | null {
  * started on a paying customer's address is never created, and the only trial
  * that precedes a purchase is the one the buyer tried first. And the
  * subscription must be unclaimed, or claimed by the machine that ran the trial,
- * the same fingerprint rule /trial uses to decide who gets a paid key inline.
+ * the same fingerprint a pre-31-October claim recorded. A trial minted on a future
+ * buyer's address by someone else also passes this: tracked in the bug queue.
  *
  * Both timestamps can be either ISO shape (see `TRIAL_REMINDER_SQL`), so both
  * sides go through `replace` before they are compared.
@@ -878,12 +879,12 @@ export function licenseEmailContent(key: string): EmailContent {
       <h1 style="font-size:20px">Your asc-mcp Pro license</h1>
       <p>Thanks for subscribing. Here is your license key:</p>
       <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
-      <p><strong>Already using asc-mcp?</strong> Ask your agent: "run asc_start_trial with the email address I subscribed with". On the Apple developer account that first does this, it fetches this key, unlocks Pro in the session you are in, and saves the key on your machine. If a license key is already set in your client config or in the extension's License key field, replace it with this one, because that setting wins after a restart. From a different Apple developer account the key is not handed to the agent: it is emailed here again, and you set it by hand as below.</p>
-      <p>To set it by hand instead: if your <code>.p8</code> is in <code>~/.appstoreconnect/private_keys/</code>, this block is complete once you fill in your Issuer ID. If the key lives somewhere else, add <code>ASC_PRIVATE_KEY_PATH</code> to the same env block. On Claude for macOS or Windows there is no config file: paste the key into the extension's own License key field. In the Claude Code plugin it is the License key option in the plugin's settings. Otherwise the block goes in your client's MCP config: <code>~/.claude.json</code> for Claude Code, <code>~/.cursor/mcp.json</code> for Cursor, <code>~/.codeium/windsurf/mcp_config.json</code> for Windsurf.</p>
+      <p>If a license key is already set in your client config or in the extension's License key field, replace it with this one, because that setting wins after a restart.</p>
+      <p>To set it: if your <code>.p8</code> is in <code>~/.appstoreconnect/private_keys/</code>, this block is complete once you fill in your Issuer ID. If the key lives somewhere else, add <code>ASC_PRIVATE_KEY_PATH</code> to the same env block. On Claude for macOS or Windows there is no config file: paste the key into the extension's own License key field. In the Claude Code plugin it is the License key option in the plugin's settings. Otherwise the block goes in your client's MCP config: <code>~/.claude.json</code> for Claude Code, <code>~/.cursor/mcp.json</code> for Cursor, <code>~/.codeium/windsurf/mcp_config.json</code> for Windsurf.</p>
       <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">${configSnippet(safeKey)}</pre>
       <p>Not set up yet? Drop your <code>.p8</code> into <code>~/.appstoreconnect/private_keys/</code> and run <code>npx @pofky/asc-mcp init --write</code>; it asks for your Issuer ID and this key, then writes the config for you.</p>
       <p><strong>Next step:</strong> save your config and restart your agent (Claude Code, Cursor, Windsurf, etc.), then ask it to run <code>asc_setup_check</code>; the License line says Pro.</p>
-      <p style="color:#666;font-size:14px">You can also retrieve this key any time at <a href="${KEY_PAGE_URL}">the license page</a>. Keep it private; it unlocks Pro tools on your machine.</p>
+      <p style="color:#666;font-size:14px">You can have this key emailed again any time from <a href="${KEY_PAGE_URL}">the license page</a>. Keep it private; it unlocks Pro tools on your machine.</p>
       <p style="color:#666;font-size:14px">Questions or trouble? Just reply to this email.</p>
     </div>`;
 
@@ -894,14 +895,10 @@ export function licenseEmailContent(key: string): EmailContent {
     "",
     `  ${key}`,
     "",
-    'Already using asc-mcp? Ask your agent: "run asc_start_trial with the email address I',
-    'subscribed with". On the Apple developer account that first does this, it fetches this key,',
-    "unlocks Pro in the session you are in, and saves the key on your machine. If a license key is",
-    "already set in your client config or in the extension's License key field, replace it with",
-    "this one, because that setting wins after a restart. From a different Apple developer account",
-    "the key is not handed to the agent: it is emailed here again, and you set it by hand as below.",
+    "If a license key is already set in your client config or in the extension's License key field,",
+    "replace it with this one, because that setting wins after a restart.",
     "",
-    "To set it by hand instead: if your .p8 is in ~/.appstoreconnect/private_keys/, this block is",
+    "To set it: if your .p8 is in ~/.appstoreconnect/private_keys/, this block is",
     "complete once you fill in",
     "your Issuer ID. If the key lives somewhere else, add ASC_PRIVATE_KEY_PATH to the same env",
     "block. On Claude for macOS or Windows there is no config file: paste the key into the",
@@ -919,7 +916,7 @@ export function licenseEmailContent(key: string): EmailContent {
     "Next step: save your config, restart your agent, then ask it to run asc_setup_check; the",
     "License line says Pro.",
     "",
-    `You can also retrieve this key any time at ${KEY_PAGE_URL}. Keep it private; it unlocks Pro`,
+    `You can have this key emailed again any time from ${KEY_PAGE_URL}. Keep it private; it unlocks Pro`,
     "tools on your machine.",
     "",
     "Questions or trouble? Just reply to this email.",

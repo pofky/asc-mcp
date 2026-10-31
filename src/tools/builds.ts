@@ -1,7 +1,7 @@
 import type { ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
-import { EDITABLE_VERSION_STATES as EDITABLE } from "../editable.js";
+import { pickEditableVersion } from "../editable.js";
 
 interface BuildAttrs {
   version: string;
@@ -12,6 +12,7 @@ interface BuildAttrs {
 interface VersionAttrs {
   versionString: string;
   appStoreState: string;
+  platform: string;
 }
 
 /** List recent builds for an app with their processing state. */
@@ -99,7 +100,7 @@ export async function waitForBuild(
  */
 export async function attachBuild(
   client: ASCClient,
-  args: { app_id: string; build_id?: string },
+  args: { app_id: string; build_id?: string; platform?: string },
   tier: Tier,
 ): Promise<string> {
   const gate = requirePro(tier, "Attaching a build", "attach_build");
@@ -108,10 +109,11 @@ export async function attachBuild(
   // Find the editable version.
   const versionsRes = await client.get<VersionAttrs>(
     `/v1/apps/${args.app_id}/appStoreVersions`,
-    { "fields[appStoreVersions]": "versionString,appStoreState", limit: "5" },
+    { "fields[appStoreVersions]": "versionString,appStoreState,platform", limit: "5" },
   );
   const versions = Array.isArray(versionsRes.data) ? versionsRes.data : [versionsRes.data];
-  const version = versions.find((v) => EDITABLE.has(v.attributes.appStoreState));
+  const { version, refusal } = pickEditableVersion(versions, args.platform);
+  if (refusal) return refusal;
   if (!version) {
     return "No editable version to attach a build to. Create one with create_version first.";
   }
@@ -123,6 +125,7 @@ export async function attachBuild(
     const res = await client.get<BuildAttrs>("/v1/builds", {
       "filter[app]": args.app_id,
       "filter[processingState]": "VALID",
+      ...(args.platform ? { "filter[preReleaseVersion.platform]": args.platform } : {}),
       sort: "-uploadedDate",
       "fields[builds]": "version",
       limit: "1",

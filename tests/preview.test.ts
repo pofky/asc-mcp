@@ -139,7 +139,7 @@ describe("the free preview of Pro read tools", () => {
     try {
       const { refusal, notice } = gated("free", "Listing builds", "list_builds");
       expect(refusal).toContain("could not be checked");
-      expect(refusal).toContain("Your key is fine");
+      expect(refusal).toContain("says nothing about your key");
       expect(refusal).not.toContain("free Pro calls");
       expect(refusal).not.toContain("$9");
       expect(refusal).not.toContain("asc_start_trial");

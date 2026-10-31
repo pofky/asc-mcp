@@ -1,28 +1,23 @@
-v1.10.0: release_preflight says what it could not check
+v1.10.1: fixes that land where the report said, and keys that only go to their owner
 
-Download **asc-mcp-1.10.0.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Claude Code: `/plugin install asc-mcp --marketplace pofky/asc-mcp`. Every other client: `npx -y @pofky/asc-mcp@latest`.
+Download **asc-mcp-1.10.1.mcpb** below and open it for a one-click install on Claude for macOS and Windows. Claude Code: `/plugin install asc-mcp --marketplace pofky/asc-mcp`. Every other client: `npx -y @pofky/asc-mcp`.
 
-**Why this release**
+If you subscribe, nothing changes in how your key works, and you do not need to do anything. Getting your key onto a new machine now always arrives by email: asc_start_trial with your subscription's address, or the form at /key, sends it there. Neither shows it on screen any more, because either one would show it to anyone who typed your address.
 
-The old preflight could print "PASS: Ready to submit" when Apple refused some of its reads, because those checks failed silently. It could also pass an app with no price, an empty screenshot set, an expired build, or a product Apple had sent back. A clean report now means every rule it lists ran. Project files are checked only when you pass `project_path`, and the verdict says so when they were not.
+Fixes to release_preflight's loop, found by running each rule through its named fix against a stateful test double:
 
-**The report has a new format, on this tool only**
+- Export compliance now answers the build attached to your version. It used to answer the newest upload, say it had worked, and leave preflight failing.
+- If an app has versions in progress on two platforms, write tools refuse and ask for `platform`, which they now accept, rather than writing to the first they find. Preflight's fix lines name it. With one platform in progress nothing changes.
+- submit_for_review opens its submission on the version's own platform. A Mac-only app no longer needs `platform` passed.
+- release_preflight reads a Podfile when no lock file is committed.
 
-If you or your agent read `release_preflight` output, expect these changes. The verdict is one of `BLOCKED`, `NOT CONFIRMED` or `NO BLOCKING ISSUES FOUND`. Each finding shows what was seen, the rule with its source and date, and the tool that fixes it. Any check that could not run prints `UNKNOWN` with the reason and withholds the clean verdict. "Ready to submit" is gone, since no tool can promise App Review's decision. `FAIL` and the manual steps section remain. A call with only `app_id` works as before.
+Safer writes:
 
-**What it checks now**
+- set_app_price refuses a negative price, and says which price is nearest rather than charging one you did not ask for. Changing a price the app already has takes confirm: true. Setting a first price does not.
+- set_app_availability takes confirm: true to turn territories off on an app already set up, including taking it off sale.
 
-- The support, marketing, privacy policy and terms links are loaded from your machine, following redirects, so a dead link fails. A site that blocks robots reads `UNKNOWN`, not `FAIL`.
-- A privacy policy URL is required in the primary language on every app, per Guideline 5.1.1(i).
-- Versions Apple rejected are audited, and read `NOT CONFIRMED`, because Apple's API does not give the reasons. Every locale's screenshots are read, and apps with several platforms get a section each. Pass `platform` to audit one.
-- Screenshots are judged by platform. A 13-inch iPad set is required if the build runs on iPad, and one large iPhone set is enough.
-- New checks: real price rows, export compliance, content rights, copyright, build expiry, placeholder text, name and subtitle length, and the April 2027 iPhone Duo rule for builds on the iOS 27.1 SDK or later.
-- A custom licence agreement now satisfies the subscription terms rule. The tool no longer claims Apple "auto-rejects".
+When the licence server is down:
 
-**New, optional: `project_path`**
-
-Point it at your Xcode project to check privacy manifests and reason codes (ITMS-91053), SDKs on Apple's list (ITMS-91061), purpose strings and sample ids. It reads locally, writes nothing, runs nothing from the project, and prints paths, line numbers and setting names, not file contents. A path it cannot read, or a build it cannot read, reads `UNKNOWN`. It also lists your declared data types to check against the App Privacy page, which Apple's API still cannot read.
-
-**What else changed for subscribers**
-
-Every other tool's replies are unchanged. A few descriptions and guide lines were corrected: the server instructions mention `project_path`, the slash-command prompts now treat `UNKNOWN` as not checked, and the screenshot guidance names `APP_IPAD_PRO_3GEN_129`. No licensing, price or account change.
+- Startup waits 8 seconds at most. A server that never answered could hold it for five minutes, past your client's own limit.
+- A subscriber in the renewal grace keeps Pro through an outage.
+- A key that got no answer is reported as an outage, not as a bad key, and the startup line no longer offers a trial to someone who would be refused one.

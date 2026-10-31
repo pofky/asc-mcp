@@ -198,6 +198,16 @@ describe("purpose strings", () => {
 describe("third-party SDKs, built from Apple's list", () => {
   const listed = LISTED_SDKS.find((s) => s === "Alamofire")!;
 
+  it("reads a Podfile when the lock file is not committed, subspecs included", async () => {
+    write("App.swift", "import UIKit\n");
+    write("App.xcodeproj/project.pbxproj", "// project\n");
+    write("Podfile", "target 'App' do\n  # pod 'Alamofire'\n  pod 'Firebase/Crashlytics'\n  pod 'Google-Mobile-Ads-SDK'\nend\n");
+    const input = await readProjectInput(root, null);
+    const names = "scan" in input ? input.scan.sdks.map((s) => s.name) : [];
+    expect(names).toContain("FirebaseCrashlytics");
+    expect(names).not.toContain("Alamofire");
+  });
+
   it("sees a CocoaPods dependency with a manifest", async () => {
     write("Podfile.lock", `PODS:\n  - ${listed} (5.9.0)\n\nDEPENDENCIES:\n  - ${listed}\n`);
     write(`Pods/${listed}/Source/PrivacyInfo.xcprivacy`, manifest({}));

@@ -1,3 +1,4 @@
+import { setAppPrice } from "../src/tools/submission.js";
 import { describe, it, expect } from "vitest";
 import { requirePro } from "../src/gate.js";
 import { ASCAPIError } from "../src/client.js";
@@ -324,7 +325,7 @@ describe("set_app_availability territory semantics", () => {
 
   it("turns every territory off when given an empty array", async () => {
     const { client, patched } = stubClient(true);
-    const out = await setAppAvailability(client, { app_id: "1", territories: [] }, "pro");
+    const out = await setAppAvailability(client, { app_id: "1", territories: [], confirm: true }, "pro");
     expect(patched.every((p) => p.available === false)).toBe(true);
     expect(patched).toHaveLength(3);
     expect(out).toContain("0 of 3");
@@ -336,6 +337,26 @@ describe("set_app_availability territory semantics", () => {
    * the tool to see what it does then quietly widened where a deliberately
    * limited app was sold, and that is not a reversible read.
    */
+  it.each([[[], "every territory"], [["USA"], "keeping USA"]])("asks before turning territories off on an app already set up: %j", async (territories, says) => {
+    const { client, patched } = stubClient(true);
+    const out = await setAppAvailability(client, { app_id: "1", territories: territories as string[] }, "pro");
+    expect(patched).toHaveLength(0);
+    expect(out).toContain(says);
+    expect(out).toContain("Nothing was changed");
+  });
+
+  it("does not ask when nothing that is on gets turned off", async () => {
+    const { client } = stubClient(true);
+    const out = await setAppAvailability(client, { app_id: "1", territories: ["USA", "GBR", "JPN"] }, "pro");
+    expect(out).not.toContain("Nothing was changed");
+  });
+
+  it("does not ask on first setup, when there is nothing to lose", async () => {
+    const { client } = stubClient(false);
+    const out = await setAppAvailability(client, { app_id: "1", territories: ["USA"] }, "pro");
+    expect(out).not.toContain("Nothing was changed");
+  });
+
   it("refuses to touch availability without an explicit instruction", async () => {
     const { client, patched } = stubClient(true);
     const out = await setAppAvailability(client, { app_id: "1" }, "pro");
@@ -353,7 +374,7 @@ describe("set_app_availability territory semantics", () => {
 
   it("patches the v1 territoryAvailabilities path, not v2", async () => {
     const { client, patched } = stubClient(true);
-    await setAppAvailability(client, { app_id: "1", territories: ["USA"] }, "pro");
+    await setAppAvailability(client, { app_id: "1", territories: ["USA"], confirm: true }, "pro");
     expect(patched.length).toBeGreaterThan(0);
     expect(patched.every((p) => p.path.startsWith("/v1/territoryAvailabilities/"))).toBe(true);
   });
@@ -394,5 +415,40 @@ describe("create_version will not write without confirmation", () => {
     const out = await createVersion(client, { app_id: "1", version_string: "9.9.9", confirm: true }, "pro");
     expect(posted).toBe(true);
     expect(out).toContain("Created version 9.9.9");
+  });
+});
+
+describe("set_app_price", () => {
+  function stub(hasPrice: boolean) {
+    const posts: string[] = [];
+    const client = {
+      get: async () => ({ data: hasPrice ? [{ id: "p" }] : [] }),
+      getAll: async () => ({ data: [{ id: "free", attributes: { customerPrice: "0.0" } }, { id: "two", attributes: { customerPrice: "1.99" } }] }),
+      post: async (path: string) => { posts.push(path); return {}; },
+    } as never;
+    return { client, posts };
+  }
+  it("sets a first price with no second call, which is the fix preflight names", async () => {
+    const { client, posts } = stub(false);
+    expect(await setAppPrice(client, { app_id: "1", price_usd: 1.99 }, "pro")).toContain("$1.99");
+    expect(posts).toEqual(["/v1/appPriceSchedules"]);
+  });
+  it("asks before changing a price the app already has", async () => {
+    const { client, posts } = stub(true);
+    expect(await setAppPrice(client, { app_id: "1", price_usd: 0 }, "pro")).toContain("Nothing was changed");
+    expect(posts).toHaveLength(0);
+    await setAppPrice(client, { app_id: "1", price_usd: 0, confirm: true }, "pro");
+    expect(posts).toHaveLength(1);
+  });
+  it.each([-5, Number.NaN])("refuses a price of %s", async (price_usd) => {
+    const { client, posts } = stub(false);
+    expect(await setAppPrice(client, { app_id: "1", price_usd }, "pro")).toContain("Refusing");
+    expect(posts).toHaveLength(0);
+  });
+  it("names the nearest price point rather than charging it", async () => {
+    const { client, posts } = stub(false);
+    const out = await setAppPrice(client, { app_id: "1", price_usd: 1.5 }, "pro");
+    expect(out).toContain("nearest is $1.99");
+    expect(posts).toHaveLength(0);
   });
 });
