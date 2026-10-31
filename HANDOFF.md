@@ -11,8 +11,8 @@ worker `a340a56e`.**
 - **Driven on the published package as a free user, clean HOME, Apple writes guarded:** 41 tools,
   real app audited, bad app id gives an Error, missing `project_path` reads NOT CONFIRMED, a write
   is refused with the price. The new `confirm` and platform paths are covered by tests, not by a
-  real Apple write. npm trap: a publish can succeed without a browser key touch shortly after a
-  recent approval, so read the log before opening a link. Branch `release/1.10.1` is left on
+  real Apple write. npm: the 1.10.1 publish went through with its link never opened by this session,
+  cause not known, so read the log before opening a link. Branch `release/1.10.1` is left on
   origin, now redundant: a hook blocks deleting remote branches.
 - **Live, worker `a340a56e`:** `/key` and `/trial` only ever mail a paid key (hole open until
   `b6186d5d`; rows 17, 21, 24, 84 were exposed, no log says whether anyone used it, keys not
