@@ -1,6 +1,13 @@
 # WORKLOG, @pofky/asc-mcp
 
 ## Currently Active
+
+**Flow audit for current and new users (2026-11-04).**
+
+Payments and keys healthy: three renewals landed, all 7 live keys validate. A first-time-user tester failed setup
+clarity (the documented `mv` fails on a fresh Mac, the hero hid that an Apple key is needed); a mechanic passed every
+flow with minor findings. Copy fixed on site `ef3f3f21`, worker `135abc78`, README and client help text; both review
+agents pass 8 lenses. Client 1.10.3 committed, publish left to the operator (`release-npm.txt`, 2FA).
 **1.10.2: the product explained in plain words on the site, README and listings (2026-10-31).**
 
 The operator liked a first-grader explanation and asked for it wherever the product is distributed. Review caught two

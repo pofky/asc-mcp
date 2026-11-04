@@ -1,8 +1,20 @@
 # Handoff: appstore-connect-mcp
 
-Updated 2026-10-31. Branch `master`.
+Updated 2026-11-04. Branch `master`.
 
 ## Where things stand
+
+**4 November: full flow audit, current and new users. Payments and keys healthy; setup copy was the gap, fixed and live on site + worker. Client 1.10.3 is committed but NOT published.**
+
+- **Renewals proven live:** rows 17 (to 29 Nov), 21 and 24 (to 1 Dec) renewed through the old org after all the worker changes. All 7 live keys validate after worker `135abc78` (17, 20, 21, 24 Pro; 82 answers as 84's subscription; 84 Pro to 18 Nov; 88 trial).
+- **Row 88 is a live trial** (from `release_preflight`), ends 6 Nov 16:03 UTC. The 5 Nov 15:00 cron should send its ending mail: check `trial_ending_emailed_at` on 5 Nov, conversion on 6 to 7 Nov.
+- **First-time user test FAILED on setup clarity, now fixed** (`.autopilot/reports/flow-senior-2026-11-04.md`): `mv` into `~/.appstoreconnect/private_keys` fails on a fresh Mac (folder missing); hero "Start free" went to pricing and never said an Apple key is needed; Issuer ID not located on the site; roles disagreed. Fixed in site, README (one numbered path), `init`, `doctor`, guide, gate refusal (`init --write --license`, `/key`). FLOWS F8. change-reviewer and change-tester PASS all 8 lenses.
+- **Mechanic PASS** (`.autopilot/reports/flow-mechanic-2026-11-04.md`): free, preview, refund, Pro (row 20) on all read tools, confirm gates, trial against a local worker, F5 states, `.mcpb` byte-identical to npm, consistency across surfaces. Fixed: favicon 404 (`site/favicon.svg`, `_redirects`), "licence" in llms.txt, 403 now names a wrong app id, F4 wording.
+- **Live:** site `ef3f3f21` (Pages, master), worker `135abc78`. Verified: hero CTA to `#setup`, `mkdir -p` on page, favicon 200, `/health` 200.
+- **NOT live: client 1.10.3** (help text in `src/setup.ts`, `src/doctor.ts`, `src/gate.ts`, `src/tools/guide.ts`, `src/client.ts`, `src/preflight/gather.ts`). The release was refused in-session (public surface); operator runs `release-npm.txt` and approves with the security key. Until then npm, registry and plugin stay at 1.10.2, and the site footer says v1.10.2.
+- **Not changed, by judgement:** inline prose links under 44px (WCAG 2.5.8 inline exemption; footer links are 44px); empty results (`No beta groups`) still spend a preview call; mail sender is `license@brewist.app` (the `/key` page now says it is asc-mcp's mail service); `PRO_PRICE` worded differently in client and worker.
+- **Audit noise in production:** the mechanic hit `/go` twice (one `checkout_click`, one `checkout_click_bot`, `site_pricing`, 4 Nov) and posted `/key` twice with `audit-noone@example.invalid`. Discount them in funnel reads.
+- **Trap:** a stale empty `.git/index.lock` appeared twice today (1 Nov and 08:18 4 Nov) with no git process running; removing it is safe when `pgrep git` shows only status polls.
 
 **31 October, last: v1.10.2 says what the product does in plain words.** No tool changed. Landing section `#plain`, README, llms.txt, JSON-LD FAQ, npm, registry, plugin and bundle descriptions, GitHub repo description. Paste-ready listing copy for directories I cannot edit: `launch/plain-explainer-long.txt`, `launch/plain-explainer-short.txt`, `launch/glama-description.txt`. PRD `tasks/0003-prd-plain-words-explainer.md`, flow F7. Legal, SEO+CRO+AEO, slop and completeness PASS. Live claims rule: reviews are Pro, and "stops and asks" means changing a price, not a first price.
 
