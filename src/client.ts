@@ -187,7 +187,7 @@ function friendlyHint(status: number, body: string): string {
     case 401:
       return "Authentication failed. Your Issuer ID, Key ID, or .p8 likely don't match. Re-check the Issuer ID (UUID on the Integrations page) and that the .p8 matches the Key ID. Run `npx @pofky/asc-mcp doctor` to pinpoint it.";
     case 403:
-      return "Your API key authenticated but lacks permission for this action. Its role is probably too low (needs App Manager or higher), or this specific capability (e.g. cloud signing, creating an app record) is not available to API keys at all. See `asc_guide topic:limitations`.";
+      return "Your API key authenticated but lacks permission for this action. The id may not belong to an app in this account (check it with list_apps), the key's role may be too low (needs App Manager or higher), or this specific capability (e.g. cloud signing, creating an app record) is not available to API keys at all. See `asc_guide topic:limitations`.";
     case 404:
       return "The resource wasn't found. Double-check the app_id / product_id (use `list_apps`), or the resource may not exist yet for this app.";
     case 409:

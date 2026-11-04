@@ -108,7 +108,7 @@ Success: `Pro trial started`, and the refused call works when retried.
 
 ### States on this flow
 
-- Same machine again during the trial: the same key, `already_started`.
+- Again during the trial, on this machine or another one signed in to the same Apple account: the same trial key, `already_started`. Paid rows are checked first, so this never returns a paid key.
 - This Apple account has already trialled, or the address once had a paid subscription: `No new trial is available for <address>`, the price, and a checkout link. A second Apple account on the same address may trial: the email is deliberately not an anchor, so nobody can use up a stranger's trial by typing their address.
 - A live subscription on the address: F3.
 - Daily cap reached: `Trials are temporarily unavailable`, and an address to write to.
