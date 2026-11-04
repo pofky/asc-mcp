@@ -1,1 +1,1 @@
-cd /Volumes/T7/Projects/appstore-connect-mcp && npm run release -- 1.9.12
+cd /Volumes/T7/Projects/appstore-connect-mcp && npm run release -- 1.10.3
