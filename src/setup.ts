@@ -431,8 +431,10 @@ export async function runInit(options: InitOptions | boolean = {}): Promise<numb
     process.stdout.write(
       "No .p8 found in the standard location.\n" +
         `  1. App Store Connect > Users and Access > Integrations > App Store Connect API\n` +
-        `  2. Generate an API key with the App Manager role and Download the .p8 (one-time).\n` +
-        `  3. Move it to: ${STANDARD_KEY_DIR}/\n\n`,
+        `  2. Generate an API key with the Admin or App Manager role and Download the .p8 (one-time).\n` +
+        `  3. Move it into place, then run init again:\n` +
+        `       mkdir -p ~/.appstoreconnect/private_keys\n` +
+        `       mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/private_keys/\n\n`,
     );
   }
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>App Store Connect MCP server for releases | asc-mcp</title>
-<meta name="description" content="41 tools that drive App Store Connect from Claude Code, Cursor or any MCP client. Free 7-day trial, no card. Pro is $9/month, VAT included (sales tax added in the US, Canada and India).">
+<meta name="description" content="41 tools that drive App Store Connect from Claude Code, Cursor or any MCP agent. 7-day free trial, no card. Then $9/month, sales tax added in US, CA, IN.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://asc-mcp.pages.dev/">
 <meta property="og:type" content="website">
@@ -107,6 +107,7 @@ header.hero{padding:26px 0 56px}
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
 .btn.ghost:hover{border-color:var(--muted);background:transparent}
 .reassure{font-family:var(--mono);font-size:.74rem;color:var(--dim);margin:0}
+.needs{font-size:1rem;color:var(--muted);margin:0 0 10px;max-width:60ch}
 
 /* the plain version: same prompt convention as the terminals, in reading type */
 .said{list-style:none;margin:24px 0;padding:6px 18px;border:1px solid var(--line);border-radius:12px;
@@ -237,14 +238,17 @@ nav.top a,.foot-links a{display:inline-flex;align-items:center;min-height:44px;m
       <b>The steps Apple's API cannot do are flagged before you hit them</b>, not after you are half done.</p>
 
     <div class="cta-row">
-      <a class="btn" href="#pricing">Start free, no card</a>
+      <a class="btn" href="#setup">Start free, no card</a>
       <div class="install">
         <code id="cmd">npx @pofky/asc-mcp init</code>
         <button type="button" id="copy" aria-label="Copy install command">Copy</button>
       </div>
     </div>
-    <p class="reassure">Install, then ask your agent to run <code>asc_start_trial</code>. Every tool unlocks for 7 days,
-      no card and nothing to cancel. Your .p8 key never leaves your machine. <a href="#setup">How setup works</a></p>
+    <p class="needs">You need an Apple Developer account, an App Store Connect API key (a .p8 file, step 1 of
+      <a href="#setup">setup</a>), Node 18 or newer, and an AI coding app that supports MCP, such as Claude Code,
+      Claude Desktop or Cursor.</p>
+    <p class="reassure">Then run the command above and ask your agent to start the trial: every tool unlocks for 7
+      days, no card and nothing to cancel. Your .p8 key never leaves your machine.</p>
   </div>
 </header>
 
@@ -559,27 +563,32 @@ When the trial ends, Pro is $9/month (VAT included; in the US, Canada and India 
 <section id="setup">
   <div class="wrap narrow">
     <span class="eyebrow">Setup</span>
-    <h2>Three steps, about five minutes</h2>
+    <h2>Four steps, about five minutes</h2>
     <p style="color:var(--muted);margin:0 0 22px"><b style="color:var(--text)">On Claude Desktop, skip all of it.</b>
       Download <a href="https://github.com/pofky/asc-mcp/releases/latest">the .mcpb bundle</a> and open it. Claude
       installs it in one click, asks for your Issuer ID, and lets you pick your .p8 with a file picker. No config
       file, no restart. The steps below are for every other client.</p>
     <ol class="steps">
       <li><b>Create an App Store Connect API key.</b> In App Store Connect, open Users and Access, then
-        Integrations, then App Store Connect API. Generate a key with the App Manager role and download the .p8.
-        Apple only lets you download it once. Drop it in Apple's standard folder and the Key ID is read from the
+        Integrations, then App Store Connect API. Generate a key with the Admin or App Manager role and download the
+        .p8. Apple only lets you download it once. Copy the Issuer ID too: it is the long ID shown above the list of
+        keys on that same page. Then move the key into Apple's standard folder, so the Key ID is read from the
         filename.
-        <pre>mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/private_keys/</pre>
+        <pre tabindex="0">mkdir -p ~/.appstoreconnect/private_keys
+mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/private_keys/</pre>
       </li>
       <li><b>Run init.</b> It finds the key, asks for your Issuer ID and optional Pro key, and prints a
         paste-ready config block. Add <code>--write</code> and it merges the block into your client config for you,
         after backing it up.
-        <pre>npx @pofky/asc-mcp init --write</pre>
+        <pre tabindex="0">npx @pofky/asc-mcp init --write</pre>
       </li>
-      <li><b>Restart your client and check.</b> Ask your agent to run the setup check. It verifies the key, the
+      <li><b>Restart your client and check.</b> Ask your agent: "run asc_setup_check". It verifies the key, the
         Issuer ID, a live authenticated call, and your license tier, and prints the exact fix for anything wrong.
-        <pre>npx @pofky/asc-mcp doctor</pre>
+        The same check from a terminal:
+        <pre tabindex="0">npx @pofky/asc-mcp doctor</pre>
       </li>
+      <li><b>Start the trial.</b> Ask your agent to "start my asc-mcp trial" and give it your email. Every tool unlocks
+        for 7 days in the running session, no card, no restart.</li>
     </ol>
     <p style="color:var(--muted);margin-top:24px">Works with Claude Code, Claude Desktop, Cursor, Windsurf, Cline,
       and any other MCP client that speaks stdio. Requires Node 18 or newer. Building and uploading a binary

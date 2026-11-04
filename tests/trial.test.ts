@@ -479,7 +479,7 @@ describe("the gate adapts to a trial that has already been spent", () => {
 
       delete process.env.ASC_INSTALL;
       const npx = requirePro("free", "Submitting for review", "submit_for_review")!;
-      expect(npx).toContain("Set ASC_LICENSE_KEY in your MCP server config");
+      expect(npx).toContain("set ASC_LICENSE_KEY in your MCP server config");
     } finally {
       if (before === undefined) delete process.env.ASC_INSTALL;
       else process.env.ASC_INSTALL = before;

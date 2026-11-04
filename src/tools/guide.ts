@@ -43,15 +43,15 @@ const FLOWS: Record<Exclude<GuideTopic, "overview" | "limitations">, Flow> = {
     title: "One-time setup",
     when: "Before anything else, once per machine.",
     steps: [
-      "Create an API key: App Store Connect > Users and Access > Integrations > App Store Connect API > generate a key with the App Manager role. Download the .p8 (one time only).",
-      "Drop the .p8 into ~/.appstoreconnect/private_keys/ (Apple's standard path). The 10-char Key ID is read from the filename, so that one file is enough.",
+      "Create an API key: App Store Connect > Users and Access > Integrations > App Store Connect API > generate a key with the Admin or App Manager role. Download the .p8 (one time only).",
+      "Move the .p8 into ~/.appstoreconnect/private_keys/ (Apple's standard path; create it first with `mkdir -p ~/.appstoreconnect/private_keys`). The 10-char Key ID is read from the filename, so that one file is enough.",
       "Run `npx @pofky/asc-mcp init` in a terminal. It auto-detects the key, asks for your Issuer ID (the UUID at the top of the Integrations page) and an optional Pro license key, and prints a paste-ready MCP config block.",
       "Paste the block into your client config and restart the client. Claude Code global: ~/.claude.json. Claude Desktop: Library/Application Support/Claude/claude_desktop_config.json. Per project: .mcp.json in the project root. Or re-run `init --write` and let it write whichever you pick.",
       "Verify with `list_apps`. If it returns your apps, you are connected.",
     ],
     manual: [
       "MANUAL: generating the API key and downloading the .p8 is a one-time App Store Connect website action. The .p8 cannot be re-downloaded; if lost, revoke and make a new one.",
-      "The free tier is three read tools (list_apps, app_details, review_status); the write, control and intelligence tools need Pro. To unlock all of them, call `asc_start_trial` with the user's email: 7 days, no card, and it takes effect in the running session with no restart. After that it is $9/month (VAT included; in the US, Canada and India sales tax is added at checkout) (ASC_LICENSE_KEY).",
+      "Free with no time limit: three read tools (list_apps, app_details, review_status), plus asc_setup_check, asc_guide and asc_start_trial. Most Pro tools that only read work 5 times in total as a preview. The write, control and intelligence tools need Pro. To unlock all of them, call `asc_start_trial` with the user's email: 7 days, no card, and it takes effect in the running session with no restart. After that it is $9/month (VAT included; in the US, Canada and India sales tax is added at checkout) (ASC_LICENSE_KEY).",
     ],
   },
 

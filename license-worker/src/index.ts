@@ -1550,7 +1550,7 @@ async function handleKeyLookup(
 
   return html(`
     <h1>Check your email</h1>
-    <p>If <strong>${escapeHtml(email)}</strong> has an active license, the key is on its way from license@brewist.app, with the steps to set it up. It usually takes a few seconds, so look in spam if it is not there.</p>
+    <p>If <strong>${escapeHtml(email)}</strong> has an active license, the key is on its way from asc-mcp (sender address license@brewist.app, the mail service asc-mcp uses), with the steps to set it up. It usually takes a few seconds, so look in spam if it is not there.</p>
     <p>Nothing after a few minutes? It may be a different address: use the one you checked out with, or write to <a href="mailto:povkonop@gmail.com?subject=ASC%20MCP%20Pro%20license">povkonop@gmail.com</a>.</p>
     <p>Never had one? Pro is ${PRO_PRICE}, and there is a free 7-day trial you start from inside your agent by asking it to run <code>asc_start_trial</code>.</p>
   `, headers, 200, { title: "Check your email", noindex: true });

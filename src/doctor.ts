@@ -67,7 +67,7 @@ export async function runDoctor(): Promise<DoctorReport> {
       name: "API key file (.p8)",
       status: "fail",
       detail: "No .p8 found in ~/.appstoreconnect/private_keys/ and ASC_PRIVATE_KEY_PATH is unset.",
-      fix: `Create a key at ${INTEGRATIONS_URL} (role: App Manager), download the .p8 once, and drop it into ~/.appstoreconnect/private_keys/.`,
+      fix: `Create a key at ${INTEGRATIONS_URL} (role: Admin or App Manager), download the .p8 once, then: mkdir -p ~/.appstoreconnect/private_keys && mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/private_keys/`,
     });
   } else if (!existsSync(resolvePath(keyPath))) {
     checks.push({

@@ -47,30 +47,37 @@ Other ASC MCP servers wrap the API and give you 80 to 982 raw endpoints. This on
 
 **Why full control is possible without fastlane:** fastlane's `deliver` and `pilot` are just calls to the same App Store Connect REST API this server authenticates against with your `.p8`. So nearly everything you would script with fastlane is a tool here, no Ruby toolchain required. The only step that needs your Mac is building and signing the binary, which `build_and_archive` and `upload_binary` drive via Xcode.
 
-## Setup (3 minutes)
+## Setup (about 5 minutes)
 
-**Step 1.** Create an API key in [App Store Connect > Integrations > App Store Connect API](https://appstoreconnect.apple.com/access/integrations/api) (Admin or App Manager role), then grab three things from that same page:
+**You need:** an Apple Developer account, Node 18 or newer, and an AI coding app that supports MCP (Claude Code, Claude Desktop, Cursor, Windsurf, Cline or any other MCP client). MCP is the standard way these apps plug in extra tools; asc-mcp is one of those tools, and it runs on your own computer.
 
-- **Issuer ID** (`ASC_ISSUER_ID`): the UUID shown at the top of the page, with a copy button next to it.
-- **Key ID** (`ASC_KEY_ID`): the 10-character ID next to your key, also in the filename `AuthKey_XXXXXXXXXX.p8`.
-- **`.p8` file** (`ASC_PRIVATE_KEY_PATH`): click **Download** and point this at the saved file. Apple lets you download it only once, so keep it safe.
+**Step 1. Create an App Store Connect API key.** Open [App Store Connect > Integrations > App Store Connect API](https://appstoreconnect.apple.com/access/integrations/api) and generate a key with the Admin or App Manager role. From that same page you need two things:
 
-**Step 2.** Install:
+- **The `.p8` file.** Click **Download**. Apple lets you download it only once, so keep it safe. Its name, `AuthKey_XXXXXXXXXX.p8`, contains the Key ID.
+- **The Issuer ID.** The UUID shown at the top of the page, with a copy button next to it.
 
-```bash
-npm install -g @pofky/asc-mcp
-```
-
-No global install needed if you prefer `npx` (see the manual config below).
-
-**Fastest setup (recommended).** Drop your `.p8` into Apple's standard path `~/.appstoreconnect/private_keys/` (the file is named `AuthKey_XXXXXXXXXX.p8`, and the Key ID is in the filename). Then run:
+Move the key into Apple's standard folder, where asc-mcp finds it on its own:
 
 ```bash
-npx @pofky/asc-mcp init --write     # auto-detects the key, asks for your Issuer ID, and writes the config for you
-# or: npx @pofky/asc-mcp init       # same, but prints the block to paste yourself
+mkdir -p ~/.appstoreconnect/private_keys
+mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/private_keys/
 ```
 
-`init --write` finds your Claude Desktop / Claude Code config, backs it up, and merges in the server block, so there's no JSON editing. The server also auto-discovers the `.p8` path at runtime, so you only ever need `ASC_ISSUER_ID` (and `ASC_LICENSE_KEY` for Pro).
+**Step 2. Run init.**
+
+```bash
+npx @pofky/asc-mcp init --write
+```
+
+It finds the key, asks for your Issuer ID, backs up your Claude Desktop / Claude Code config and adds the server to it, so there is no JSON to edit. Leave out `--write` to print the block and paste it yourself.
+
+**Step 3. Restart your agent and check.** Ask it: "run asc_setup_check". It checks the key, the Issuer ID, a live connection to App Store Connect and your license, and prints the exact fix for anything wrong. The same check from a terminal is `npx @pofky/asc-mcp doctor`. Then ask: "List my App Store Connect apps".
+
+**Step 4. Start the trial.** Ask your agent: "start my asc-mcp trial" and give it your email. It calls `asc_start_trial`, which unlocks all 41 tools for 7 days with no card and nothing to cancel. The key works in the running session, so whatever you were blocked on works on the very next call, and it is saved on your machine, in `~/.asc-mcp/license.json` and in any MCP client config that already has an asc-mcp entry, so it survives a restart. One trial per Apple developer account. Without a trial, six tools stay free with no time limit, and most Pro tools that only read work 5 times in total as a preview.
+
+### Other ways to install
+
+**Claude Desktop, no terminal.** Download the `.mcpb` bundle from the [latest release](https://github.com/pofky/asc-mcp/releases/latest) and open it. Claude asks for your Issuer ID and lets you pick the `.p8` with a file picker.
 
 **As a Claude Code plugin.** One line installs the server and the review-triage skill together, and Claude Code asks for your Issuer ID when it enables the plugin:
 
@@ -78,19 +85,19 @@ npx @pofky/asc-mcp init --write     # auto-detects the key, asks for your Issuer
 /plugin install asc-mcp --marketplace pofky/asc-mcp
 ```
 
-The plugin lives in [`plugin/`](plugin/), and its README says what it runs and sends.
+The plugin lives in [`plugin/`](plugin/), and its README says what it runs and sends. In your agent, the `/asc-start` command walks a first-time user through setup.
 
-**Running it from an agent, or any pipe.** There is no terminal to answer questions in, so pass what would have been asked:
+**Running init from an agent, or any pipe.** There is no terminal to answer questions in, so pass what would have been asked:
 
 ```bash
 npx @pofky/asc-mcp init --write --issuer <your-issuer-uuid>   # add --config <path> if you keep several client configs
 ```
 
-It prints the paste-ready block either way, and it never invents a value: if the Issuer ID is missing it says so instead of writing a config that fails at Apple's auth. `--key-path`, `--key-id` and `--license` are there for the same reason, and every one of them also reads from the matching `ASC_*` environment variable.
+It never invents a value: if the Issuer ID is missing it says so instead of writing a config that fails at Apple's auth. `--key-path`, `--key-id` and `--license` are there for the same reason, and every one of them also reads from the matching `ASC_*` environment variable. Already paid? `--license <key>` adds your Pro key to the config.
 
-**Stuck?** Run `npx @pofky/asc-mcp doctor` (or ask your agent to call `asc_setup_check`). It checks your key, Issuer ID, a live connection to App Store Connect, and your license, and prints the exact fix for anything wrong. In your agent, the `/asc-start` command walks a first-time user through all of this.
+**Global install.** `npm install -g @pofky/asc-mcp`, then use `asc-mcp` where the examples say `npx -y @pofky/asc-mcp`.
 
-**Manual setup.** Add to your agent's MCP config (Claude Desktop config, or `~/.claude.json` for Claude Code). Use `npx` for zero-install, or `asc-mcp` if you installed globally:
+**Manual config.** Add to your agent's MCP config (Claude Desktop config, or `~/.claude.json` for Claude Code):
 
 ```json
 {
@@ -106,11 +113,7 @@ It prints the paste-ready block either way, and it never invents a value: if the
 }
 ```
 
-With the `.p8` in `~/.appstoreconnect/private_keys/`, `ASC_ISSUER_ID` is the only required env var (Key ID and key path are auto-detected). Add `ASC_LICENSE_KEY` to unlock Pro.
-
-**Step 3.** Ask your agent: "List my App Store Connect apps"
-
-**Step 4, to try the paid half.** Ask your agent: "start my asc-mcp trial, my email is you@example.com". It calls `asc_start_trial`, which unlocks all 41 tools for 7 days with no card and nothing to cancel. The key activates in the running session, so whatever you were blocked on works on the very next call, and it is saved on your machine, in `~/.asc-mcp/license.json` and in any MCP client config that already has an asc-mcp entry, so it survives a restart. One trial per Apple developer account.
+With the `.p8` in `~/.appstoreconnect/private_keys/`, `ASC_ISSUER_ID` is the only required env var (Key ID and key path are auto-detected). Add `ASC_LICENSE_KEY` to unlock Pro. A key kept elsewhere: set `ASC_PRIVATE_KEY_PATH` to the file and `ASC_KEY_ID` to its 10-character ID.
 
 Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-compatible client.
 

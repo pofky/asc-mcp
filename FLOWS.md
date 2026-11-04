@@ -1,7 +1,7 @@
 # FLOWS.md
 
 App: asc-mcp
-Last amended: 2026-10-31, v1.10.1 fixes
+Last amended: 2026-11-04, setup path audit
 
 The interface is the agent conversation. The "labels" below are the report's exact text.
 
@@ -15,6 +15,8 @@ The interface is the agent conversation. The "labels" below are the report's exa
 | F4 | Starting a trial | `asc_start_trial`, or the instructions when a call is refused | 7 days of every tool in the running session | Conversion | v1.10.1 |
 | F5 | A license that is not answered or has ended | Startup, any tool | The truth about the key, and no offer the server would refuse | Retention | v1.10.1 |
 | F6 | Creating or changing something on sale | `create_iap`, `create_subscription`, `set_app_price`, `set_app_availability` | A second call before anything customers can see changes | Trust | v1.10.1 |
+| F7 | A visitor who does not know the jargon | Landing page `#plain` | What the product does, in plain words | Activation | tasks/0003 |
+| F8 | First setup from the page or README | Hero `Start free, no card`, README `## Setup` | A connected agent and a running trial, with no failed command | Activation | 2026-11-04 |
 
 ---
 
@@ -145,3 +147,29 @@ Added by `tasks/0003-prd-plain-words-explainer.md`.
 4. Next section, eyebrow `In your agent`, heading `What it looks like when you ask`: the setup check and trial terminals, then the copyable trial sentence.
 5. Works at 320px with no sideways scroll. With scripts off, the text still reads; only the copy buttons do nothing.
 
+
+## F8. First setup from the page or README
+
+Who: a developer who has never used an MCP server and has never made an App Store Connect API key.
+Goal: a working server in their agent and the trial running, without a command failing on the way.
+Entry: the hero button `Start free, no card` (goes to `#setup`), or the README `## Setup (about 5 minutes)`.
+Success: `asc_setup_check` says every check is OK, then `Pro trial started`.
+
+### Steps
+
+| # | Screen | User does | UI element (exact label) | System shows |
+|---|--------|-----------|--------------------------|--------------|
+| 1 | Hero | Reads what is needed | The line under the install command: Apple Developer account, API key, Node 18, an app that supports MCP | Link to `setup` |
+| 2 | `#setup` step 1 | Makes the key, copies the Issuer ID | `Create an App Store Connect API key.` | `mkdir -p ~/.appstoreconnect/private_keys` then `mv ~/Downloads/AuthKey_*.p8 ...` |
+| 3 | Terminal | Runs init | `npx @pofky/asc-mcp init --write` | Found API key, asks for the Issuer ID, writes the config |
+| 4 | Agent | Restarts, asks for the check | "run asc_setup_check" (terminal: `npx @pofky/asc-mcp doctor`) | Every check OK, license Free tier |
+| 5 | Agent | Asks for the trial with their email | "start my asc-mcp trial" | `Pro trial started` |
+
+### States on this flow
+
+- No `.p8` when init runs: `No .p8 found in the standard location.` with the `mkdir -p` and `mv` lines to copy, then run init again.
+- No `.p8` when the server starts: setup mode, only `asc_setup_check` and `asc_guide`; the check's fix line carries the same two commands.
+- A paid user with a key: the refusal says `init --write --license <key>` or `ASC_LICENSE_KEY`, and `/key` if it is lost.
+- `/key` after a request: the mail comes from asc-mcp, sender address license@brewist.app, the mail service asc-mcp uses.
+
+Change log: 2026-11-04, first-time-user audit. The key folder did not exist on a fresh Mac so the documented `mv` failed; the hero sent "Start free" to pricing and never said an Apple key is needed; the Issuer ID was not located on the site; the role said App Manager in some places and Admin or App Manager in others.

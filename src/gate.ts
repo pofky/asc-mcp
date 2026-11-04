@@ -236,5 +236,6 @@ function keyAdvice(): string {
     ? "Already have a key? Paste it into Claude Settings > Extensions > asc-mcp > Configure > License key, then Save."
     : process.env.ASC_INSTALL === "plugin"
       ? "Already have a key? Set it as the License key option in the asc-mcp plugin's settings."
-      : "Already have a key? Set ASC_LICENSE_KEY in your MCP server config.";
+      : "Already have a key? Run `npx @pofky/asc-mcp init --write --license <key>`, or set ASC_LICENSE_KEY in your MCP server config, then restart. " +
+        `Lost it? ${LICENSE_API_URL}/key emails it to the address you paid with.`;
 }
