@@ -1,0 +1,1 @@
+Polar dashboard, organization asc-mcp: Settings, Subscriptions, Benefit revocation grace period. Change it from Immediately to 14 days and save. Then do the same in the old organization, which still bills three subscribers.

@@ -43,7 +43,7 @@ import { runDoctor, formatDoctor, trialDaysLeft } from "./doctor.js";
 import { discoverPrivateKey, keyIdFromPath, runInit, parseInitArgs, injectLicenseKey } from "./setup.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PRO_PRICE, UPGRADE_URL, takePreviewNotice, previewScope } from "./gate.js";
+import { PRO_PRICE, UPGRADE_URL, takePreviewNotice, previewScope, previewReplyKind, EMPTY_PREVIEW_NOTE } from "./gate.js";
 import { BASE_INSTRUCTIONS, instructionsFor } from "./instructions.js";
 import { toolMeta, type ToolName } from "./tool-meta.js";
 
@@ -270,16 +270,13 @@ async function main() {
           // Only ever non-null for a free-tier call the gate let through as a
           // preview. A Pro reply is returned exactly as the tool produced it.
           const preview = takePreviewNotice();
-          // Tools report a bad argument or a failed fetch as an "Error ..."
-          // reply, not a throw. That is not a look at the product either, so
-          // it is given back too.
-          // The two other prefixes are failure replies whose wording is left
-          // as it is, so nothing a Pro user reads changes.
-          const failed = /^(Error\b|Invalid vendor number|Could not fetch |No app with id )/.test(body);
-          if (preview && failed) preview.refund();
-          return {
-            content: [{ type: "text" as const, text: preview && !failed ? body + preview.footer : body }],
-          };
+          if (!preview) return { content: [{ type: "text" as const, text: body }] };
+          // A failed or empty reply is not a look at the product, so the
+          // preview call is given back. See previewReplyKind in src/gate.ts.
+          const kind = previewReplyKind(body);
+          if (kind !== "answer") preview.refund();
+          const text = kind === "answer" ? body + preview.footer : kind === "empty" ? body + EMPTY_PREVIEW_NOTE : body;
+          return { content: [{ type: "text" as const, text }] };
         } catch (err) {
           // A preview call that failed is given back: a wrong app id or an
           // Apple outage should not spend it.

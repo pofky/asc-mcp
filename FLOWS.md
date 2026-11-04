@@ -72,6 +72,7 @@ Success: the full F1 report, ending with the existing preview footer.
 ### States on this flow
 
 - A reply starting `Error` gives the preview call back (`safe` in `src/index.ts`).
+- An empty reply (no reviews, no beta groups, no builds, one version so nothing to diff) gives it back too and ends `Nothing to show, so this did not use one of your free Pro calls.` (`previewReplyKind` in `src/gate.ts`, 2026-11-04).
 - One call costs one preview however long the report is.
 
 ## F3. A subscriber gets their key

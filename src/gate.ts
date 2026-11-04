@@ -136,6 +136,34 @@ export function takePreviewNotice(): { footer: string; refund: () => void } | nu
 }
 
 /**
+ * What a previewed reply was, for the tool wrapper in src/index.ts.
+ *
+ * "failed": the tool reports a bad argument or a failed fetch as a reply, not a
+ * throw. The two other prefixes are failure replies whose wording is left as it
+ * is, so nothing a Pro user reads changes.
+ *
+ * "empty": the read worked and there was nothing to show (no reviews, no beta
+ * groups, one version so nothing to diff). The 4 November 2026 first-time-user
+ * test spent its five calls on replies like these before it ever reached
+ * preflight, so the preview showed nothing of the product. These are given back
+ * too. A comparison that found no differences is an answer and is not here.
+ */
+export function previewReplyKind(body: string): "failed" | "empty" | "answer" {
+  if (/^(Error\b|Invalid vendor number|Could not fetch |No app with id )/.test(body)) return "failed";
+  if (
+    /^(No customer reviews found|No sales report available|No apps? found|No commits found|No new commits since|No versions found|Only one version found|This app has only one version|No beta groups|No keywords found|No builds found)/.test(
+      body,
+    )
+  )
+    return "empty";
+  return "answer";
+}
+
+/** Appended to an empty previewed reply in place of the countdown. */
+export const EMPTY_PREVIEW_NOTE =
+  "\n\n---\nNothing to show, so this did not use one of your free Pro calls.";
+
+/**
  * Returns an upgrade message when the tier is not Pro, otherwise null. Write and
  * control tools call this first and early-return the message.
  *
