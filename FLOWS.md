@@ -1,7 +1,7 @@
 # FLOWS.md
 
 App: asc-mcp
-Last amended: 2026-11-04, setup path audit
+Last amended: 2026-11-12, in-chat setup (tasks/0004)
 
 The interface is the agent conversation. The "labels" below are the report's exact text.
 
@@ -16,7 +16,7 @@ The interface is the agent conversation. The "labels" below are the report's exa
 | F5 | A license that is not answered or has ended | Startup, any tool | The truth about the key, and no offer the server would refuse | Retention | v1.10.1 |
 | F6 | Creating or changing something on sale | `create_iap`, `create_subscription`, `set_app_price`, `set_app_availability` | A second call before anything customers can see changes | Trust | v1.10.1 |
 | F7 | A visitor who does not know the jargon | Landing page `#plain` | What the product does, in plain words | Activation | tasks/0003 |
-| F8 | First setup from the page or README | Hero `Start free, no card`, README `## Setup` | A connected agent and a running trial, with no failed command | Activation | 2026-11-04 |
+| F8 | First setup from the page or README | Hero command, README `## Setup` | A connected agent and a running trial, setup finished in the chat | Activation | tasks/0004 |
 
 ---
 
@@ -160,17 +160,26 @@ Success: `asc_setup_check` says every check is OK, then `Pro trial started`.
 
 | # | Screen | User does | UI element (exact label) | System shows |
 |---|--------|-----------|--------------------------|--------------|
-| 1 | Hero | Reads what is needed | The line under the install command: Apple Developer account, API key, Node 18, an app that supports MCP | Link to `setup` |
-| 2 | `#setup` step 1 | Makes the key, copies the Issuer ID | `Create an App Store Connect API key.` | `mkdir -p ~/.appstoreconnect/private_keys` then `mv ~/Downloads/AuthKey_*.p8 ...` |
-| 3 | Terminal | Runs init | `npx @pofky/asc-mcp init --write` | Found API key, asks for the Issuer ID, writes the config |
-| 4 | Agent | Restarts, asks for the check | "run asc_setup_check" (terminal: `npx @pofky/asc-mcp doctor`) | Every check OK, license Free tier |
+| 1 | Hero | Reads what is needed, copies the command | `claude mcp add asc-mcp -- npx -y @pofky/asc-mcp`, `Copy` | Line under it: other clients go to step 2 of setup; then paste the Issuer ID in the chat |
+| 2 | `#setup` step 1 | Makes the key, downloads the `.p8`, leaves the page open | `Create an App Store Connect API key.` | Where the Issuer ID is on that page |
+| 3 | `#setup` step 2 | Adds the server | `claude mcp add ...`, or the JSON line for Cursor, Windsurf, Cline | The agent lists three tools: `asc_setup_check`, `asc_guide`, `asc_connect` |
+| 4 | Agent | "connect asc-mcp, my Issuer ID is <uuid>" | `asc_connect` | `Connected to App Store Connect with key <id>. <n> apps in the account.`, `Your key was moved from ~/Downloads/... to ~/.appstoreconnect/private_keys/...`, then 41 tools in the same chat |
 | 5 | Agent | Asks for the trial with their email | "start my asc-mcp trial" | `Pro trial started` |
 
 ### States on this flow
 
-- No `.p8` when init runs: `No .p8 found in the standard location.` with the `mkdir -p` and `mv` lines to copy, then run init again.
-- No `.p8` when the server starts: setup mode, only `asc_setup_check` and `asc_guide`; the check's fix line carries the same two commands.
+- Not a UUID (a Key ID, Team ID, empty): `That is not an Issuer ID.` Nothing moved or saved.
+- No `.p8` in the standard folder, Downloads or Desktop: where to create one, `Nothing was changed.`
+- Several `.p8` files: lists them, asks for `key_path`. Nothing moved.
+- A `key_path` not named `AuthKey_<10>.p8`: asks to restore Apple's name (the Key ID is in it).
+- Apple 401: `Apple refused this Issuer ID with key <id> (401)`. 403: give the key App Manager. No network or unreadable key: `Could not reach App Store Connect or sign with ...`. All end `Nothing was saved.` and the download stays where it was.
+- A key already in `~/.appstoreconnect/private_keys`: that one is used and Downloads is not searched. With `key_path` pointing at a download whose name is already filed, the filed key is used, the download is left in place and the reply says so.
+- `key_path` outside Downloads and Desktop: used where it is and its path saved, since other tools may reference it.
+- Home not writable: connects for this session, says to run `asc_connect` again after a restart.
+- A client that ignores `tools/list_changed`: the reply says to restart once; the restart reads `~/.asc-mcp/credentials.json` and starts connected.
+- Terminal path, unchanged: `npx @pofky/asc-mcp init --write`, `doctor`. `No .p8 found in the standard location.` still prints the `mkdir -p` and `mv` lines.
 - A paid user with a key: the refusal says `init --write --license <key>` or `ASC_LICENSE_KEY`, and `/key` if it is lost.
 - `/key` after a request: the mail comes from asc-mcp, sender address license@brewist.app, the mail service asc-mcp uses.
 
+Change log: 2026-11-12, tasks/0004. Installs doubled while trial starts went to zero; every step after setup worked, so the setup itself (terminal, JSON config, restart) moved into the chat.
 Change log: 2026-11-04, first-time-user audit. The key folder did not exist on a fresh Mac so the documented `mv` failed; the hero sent "Start free" to pricing and never said an Apple key is needed; the Issuer ID was not located on the site; the role said App Manager in some places and Admin or App Manager in others.

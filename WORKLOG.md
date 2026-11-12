@@ -2,6 +2,13 @@
 
 ## Currently Active
 
+**No new subscribers: setup was the wall; 1.11.0 finishes setup in the chat (2026-11-12).**
+
+Production read: 1.10.3 installed 130 times in the week (baseline 66), trials by month 13, 6, 3, 0, last paid 18 Oct.
+Every flow after setup driven on the published 1.10.3 and live endpoints: all work. New `asc_connect` (setup mode only)
+takes the Issuer ID, files the downloaded .p8, tests it against Apple and hot-swaps all 41 tools into the running
+session. PRD `tasks/0004`, flow F8. Driven against real Apple: 3 tools to 41, one list_changed, restart starts connected.
+
 **Flow audit for current and new users (2026-11-04).**
 
 Payments and keys healthy: three renewals landed, all 7 live keys validate. A first-time-user tester failed setup

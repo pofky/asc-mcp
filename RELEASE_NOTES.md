@@ -1,3 +1,14 @@
+# v1.11.0: finish setup inside the chat
+
+Installs doubled in early November while trial starts fell to zero. Every step after setup worked when driven end to end, so the wall was setup itself: a terminal command, a JSON config file and a restart before anything showed value.
+
+- New `asc_connect`, present only until the server is connected. Give your agent the Issuer ID and it finds the downloaded `AuthKey_*.p8` (Apple's folder, Downloads or Desktop), tests it against App Store Connect, moves it into `~/.appstoreconnect/private_keys`, saves the Issuer ID in `~/.asc-mcp/credentials.json`, and unlocks every tool in the running session. No terminal, no config file, no restart.
+- A wrong Issuer ID, a 401 or a 403 is refused before any file moves, and nothing is saved.
+- On the next start the server reads `credentials.json` and starts connected. Your client's own settings always win over it.
+- Setup mode's instructions, `asc_setup_check`, `doctor`, the `setup` playbook, the README and the site lead with this path. `init --write` stays as the terminal option.
+
+Existing users need nothing from this release. With credentials in your client config, `credentials.json` is never read and no tool changes.
+
 # v1.10.3: setup steps that work on a fresh Mac
 
 No tool was added or removed. Found by walking setup as a first-time user.
