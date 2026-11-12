@@ -1,6 +1,6 @@
 {
   "name": "@pofky/asc-mcp",
-  "version": "1.11.1",
+  "version": "1.11.2",
   "description": "App Store Connect MCP server: ask your AI agent to check, fix, submit and release your App Store app. A fastlane alternative for AI agents. 41 tools incl. asc_setup_check (self-diagnosing setup) and asc_guide (the in-agent playbook that flags every manual website step), read intelligence (reviews, sales, preflight), and Pro write/control (metadata, screenshots, builds, IAP/subscriptions, TestFlight, submit + release, local build/upload). 6 slash-command Prompts and a bundled Claude Skill. Works with Claude Code, Claude Desktop, Cursor, Windsurf, or any MCP client. Six tools are free with no limit; 7-day trial of the rest, no card.",
   "homepage": "https://asc-mcp.pages.dev",
   "repository": {
