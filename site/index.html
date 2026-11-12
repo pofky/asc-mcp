@@ -87,16 +87,19 @@ header.hero{padding:26px 0 56px}
 .cta-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:26px 0 12px}
 .install{
   display:flex;align-items:stretch;border:1px solid var(--line);border-radius:10px;
-  background:var(--panel);overflow:hidden;min-height:48px;
+  background:var(--panel);overflow:hidden;min-height:48px;max-width:100%;
 }
+/* Wraps instead of clipping: on a 320px screen the command is wider than the
+   box, and nowrap pushed the Copy button out of reach. */
 .install code{
-  font-family:var(--mono);font-size:.84rem;padding:12px 14px;color:var(--text);white-space:nowrap;
+  font-family:var(--mono);font-size:.84rem;padding:12px 14px;color:var(--text);
+  white-space:normal;overflow-wrap:anywhere;min-width:0;flex:1 1 auto;
   display:flex;align-items:center;
 }
 .install button{
   font:inherit;font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;
   border:0;border-left:1px solid var(--line);background:var(--panel-2);color:var(--muted);
-  padding:0 16px;min-width:76px;cursor:pointer;
+  padding:0 16px;min-width:76px;cursor:pointer;flex:none;
 }
 .install button:hover{color:var(--amber)}
 .btn{
@@ -240,15 +243,17 @@ nav.top a,.foot-links a{display:inline-flex;align-items:center;min-height:44px;m
     <div class="cta-row">
       <a class="btn" href="#setup">Start free, no card</a>
       <div class="install">
-        <code id="cmd">npx @pofky/asc-mcp init</code>
+        <code id="cmd">claude mcp add asc-mcp -- npx -y @pofky/asc-mcp</code>
         <button type="button" id="copy" aria-label="Copy install command">Copy</button>
       </div>
     </div>
     <p class="needs">You need an Apple Developer account, an App Store Connect API key (a .p8 file, step 1 of
       <a href="#setup">setup</a>), Node 18 or newer, and an AI coding app that supports MCP, such as Claude Code,
       Claude Desktop or Cursor.</p>
-    <p class="reassure">Then run the command above and ask your agent to start the trial: every tool unlocks for 7
-      days, no card and nothing to cancel. Your .p8 key never leaves your machine.</p>
+    <p class="reassure">That line adds it to Claude Code (other clients: <a href="#setup">step 2</a>). Then paste your
+      Issuer ID into the chat: asc-mcp finds your downloaded key and connects, with no config file and no restart.
+      Ask it to start the trial and every tool unlocks for 7 days, no card and nothing to cancel. Your .p8 key never
+      leaves your machine.</p>
   </div>
 </header>
 
@@ -571,25 +576,24 @@ When the trial ends, Pro is $9/month (VAT included; in the US, Canada and India 
     <ol class="steps">
       <li><b>Create an App Store Connect API key.</b> In App Store Connect, open Users and Access, then
         Integrations, then App Store Connect API. Generate a key with the Admin or App Manager role and download the
-        .p8. Apple only lets you download it once. Copy the Issuer ID too: it is the long ID shown above the list of
-        keys on that same page. Then move the key into Apple's standard folder, so the Key ID is read from the
-        filename.
-        <pre tabindex="0">mkdir -p ~/.appstoreconnect/private_keys
-mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/private_keys/</pre>
+        .p8. Apple only lets you download it once. Leave the page open: the Issuer ID, the long ID above the list of
+        keys, is the one thing you will paste.</li>
+      <li><b>Add asc-mcp to your agent.</b> In Claude Code, one line:
+        <pre tabindex="0">claude mcp add asc-mcp -- npx -y @pofky/asc-mcp</pre>
+        In Cursor, Windsurf or Cline, add this to the MCP config and start a new chat:
+        <pre tabindex="0">{ "mcpServers": { "asc-mcp": { "command": "npx", "args": ["-y", "@pofky/asc-mcp"] } } }</pre>
       </li>
-      <li><b>Run init.</b> It finds the key, asks for your Issuer ID and optional Pro key, and prints a
-        paste-ready config block. Add <code>--write</code> and it merges the block into your client config for you,
-        after backing it up.
-        <pre tabindex="0">npx @pofky/asc-mcp init --write</pre>
-      </li>
-      <li><b>Restart your client and check.</b> Ask your agent: "run asc_setup_check". It verifies the key, the
-        Issuer ID, a live authenticated call, and your license tier, and prints the exact fix for anything wrong.
-        The same check from a terminal:
-        <pre tabindex="0">npx @pofky/asc-mcp doctor</pre>
-      </li>
+      <li><b>Connect in the chat.</b> Tell your agent: "connect asc-mcp, my Issuer ID is" and paste it. It finds
+        the .p8 in Downloads or on the Desktop, moves it into Apple's standard folder, tests it against App Store
+        Connect and unlocks every tool in the same chat. A wrong ID is refused before any file moves. No terminal,
+        no config file, no restart.</li>
       <li><b>Start the trial.</b> Ask your agent to "start my asc-mcp trial" and give it your email. Every tool unlocks
         for 7 days in the running session, no card, no restart.</li>
     </ol>
+    <p style="color:var(--muted);margin-top:24px">Prefer a terminal? <code>npx @pofky/asc-mcp init --write</code>
+      finds the key, asks for the Issuer ID and writes your client config after backing it up, and
+      <code>npx @pofky/asc-mcp doctor</code> checks the whole chain. In the chat the same check is
+      asc_setup_check.</p>
     <p style="color:var(--muted);margin-top:24px">Works with Claude Code, Claude Desktop, Cursor, Windsurf, Cline,
       and any other MCP client that speaks stdio. Requires Node 18 or newer. Building and uploading a binary
       additionally needs a Mac with Xcode.</p>
