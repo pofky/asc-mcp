@@ -1,13 +1,13 @@
 Hello,
 
-The listing at pulsemcp.com/servers/pofky-app-store-connect is mirroring a registry entry that has been deprecated since July. The page shows the name io.github.pofky/appstore-connect-mcp and a description from April 2026, "Check app review status, read customer reviews, and download sales reports from App Store Connect", which covers about three of the server's forty-one tools. Its Learn More button also points at the pre-rename repository URL.
+I know listing changes are paused while you rework ingestion; this is for when they reopen. The listing at pulsemcp.com/servers/pofky-app-store-connect is mirroring a registry entry that has been deprecated since July. The page shows the name io.github.pofky/appstore-connect-mcp and a description from April 2026, "Check app review status, read customer reviews, and download sales reports from App Store Connect", which covers about three of the server's forty-one tools. Its Learn More button also points at the pre-rename repository URL.
 
-The current entry on the official MCP registry is io.github.pofky/asc-mcp, version 1.9.5, published 7 August 2026 and marked as the latest version. The old entry io.github.pofky/appstore-connect-mcp is marked deprecated and will not receive further versions, so a sync from it will keep producing the April copy no matter how long it runs.
+The current entry on the official MCP registry is io.github.pofky/asc-mcp, version 1.11.1, published 12 November 2026 and marked as the latest version. The old entry io.github.pofky/appstore-connect-mcp is marked deprecated and will not receive further versions, so a sync from it will keep producing the April copy no matter how long it runs.
 
 Could you repoint this listing at io.github.pofky/asc-mcp, or add that entry and retire the old one? The accurate details are:
 
 Name: io.github.pofky/asc-mcp
-Description: 41 tools to ship an App Store release: metadata, screenshots, builds, TestFlight, IAP, submit.
+Description: App Store Connect MCP server: your AI agent checks, fixes, submits and releases your iOS app. 41 tools: metadata, screenshots, builds, TestFlight, in-app purchases, submit and release.
 Repository: https://github.com/pofky/asc-mcp
 Package: @pofky/asc-mcp on npm
 Website: https://asc-mcp.pages.dev

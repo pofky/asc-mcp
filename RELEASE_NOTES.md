@@ -1,3 +1,9 @@
+# v1.11.2: easier to find
+
+No code changed. The npm and MCP registry descriptions now say what people search for: an App Store Connect MCP server, and a fastlane alternative for AI agents. The README puts the install line first.
+
+Existing users need nothing from this release.
+
 # v1.11.1: every failure says what to do next, and who does it
 
 No tool was added or removed. Every reply was audited for one question: when something is wrong, empty or needs a manual step, does the person or the agent know what to do next?

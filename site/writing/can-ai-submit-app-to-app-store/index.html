@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Can an AI agent submit an app to the App Store? | asc-mcp</title>
+<meta name="description" content="Yes for the API steps, through submit_for_review with confirm: true. No for the app record, the App Privacy label, EU trader status, a first in-app purchase, or Apple's decision.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://asc-mcp.pages.dev/writing/can-ai-submit-app-to-app-store/">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://asc-mcp.pages.dev/writing/can-ai-submit-app-to-app-store/">
+<meta property="og:title" content="Can an AI agent submit an app to the App Store?">
+<meta property="og:description" content="Yes for the API steps, through submit_for_review with confirm: true. No for the app record, the App Privacy label, EU trader status, a first in-app purchase, or Apple's decision.">
+<meta property="og:image" content="https://asc-mcp.pages.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Can an AI agent submit an app to the App Store?">
+<meta name="twitter:description" content="Yes for the API steps, through submit_for_review with confirm: true. No for the app record, the App Privacy label, EU trader status, a first in-app purchase, or Apple's decision.">
+<meta name="twitter:image" content="https://asc-mcp.pages.dev/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230E1116'/%3E%3Cpath d='M8 21l4.6-11h1.9L19 21h-2.2l-1-2.6h-4.6L10.2 21H8zm4-4.4h3.2l-1.6-4.3-1.6 4.3z' fill='%23F0A828'/%3E%3Ccircle cx='24' cy='11' r='2.5' fill='%233DC48F'/%3E%3C/svg%3E">
+<style>
+:root{
+  --ink:#0e1116; --panel:#161b22; --panel-2:#1b2129; --line:#232a33;
+  /* --dim is lightened from the homepage value #6d7986, which measures 4.26:1
+     on --ink and fails WCAG AA for the small text it is used on. */
+  --text:#e7ecf2; --muted:#95a1b0; --dim:#7d8b9a;
+  --amber:#f0a828; --green:#3dc48f; --flag:#e0705a;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --measure:66ch;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--ink);color:var(--text);font-family:var(--sans);
+  font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(240,168,40,.28)}
+a{color:var(--text);text-decoration:none;border-bottom:1px solid var(--line)}
+a:hover{border-bottom-color:var(--amber)}
+a:focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:3px}
+h1,h2,h3{font-weight:700;letter-spacing:-.022em;line-height:1.14;margin:0}
+h1{font-size:clamp(1.95rem,6.4vw,3rem)}
+h2{font-size:clamp(1.3rem,4vw,1.75rem);letter-spacing:-.018em;margin:0 0 6px}
+h3{font-size:1.02rem;letter-spacing:-.008em;margin:0 0 6px}
+p{margin:0 0 1.05rem}
+.wrap{width:100%;max-width:960px;margin:0 auto;padding:0 20px}
+.narrow{max-width:var(--measure)}
+.eyebrow{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 14px;display:block;
+}
+.top{padding:4px 0;font-family:var(--mono);font-size:.78rem;color:var(--muted);
+  display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.top a{border:0;color:var(--muted);display:inline-flex;align-items:center;min-height:44px}
+.top a:hover{color:var(--text)}
+.mark{color:var(--text);font-weight:600;letter-spacing:.02em}
+.mark b{color:var(--amber);font-weight:600}
+.ver{margin-left:auto;color:var(--dim)}
+
+header.hero{padding:22px 0 8px}
+.meta{font-family:var(--mono);font-size:.76rem;color:var(--dim);margin:16px 0 0}
+.standfirst{font-size:1.12rem;color:var(--muted);margin:20px 0 0}
+
+article{padding:44px 0 0}
+.case{border-top:1px solid var(--line);padding:38px 0 4px}
+.case .n{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--amber);display:block;margin:0 0 10px;
+}
+.cost{
+  border-left:2px solid var(--flag);padding:2px 0 2px 14px;margin:0 0 1.05rem;
+  color:var(--muted);font-size:.95rem;
+}
+.cost b{color:var(--text);font-weight:600}
+pre{
+  font-family:var(--mono);font-size:.79rem;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:13px 14px;overflow-x:auto;margin:0 0 1.05rem;color:#c9d3de;line-height:1.55;
+}
+code{font-family:var(--mono);font-size:.88em;color:var(--text)}
+p code,li code{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+ul{margin:0 0 1.05rem;padding-left:1.1rem}
+li{margin:0 0 .5rem}
+.rule{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;margin:0 0 1.05rem;
+}
+.rule .lbl{
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--green);display:block;margin:0 0 6px;
+}
+.rule p{margin:0}
+section.q{border-top:1px solid var(--line);padding:52px 0 0}
+.qa{margin:0 0 26px}
+.qa p{margin:0}
+.cta{
+  border:1px solid var(--line);background:var(--panel-2);border-radius:12px;
+  padding:22px 22px 8px;margin:46px 0 0;
+}
+footer{border-top:1px solid var(--line);padding:34px 0 54px;color:var(--dim);font-size:.86rem;margin-top:54px}
+footer a{color:var(--muted)}
+.foot-links{display:flex;flex-wrap:wrap;gap:0 18px;font-family:var(--mono);font-size:.78rem;margin-bottom:10px}
+.foot-links a{display:inline-flex;align-items:center;min-height:44px}
+@media(max-width:560px){
+  .top{gap:0 14px}
+  .ver{display:none}
+  body{font-size:16.5px}
+}
+code,h1,h2,h3{overflow-wrap:anywhere}
+pre{overflow-x:auto;max-width:100%}
+pre code{overflow-wrap:normal}
+.foot-links a{min-width:44px}
+
+/* 44px targets for links that stand alone. Links inside a sentence stay inline. */
+nav.top a,.foot-links a{display:inline-flex;align-items:center;min-height:44px;min-width:44px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+{"@type":"BreadcrumbList","itemListElement":[
+ {"@type":"ListItem","position":1,"name":"App Store Connect MCP","item":"https://asc-mcp.pages.dev/"},
+ {"@type":"ListItem","position":2,"name":"Can an AI agent submit an app to the App Store?","item":"https://asc-mcp.pages.dev/writing/can-ai-submit-app-to-app-store/"}]},
+{"@type":"Article","headline":"Can an AI agent submit an app to the App Store?","description":"Yes for the API steps, through submit_for_review with confirm: true. No for the app record, the App Privacy label, EU trader status, a first in-app purchase, or Apple's decision.","url":"https://asc-mcp.pages.dev/writing/can-ai-submit-app-to-app-store/","datePublished":"2026-11-12","dateModified":"2026-11-12","inLanguage":"en","author":{"@type":"Person","name":"Povilas Konopackas"},"publisher":{"@type":"Organization","name":"asc-mcp","url":"https://asc-mcp.pages.dev/"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://asc-mcp.pages.dev/writing/can-ai-submit-app-to-app-store/"},"keywords":"AI agent submit app to App Store, MCP server for App Store Connect, submit_for_review, App Store Connect API, asc-mcp"},
+{"@type":"FAQPage","mainEntity":[
+ {"@type":"Question","name":"Can an AI agent submit an app to the App Store?","acceptedAnswer":{"@type":"Answer","text":"Partly. An agent connected to the App Store Connect API can attach a build, set metadata and pricing, upload screenshots and call submit_for_review with confirm: true. A person still does four things on the website: creates the app record, answers the App Privacy questions, declares EU trader status, and submits an app's first in-app purchases with the version. Apple's reviewers decide the outcome."}},
+ {"@type":"Question","name":"Can an AI agent create the app record in App Store Connect?","acceptedAnswer":{"@type":"Answer","text":"No. POST /v1/apps is refused for API keys, whatever role the key holds. The app record is created once in the App Store Connect website by a person, after which everything about it is writable over the API."}},
+ {"@type":"Question","name":"Can an agent submit an app's first in-app purchase?","acceptedAnswer":{"@type":"Answer","text":"Not through the API. Apple requires an app's first in-app purchases to be submitted with an app version, and only the website can bundle the two. submit_for_review detects this and aborts instead of orphaning the version. Later products submit over the API."}},
+ {"@type":"Question","name":"Can an AI agent build the app binary?","acceptedAnswer":{"@type":"Answer","text":"Yes, on your Mac. The build_and_archive tool runs xcodebuild through Xcode, and upload_binary sends the .ipa to App Store Connect with confirm: true. The build does not run in the cloud, so Xcode must be installed locally."}},
+ {"@type":"Question","name":"Who decides whether the app is approved?","acceptedAnswer":{"@type":"Answer","text":"Apple's reviewers do. An agent can submit the version and read its review status, but approval is Apple's decision, and nothing in the API or in asc-mcp can change it."}}]}]}</script>
+</head>
+<body>
+
+<div class="wrap">
+  <nav class="top">
+    <a href="/" class="mark" style="border:0">asc<b>-</b>mcp</a>
+    <a href="/#pipeline">Pipeline</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/#faq">Limits</a>
+    <a href="https://github.com/pofky/asc-mcp">GitHub</a>
+    <span class="ver">v1.11.1</span>
+  </nav>
+</div>
+<main>
+<header class="hero">
+  <div class="wrap narrow">
+    <span class="eyebrow">Field notes</span>
+    <h1>Can an AI agent submit an app to the App Store?</h1>
+    <p class="standfirst">Partly. An agent can do the API-side steps, from metadata and screenshots to submit_for_review with confirm: true. A person still does four things in the App Store Connect website: creates the app record, answers the App Privacy questions, declares EU trader status, and submits an app's first in-app purchases with the version. Apple's reviewers decide.</p>
+    <p class="meta">12 November 2026 &middot; Povilas Konopackas &middot; from the README and tool definitions of <a href="/">asc-mcp</a></p>
+  </div>
+</header>
+
+<article>
+<div class="wrap narrow">
+
+<h2>What an agent can do</h2>
+<p>With an App Store Connect API key, an agent can run the release in order. The chain asc-mcp follows is: <code>setup_app_store_signing</code>, <code>build_and_archive</code>, <code>upload_binary</code>, <code>wait_for_build</code>, <code>attach_build</code>, <code>update_version_metadata</code>, <code>upload_screenshots</code>, then <code>set_app_metadata</code>, <code>set_app_price</code>, <code>set_app_availability</code>, <code>set_age_rating</code> and <code>set_review_contact</code>. <code>release_preflight</code> audits the version before <code>submit_for_review</code>, and after approval <code>release_version</code> publishes it, or <code>manage_phased_release</code> starts a 7-day rollout.</p>
+<p>The <code>/asc-ship-release</code> slash command drives that sequence and stops to confirm before every outward-facing step.</p>
+
+<h2>What a person still does</h2>
+<ul>
+<li><strong>Create the app record.</strong> <code>POST /v1/apps</code> is refused for API keys, whatever role the key holds. In the website: Apps, the plus button, then bundle ID, SKU and primary language. Everything after that is writable over the API.</li>
+<li><strong>Submit the first in-app purchases.</strong> Apple wants an app's first products reviewed together with a version, and only the website can bundle them. Open the version, use Add for Review, tick the products and submit them together. Later products submit over the API.</li>
+<li><strong>Answer the App Privacy questions.</strong> The data usage resource is not public in the API. <code>set_privacy_nutrition</code> returns the checklist and the link to the page, and Apple will not accept a submission until it is answered.</li>
+<li><strong>Declare EU trader status.</strong> Also website-only. <code>set_eu_trader_status</code> returns what to fill in and where. Without it the app cannot be offered in the EU.</li>
+<li><strong>Wait for Apple.</strong> Reviewers approve or reject. The agent can read the review status and submit again, and cannot change the decision.</li>
+</ul>
+<p>The first four are among the limits on <a href="/writing/app-store-connect-api-limits/">what the App Store Connect API cannot do</a>, with the error each one returns. asc-mcp flags each one before you start, with the steps, instead of pretending the call exists.</p>
+<h2>Try it</h2>
+<p>Add the server, then paste your Issuer ID into the chat and it connects. <a href="/#setup">Setup steps</a>.</p>
+<pre><code>claude mcp add asc-mcp -- npx -y @pofky/asc-mcp</code></pre>
+
+<h2>The binary builds on your Mac</h2>
+<p>Submission needs a build, and a build needs Xcode. <code>build_and_archive</code> runs <code>xcodebuild</code> locally and <code>upload_binary</code> sends the <code>.ipa</code> with <code>altool</code> and your API key. Nothing is compiled in the cloud.</p>
+
+<h2>Nothing is submitted by accident</h2>
+<p>Three tools refuse to run without an explicit <code>confirm: true</code>: <code>submit_for_review</code>, <code>release_version</code> and <code>upload_binary</code>. The guide the agent reads says to confirm with the human first.</p>
+<pre><code>submit_for_review  { "app_id": "...", "confirm": true }</code></pre>
+<p>When first in-app purchases are present, <code>submit_for_review</code> detects it and aborts before it submits anything, so the version is not left half submitted. The agent is told to do that step in the website.</p>
+
+<h2>How it connects</h2>
+<p>Add the server, then give the agent your Issuer ID. It calls <code>asc_connect</code>, which finds the downloaded <code>.p8</code>, tests it against Apple and unlocks every tool in the same chat. Steps are under <a href="/#setup">setup</a> on the home page. asc_guide returns the playbook for a first release and marks each manual step in order.</p>
+
+<h2>What it costs</h2>
+<p>asc-mcp has a free tier. Asking your agent to run <code>asc_start_trial</code> unlocks all 41 tools for 7 days with no card and nothing to cancel. After that, Pro is $9 per month, VAT included, and in the US, Canada and India sales tax is added at checkout. See <a href="/#pricing">pricing</a>. If you are comparing this with a scripted setup, read <a href="/writing/fastlane-alternative-for-ai-agents/">a fastlane alternative for AI agents</a>.</p>
+
+<h2>Questions</h2>
+<h3>Can an AI agent submit an app to the App Store?</h3><p>Partly. An agent connected to the App Store Connect API can attach a build, set metadata and pricing, upload screenshots and call submit_for_review with confirm: true. A person still does four things on the website: creates the app record, answers the App Privacy questions, declares EU trader status, and submits an app's first in-app purchases with the version. Apple's reviewers decide the outcome.</p><h3>Can an AI agent create the app record in App Store Connect?</h3><p>No. POST /v1/apps is refused for API keys, whatever role the key holds. The app record is created once in the App Store Connect website by a person, after which everything about it is writable over the API.</p><h3>Can an agent submit an app's first in-app purchase?</h3><p>Not through the API. Apple requires an app's first in-app purchases to be submitted with an app version, and only the website can bundle the two. submit_for_review detects this and aborts instead of orphaning the version. Later products submit over the API.</p><h3>Can an AI agent build the app binary?</h3><p>Yes, on your Mac. The build_and_archive tool runs xcodebuild through Xcode, and upload_binary sends the .ipa to App Store Connect with confirm: true. The build does not run in the cloud, so Xcode must be installed locally.</p><h3>Who decides whether the app is approved?</h3><p>Apple's reviewers do. An agent can submit the version and read its review status, but approval is Apple's decision, and nothing in the API or in asc-mcp can change it.</p>
+
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-links">
+      <a href="/">Home</a>
+      <a href="https://www.npmjs.com/package/@pofky/asc-mcp">npm</a>
+      <a href="https://github.com/pofky/asc-mcp">GitHub</a>
+      <a href="/writing/app-store-connect-api-limits/">API limits</a>
+      <a href="https://asc-mcp-license.remewdy.workers.dev/terms">Terms</a>
+      <a href="https://asc-mcp-license.remewdy.workers.dev/privacy">Privacy</a>
+      <a href="/llms.txt">llms.txt</a>
+    </div>
+    <p style="margin:0">asc-mcp v1.11.1, MIT licensed. Built and maintained by Povilas Konopackas, sole trader,
+      Lithuania. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, Xcode and iOS are trademarks of Apple Inc.
+      Polar is a trademark of its respective owner.</p>
+    <p style="margin:8px 0 0">Last updated 12 November 2026.</p>
+  </div>
+</footer>
+<script>
+// One request, once per page load, to our own license worker. It sends the
+// path and nothing else: no cookie, no identifier, no third party, no library.
+// It exists so the funnel has a denominator; see /privacy on that host.
+try {
+  fetch(
+    'https://asc-mcp-license.remewdy.workers.dev/b?p=' + encodeURIComponent(location.pathname),
+    { mode: 'no-cors', keepalive: true, cache: 'no-store' }
+  ).catch(function () { /* blocked or offline: nothing to report */ });
+} catch (e) { /* a counter must never be able to break the page */ }
+</script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A fastlane alternative for AI agents | asc-mcp</title>
+<meta name="description" content="fastlane's deliver and pilot can use an App Store Connect API key. asc-mcp uses the same kind of key and gives an AI agent 41 typed MCP tools.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://asc-mcp.pages.dev/writing/fastlane-alternative-for-ai-agents/">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://asc-mcp.pages.dev/writing/fastlane-alternative-for-ai-agents/">
+<meta property="og:title" content="A fastlane alternative for AI agents">
+<meta property="og:description" content="fastlane's deliver and pilot can use an App Store Connect API key. asc-mcp uses the same kind of key and gives an AI agent 41 typed MCP tools.">
+<meta property="og:image" content="https://asc-mcp.pages.dev/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="A fastlane alternative for AI agents">
+<meta name="twitter:description" content="fastlane's deliver and pilot can use an App Store Connect API key. asc-mcp uses the same kind of key and gives an AI agent 41 typed MCP tools.">
+<meta name="twitter:image" content="https://asc-mcp.pages.dev/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230E1116'/%3E%3Cpath d='M8 21l4.6-11h1.9L19 21h-2.2l-1-2.6h-4.6L10.2 21H8zm4-4.4h3.2l-1.6-4.3-1.6 4.3z' fill='%23F0A828'/%3E%3Ccircle cx='24' cy='11' r='2.5' fill='%233DC48F'/%3E%3C/svg%3E">
+<style>
+:root{
+  --ink:#0e1116; --panel:#161b22; --panel-2:#1b2129; --line:#232a33;
+  /* --dim is lightened from the homepage value #6d7986, which measures 4.26:1
+     on --ink and fails WCAG AA for the small text it is used on. */
+  --text:#e7ecf2; --muted:#95a1b0; --dim:#7d8b9a;
+  --amber:#f0a828; --green:#3dc48f; --flag:#e0705a;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --measure:66ch;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--ink);color:var(--text);font-family:var(--sans);
+  font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(240,168,40,.28)}
+a{color:var(--text);text-decoration:none;border-bottom:1px solid var(--line)}
+a:hover{border-bottom-color:var(--amber)}
+a:focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:3px}
+h1,h2,h3{font-weight:700;letter-spacing:-.022em;line-height:1.14;margin:0}
+h1{font-size:clamp(1.95rem,6.4vw,3rem)}
+h2{font-size:clamp(1.3rem,4vw,1.75rem);letter-spacing:-.018em;margin:0 0 6px}
+h3{font-size:1.02rem;letter-spacing:-.008em;margin:0 0 6px}
+p{margin:0 0 1.05rem}
+.wrap{width:100%;max-width:960px;margin:0 auto;padding:0 20px}
+.narrow{max-width:var(--measure)}
+.eyebrow{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 14px;display:block;
+}
+.top{padding:4px 0;font-family:var(--mono);font-size:.78rem;color:var(--muted);
+  display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.top a{border:0;color:var(--muted);display:inline-flex;align-items:center;min-height:44px}
+.top a:hover{color:var(--text)}
+.mark{color:var(--text);font-weight:600;letter-spacing:.02em}
+.mark b{color:var(--amber);font-weight:600}
+.ver{margin-left:auto;color:var(--dim)}
+
+header.hero{padding:22px 0 8px}
+.meta{font-family:var(--mono);font-size:.76rem;color:var(--dim);margin:16px 0 0}
+.standfirst{font-size:1.12rem;color:var(--muted);margin:20px 0 0}
+
+article{padding:44px 0 0}
+.case{border-top:1px solid var(--line);padding:38px 0 4px}
+.case .n{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--amber);display:block;margin:0 0 10px;
+}
+.cost{
+  border-left:2px solid var(--flag);padding:2px 0 2px 14px;margin:0 0 1.05rem;
+  color:var(--muted);font-size:.95rem;
+}
+.cost b{color:var(--text);font-weight:600}
+pre{
+  font-family:var(--mono);font-size:.79rem;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:13px 14px;overflow-x:auto;margin:0 0 1.05rem;color:#c9d3de;line-height:1.55;
+}
+code{font-family:var(--mono);font-size:.88em;color:var(--text)}
+p code,li code{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+ul{margin:0 0 1.05rem;padding-left:1.1rem}
+li{margin:0 0 .5rem}
+.rule{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;margin:0 0 1.05rem;
+}
+.rule .lbl{
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--green);display:block;margin:0 0 6px;
+}
+.rule p{margin:0}
+section.q{border-top:1px solid var(--line);padding:52px 0 0}
+.qa{margin:0 0 26px}
+.qa p{margin:0}
+.cta{
+  border:1px solid var(--line);background:var(--panel-2);border-radius:12px;
+  padding:22px 22px 8px;margin:46px 0 0;
+}
+footer{border-top:1px solid var(--line);padding:34px 0 54px;color:var(--dim);font-size:.86rem;margin-top:54px}
+footer a{color:var(--muted)}
+.foot-links{display:flex;flex-wrap:wrap;gap:0 18px;font-family:var(--mono);font-size:.78rem;margin-bottom:10px}
+.foot-links a{display:inline-flex;align-items:center;min-height:44px}
+@media(max-width:560px){
+  .top{gap:0 14px}
+  .ver{display:none}
+  body{font-size:16.5px}
+}
+code,h1,h2,h3{overflow-wrap:anywhere}
+pre{overflow-x:auto;max-width:100%}
+pre code{overflow-wrap:normal}
+.foot-links a{min-width:44px}
+
+/* 44px targets for links that stand alone. Links inside a sentence stay inline. */
+nav.top a,.foot-links a{display:inline-flex;align-items:center;min-height:44px;min-width:44px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+{"@type":"BreadcrumbList","itemListElement":[
+ {"@type":"ListItem","position":1,"name":"App Store Connect MCP","item":"https://asc-mcp.pages.dev/"},
+ {"@type":"ListItem","position":2,"name":"A fastlane alternative for AI agents","item":"https://asc-mcp.pages.dev/writing/fastlane-alternative-for-ai-agents/"}]},
+{"@type":"Article","headline":"A fastlane alternative for AI agents","description":"fastlane's deliver and pilot can use an App Store Connect API key. asc-mcp uses the same kind of key and gives an AI agent 41 typed MCP tools.","url":"https://asc-mcp.pages.dev/writing/fastlane-alternative-for-ai-agents/","datePublished":"2026-11-12","dateModified":"2026-11-12","inLanguage":"en","author":{"@type":"Person","name":"Povilas Konopackas"},"publisher":{"@type":"Organization","name":"asc-mcp","url":"https://asc-mcp.pages.dev/"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://asc-mcp.pages.dev/writing/fastlane-alternative-for-ai-agents/"},"keywords":"fastlane alternative, MCP server for App Store Connect, App Store Connect API, AI agent, deliver, pilot, asc-mcp"},
+{"@type":"FAQPage","mainEntity":[
+ {"@type":"Question","name":"Is there a fastlane alternative for AI agents?","acceptedAnswer":{"@type":"Answer","text":"Yes. asc-mcp is an MCP server that gives an agent 41 typed tools for App Store Connect, using an App Store Connect API key, the same kind deliver and pilot can use. fastlane is a free MIT Ruby command line tool that an agent has to shell out to. Setup happens in chat with the asc_connect tool."}},
+ {"@type":"Question","name":"Does fastlane use the App Store Connect API?","acceptedAnswer":{"@type":"Answer","text":"Partly. Per fastlane's docs, deliver and pilot can authenticate with an App Store Connect API key, the same kind of key asc-mcp uses. Some actions, such as produce for creating an app, still sign in with an Apple ID. asc-mcp only ever uses the API key."}},
+ {"@type":"Question","name":"Can asc-mcp build and upload my app without fastlane?","acceptedAnswer":{"@type":"Answer","text":"Building still happens on your Mac. The build_and_archive tool runs xcodebuild through Xcode, and upload_binary sends the .ipa with altool using your API key. upload_binary requires confirm: true."}},
+ {"@type":"Question","name":"What does asc-mcp cost compared with fastlane?","acceptedAnswer":{"@type":"Answer","text":"fastlane is free. asc-mcp has a free tier and a 7-day trial with no card, then Pro is $9 per month, VAT included, with sales tax added at checkout in the US, Canada and India."}}]}]}</script>
+</head>
+<body>
+
+<div class="wrap">
+  <nav class="top">
+    <a href="/" class="mark" style="border:0">asc<b>-</b>mcp</a>
+    <a href="/#pipeline">Pipeline</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/#faq">Limits</a>
+    <a href="https://github.com/pofky/asc-mcp">GitHub</a>
+    <span class="ver">v1.11.1</span>
+  </nav>
+</div>
+<main>
+<header class="hero">
+  <div class="wrap narrow">
+    <span class="eyebrow">Field notes</span>
+    <h1>A fastlane alternative for AI agents</h1>
+    <p class="standfirst">fastlane is a free, MIT-licensed Ruby command line tool, and its deliver and pilot actions can authenticate with the same kind of App Store Connect API key that asc-mcp uses. The difference for an agent is the interface: fastlane is reached by shelling out, while asc-mcp gives the agent 41 typed tools to call directly.</p>
+    <p class="meta">12 November 2026 &middot; Povilas Konopackas &middot; from the README and tool definitions of <a href="/">asc-mcp</a></p>
+  </div>
+</header>
+
+<article>
+<div class="wrap narrow">
+
+<h2>What fastlane and asc-mcp share</h2>
+<p>Both talk to Apple through the App Store Connect REST API, authenticated with an API key (a <code>.p8</code> file, a Key ID and an Issuer ID). Per <a href="https://docs.fastlane.tools/app-store-connect-api/">fastlane's own docs</a>, <code>deliver</code> and <code>pilot</code> can authenticate with such a key, while some actions, such as <code>produce</code> for creating an app, still need an Apple ID login. The release steps you would script with deliver and pilot have a matching tool in asc-mcp, with no Ruby toolchain. fastlane is a good tool, and this page is about a narrower question: what changes when the caller is an AI agent instead of a person or a CI job.</p>
+
+<h2>What changes when an agent is the caller</h2>
+<p>An agent reaches fastlane by running shell commands and reading text back. asc-mcp is an MCP server, so the agent sees 41 tools with typed inputs and calls them directly. There is no Fastfile to write first, and no output to parse.</p>
+<ul>
+<li>Tools that send something outward need an explicit <code>confirm: true</code>: <code>submit_for_review</code>, <code>release_version</code> and <code>upload_binary</code>. Nothing is submitted by accident.</li>
+<li><code>asc_setup_check</code> tests the key, the Issuer ID, a live connection and the license, and prints the exact fix for each failure.</li>
+<li><code>asc_guide</code> returns the playbook for a flow, such as a first release, and marks the steps the API cannot do.</li>
+</ul>
+
+<h2>Setup happens in the chat</h2>
+<p>Add the server to your client. In Claude Code:</p>
+<pre><code>claude mcp add asc-mcp -- npx -y @pofky/asc-mcp</code></pre>
+<p>Create an API key at App Store Connect, Integrations, download the <code>.p8</code>, then tell the agent "connect asc-mcp, my Issuer ID is" followed by the UUID shown on that page. It calls <code>asc_connect</code>, which finds the downloaded key, files it in <code>~/.appstoreconnect/private_keys</code>, tests it against Apple and unlocks every tool in the same conversation. The full steps are in <a href="/#setup">setup</a> on the home page.</p>
+
+<h2>The binary still builds on your Mac</h2>
+<p>An API cannot compile your app. <code>build_and_archive</code> runs <code>xcodebuild</code> archive and export locally, so Xcode must be installed. <code>upload_binary</code> then sends the <code>.ipa</code> to App Store Connect with <code>altool</code> and your API key, and asks for <code>confirm: true</code>. <code>wait_for_build</code> blocks until the build is valid, and <code>attach_build</code> puts it on the version.</p>
+
+<h2>What the API cannot do with a key</h2>
+<p>These are limits of the App Store Connect API used with a key, and asc-mcp does not work around them with an Apple ID login. You cannot create the app record with an API key. An app's first in-app purchases cannot be submitted over the API with the version. The app privacy questionnaire and EU trader status have no public endpoint. asc-mcp flags each of these in <code>asc_guide</code> before you reach it, and <code>submit_for_review</code> aborts rather than orphan a version when first in-app purchases block it. The full list, with the error each one returns, is on <a href="/writing/app-store-connect-api-limits/">what the App Store Connect API cannot do</a>.</p>
+
+<h2>When fastlane is the better fit</h2>
+<p>If a Fastfile already works for you, or releases run from CI with no agent involved, fastlane is free and does that job. asc-mcp is for the case where the agent in your editor should do the release steps itself, with typed calls and a checklist of what only a person can finish.</p>
+
+<h2>What asc-mcp costs</h2>
+<p>fastlane costs nothing. asc-mcp has a free tier. Asking your agent to run <code>asc_start_trial</code> unlocks all 41 tools for 7 days with no card and nothing to cancel. After that, Pro is $9 per month, VAT included, and in the US, Canada and India sales tax is added at checkout. Details are under <a href="/#pricing">pricing</a>.</p>
+
+<h2>Questions</h2>
+<h3>Is there a fastlane alternative for AI agents?</h3><p>Yes. asc-mcp is an MCP server that gives an agent 41 typed tools for App Store Connect, using an App Store Connect API key, the same kind deliver and pilot can use. fastlane is a free MIT Ruby command line tool that an agent has to shell out to. Setup happens in chat with the asc_connect tool.</p><h3>Does fastlane use the App Store Connect API?</h3><p>Partly. Per fastlane's docs, deliver and pilot can authenticate with an App Store Connect API key, the same kind of key asc-mcp uses. Some actions, such as produce for creating an app, still sign in with an Apple ID. asc-mcp only ever uses the API key.</p><h3>Can asc-mcp build and upload my app without fastlane?</h3><p>Building still happens on your Mac. The build_and_archive tool runs xcodebuild through Xcode, and upload_binary sends the .ipa with altool using your API key. upload_binary requires confirm: true.</p><h3>What does asc-mcp cost compared with fastlane?</h3><p>fastlane is free. asc-mcp has a free tier and a 7-day trial with no card, then Pro is $9 per month, VAT included, with sales tax added at checkout in the US, Canada and India.</p>
+
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-links">
+      <a href="/">Home</a>
+      <a href="https://www.npmjs.com/package/@pofky/asc-mcp">npm</a>
+      <a href="https://github.com/pofky/asc-mcp">GitHub</a>
+      <a href="/writing/app-store-connect-api-limits/">API limits</a>
+      <a href="https://asc-mcp-license.remewdy.workers.dev/terms">Terms</a>
+      <a href="https://asc-mcp-license.remewdy.workers.dev/privacy">Privacy</a>
+      <a href="/llms.txt">llms.txt</a>
+    </div>
+    <p style="margin:0">asc-mcp v1.11.1, MIT licensed. Built and maintained by Povilas Konopackas, sole trader,
+      Lithuania. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, App Store, App Store Connect, TestFlight, Xcode and iOS are trademarks of Apple Inc.
+      Polar is a trademark of its respective owner.</p>
+    <p style="margin:8px 0 0">Last updated 12 November 2026.</p>
+  </div>
+</footer>
+<script>
+// One request, once per page load, to our own license worker. It sends the
+// path and nothing else: no cookie, no identifier, no third party, no library.
+// It exists so the funnel has a denominator; see /privacy on that host.
+try {
+  fetch(
+    'https://asc-mcp-license.remewdy.workers.dev/b?p=' + encodeURIComponent(location.pathname),
+    { mode: 'no-cors', keepalive: true, cache: 'no-store' }
+  ).catch(function () { /* blocked or offline: nothing to report */ });
+} catch (e) { /* a counter must never be able to break the page */ }
+</script>
+</body>
+</html>

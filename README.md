@@ -1,8 +1,20 @@
 # asc-mcp
 
-> **Ship an App Store release from your coding agent.** An MCP server for App Store Connect: 41 tools that edit version metadata, upload screenshots, attach builds, drive TestFlight, create in-app purchases, submit and release, plus an intelligence layer that audits a version before you submit and summarizes your reviews. 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper.
+> **Ship an App Store release from your coding agent.** An MCP server for App Store Connect: 41 tools that edit version metadata, upload screenshots, attach builds, drive TestFlight, create in-app purchases, submit and release, plus an intelligence layer that audits a version before you submit and summarizes your reviews. 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper. A fastlane alternative for AI agents: the App Store Connect API, as typed tools your agent calls directly.
 
 [asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/month, VAT included (sales tax added in the US, Canada and India)](https://asc-mcp.pages.dev/#pricing)
+
+**Claude Desktop, one click:** download the latest [`asc-mcp.mcpb`](https://github.com/pofky/asc-mcp/releases/latest) and open it. Claude asks for your Issuer ID and lets you pick your `.p8` with a file picker. No JSON, no restart hunt.
+
+**Everything else** (Claude Code, Cursor, Windsurf, Cline): add the server, then finish setup in the chat.
+
+```bash
+claude mcp add asc-mcp -- npx -y @pofky/asc-mcp   # Claude Code. Other clients: the JSON block under "Manual config"
+```
+
+Create an API key at [App Store Connect > Integrations](https://appstoreconnect.apple.com/access/integrations/api) and download it, then tell your agent: **"connect asc-mcp, my Issuer ID is <the UUID on that page>"**. It calls `asc_connect`, which finds the downloaded `.p8`, files it in Apple's standard folder, tests it against Apple and unlocks every tool in the same chat. No terminal, no config file, no restart. (`npx @pofky/asc-mcp init --write` does the same from a terminal.)
+
+Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 41 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month (VAT included; in the US, Canada and India sales tax is added at checkout). Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no license, as a preview.
 
 ### In plain words
 
@@ -17,18 +29,6 @@ asc-mcp is a helper robot for that office. It talks to your AI assistant, so you
 Checking whether the store said yes or no is free, with no time limit. Everything else works free for 7 days, no card, then it's $9 a month, VAT included, with sales tax added in the US, Canada and India. The robot checks your homework, and the store still decides.
 
 For the grown-ups: the toy is your app, the office is App Store Connect, and the robot is an MCP server running on your own computer.
-
-**Claude Desktop, one click:** download the latest [`asc-mcp.mcpb`](https://github.com/pofky/asc-mcp/releases/latest) and open it. Claude asks for your Issuer ID and lets you pick your `.p8` with a file picker. No JSON, no restart hunt.
-
-**Everything else** (Claude Code, Cursor, Windsurf, Cline): add the server, then finish setup in the chat.
-
-```bash
-claude mcp add asc-mcp -- npx -y @pofky/asc-mcp   # Claude Code. Other clients: the JSON block under "Manual config"
-```
-
-Create an API key at [App Store Connect > Integrations](https://appstoreconnect.apple.com/access/integrations/api) and download it, then tell your agent: **"connect asc-mcp, my Issuer ID is <the UUID on that page>"**. It calls `asc_connect`, which finds the downloaded `.p8`, files it in Apple's standard folder, tests it against Apple and unlocks every tool in the same chat. No terminal, no config file, no restart. (`npx @pofky/asc-mcp init --write` does the same from a terminal.)
-
-Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 41 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month (VAT included; in the US, Canada and India sales tax is added at checkout). Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no license, as a preview.
 
 | You say | What happens |
 |---------|-------------|
@@ -47,7 +47,7 @@ Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://gi
 
 Other ASC MCP servers wrap the API and give you 80 to 982 raw endpoints. This one gives you 41 opinionated tools, 6 slash-command Prompts, and a Claude Skill that all think. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
 
-**Why full control is possible without fastlane:** fastlane's `deliver` and `pilot` are just calls to the same App Store Connect REST API this server authenticates against with your `.p8`. So nearly everything you would script with fastlane is a tool here, no Ruby toolchain required. The only step that needs your Mac is building and signing the binary, which `build_and_archive` and `upload_binary` drive via Xcode.
+**Why full control is possible without fastlane:** per [fastlane's docs](https://docs.fastlane.tools/app-store-connect-api/), `deliver` and `pilot` can authenticate with an App Store Connect API key, the same kind of key this server uses with your `.p8`. The release steps you would script with them are tools here, no Ruby toolchain required. The only step that needs your Mac is building and signing the binary, which `build_and_archive` and `upload_binary` drive via Xcode.
 
 ## Setup (about 5 minutes)
 

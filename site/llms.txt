@@ -4,7 +4,7 @@
 
 ## Facts
 
-- Package: `@pofky/asc-mcp` on npm. Current version 1.10.3 (published 31 October 2026).
+- Package: `@pofky/asc-mcp` on npm. Current version 1.11.1 (published 12 November 2026).
 - Install: add `npx -y @pofky/asc-mcp` as an MCP server (Claude Code: `claude mcp add asc-mcp -- npx -y @pofky/asc-mcp`), then give the agent your Issuer ID: the `asc_connect` tool finds the downloaded `.p8`, files it in `~/.appstoreconnect/private_keys`, tests it against Apple and unlocks every tool in the running session, with no config file and no restart. From a terminal, `npx @pofky/asc-mcp init --write` writes the client config instead.
 - One-click install on Claude Desktop (macOS and Windows): download the `.mcpb` bundle from https://github.com/pofky/asc-mcp/releases/latest and open it. Claude installs it in one click and collects the Issuer ID and the `.p8` file natively, with no config file editing and no restart. Every other client uses the `npx` server above.
 - Tool count: 41 tools and 6 prompts. 6 tools are free with no limit. Of the other 35, 10 that only read work 5 times in total per machine with no license, as a preview; past that, all 35 require Pro or a running trial.
@@ -35,6 +35,8 @@
 - User guide (generated from the in-tool playbook): https://github.com/pofky/asc-mcp/blob/master/USER_GUIDE.md
 - Limitations: https://github.com/pofky/asc-mcp/blob/master/LIMITATIONS.md
 - Field notes, what the App Store Connect API cannot do (ten refusals with the error each returns, the manual path round each, and three calls that succeed and still surprise you): https://asc-mcp.pages.dev/writing/app-store-connect-api-limits/
+- A fastlane alternative for AI agents (what deliver and pilot do, the typed tool for each, and what still needs your Mac): https://asc-mcp.pages.dev/writing/fastlane-alternative-for-ai-agents/
+- Can an AI agent submit an app to the App Store? (yes for every API step through submit_for_review; what a person still does on the website): https://asc-mcp.pages.dev/writing/can-ai-submit-app-to-app-store/
 - Field notes, ITMS-91053 Missing API declaration (what the email means, how to find the API and SDK behind it, every reason code, and ITMS-91061): https://asc-mcp.pages.dev/writing/itms-91053/
 - Field notes, seven ways a license server cuts off paying customers (Polar webhooks, cancel versus revoke, webhook signature encoding, org-wide event fan-out, renewal grace, trial and paid key collision): https://asc-mcp.pages.dev/writing/license-server/
 - Terms: https://asc-mcp-license.remewdy.workers.dev/terms
@@ -65,7 +67,7 @@ A: Wrappers map endpoints one to one, which can mean hundreds of tools and leave
 
 ## Citation
 
-asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.10.3, updated 31 October 2026).
+asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.11.1, updated 12 November 2026).
 
 ## How it compares (verified 7 September 2026)
 

@@ -1,7 +1,7 @@
 # FLOWS.md
 
 App: asc-mcp
-Last amended: 2026-11-12, failure replies name the next step (tasks/0005)
+Last amended: 2026-11-12, discovery pages and listings (tasks/0006)
 
 The interface is the agent conversation. The "labels" below are the report's exact text.
 
@@ -18,7 +18,8 @@ Failure contract, every flow (tasks/0005): a tool call that throws returns `isEr
 | F5 | A license that is not answered or has ended | Startup, any tool | The truth about the key, and no offer the server would refuse | Retention | v1.10.1 |
 | F6 | Creating or changing something on sale | `create_iap`, `create_subscription`, `set_app_price`, `set_app_availability` | A second call before anything customers can see changes | Trust | tasks/0005 |
 | F7 | A visitor who does not know the jargon | Landing page `#plain` | What the product does, in plain words | Activation | tasks/0003 |
-| F8 | First setup from the page or README | Hero command, README `## Setup` | A connected agent and a running trial, setup finished in the chat | Activation | tasks/0005 |
+| F8 | First setup from the page or README | Hero command, README top install block | A connected agent and a running trial, setup finished in the chat | Activation | tasks/0005 |
+| F9 | Found through search, an LLM answer or a directory | A search or LLM query, a directory listing, the homepage fastlane link | An honest answer that leads to the install line | Acquisition | tasks/0006 |
 
 ---
 
@@ -191,3 +192,27 @@ Success: `asc_setup_check` says every check is OK, then `Pro trial started`.
 Change log: 2026-11-12, tasks/0005. Every reply audited for the next step and who takes it; four replies hid or misstated state and were fixed.
 Change log: 2026-11-12, tasks/0004. Installs doubled while trial starts went to zero; every step after setup worked, so the setup itself (terminal, JSON config, restart) moved into the chat.
 Change log: 2026-11-04, first-time-user audit. The key folder did not exist on a fresh Mac so the documented `mv` failed; the hero sent "Start free" to pricing and never said an Apple key is needed; the Issuer ID was not located on the site; the role said App Manager in some places and Admin or App Manager in others.
+
+## F9. Found through search, an LLM answer or a directory
+
+Who: a developer, or an agent answering one, looking for a way to automate App Store Connect from an AI agent.
+Goal: an accurate answer to their question, then the install line.
+Entry: queries like "MCP server for App Store Connect", "fastlane alternative for AI agents", "can an AI agent submit an app to the App Store"; npm, GitHub topics, the MCP registry, Glama, mcpservers.org, PulseMCP; on the homepage, `Coming from fastlane? How asc-mcp covers what deliver and pilot do, for an agent`.
+Success: they reach F8 with a correct picture of what still needs a person.
+
+### Steps
+
+| # | Screen | User does | Exact label | System shows |
+|---|--------|-----------|-------------|--------------|
+| 1 | Search or LLM | Asks | | `/writing/can-ai-submit-app-to-app-store/` or `/writing/fastlane-alternative-for-ai-agents/`, answer in the first paragraph |
+| 2 | Page | Reads | `What a person still does` | App record, App Privacy questions, EU trader status, first in-app purchases, Apple's decision |
+| 3 | Page | Copies | `claude mcp add asc-mcp -- npx -y @pofky/asc-mcp` | Then F8 |
+
+### States on this flow
+
+- Every page states the four website-only steps the same way as the homepage FAQ and `/writing/app-store-connect-api-limits/`.
+- fastlane is described from its own docs (deliver and pilot accept an API key; produce needs an Apple ID). No claim that it shares our limits.
+- Directories we cannot edit: Claude plugin directory refuses local servers from unverified organizations (owner); PulseMCP shows the deprecated April entry and has paused changes (email drafted in `launch/pulsemcp-listing-update.txt`).
+
+Change log: 2026-11-12, tasks/0006. asc-mcp did not appear for "MCP server for App Store Connect"; two answer-first pages, search terms in npm, GitHub, registry, README and llms.txt.
+
