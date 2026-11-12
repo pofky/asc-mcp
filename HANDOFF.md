@@ -1,8 +1,18 @@
 # Handoff: appstore-connect-mcp
 
-Updated 2026-11-04. Branch `master`.
+Updated 2026-11-12. Branch `master`.
 
 ## Where things stand
+
+**12 November: no new subscribers since 18 Oct. The cause is setup, not a broken flow. 1.11.0 moves setup into the chat. It is committed and pushed, NOT released yet.**
+
+- **Data (D1, npm, read 12 Nov):** 1.10.3 installed 130 times in the last week (baseline 66), while trial starts by month went 13, 6, 3, 0. Last trial 30 Oct (row 88), last paid row 84 on 18 Oct. Page views run 1 to 5 a day. My `/go?tool=audit_probe` hit on 12 Nov is noise; discount it.
+- **Every flow after setup works (driven on the published 1.10.3, clean HOME, real Apple, local worker):** setup mode, free tools, 5 preview calls counting down, gate refusal with price and trial, write refusal, `asc_start_trial` unlocking the session. The live `/health`, `/trial` (400 on bad input), `/validate`, `/go` (302 to Polar with a browser user agent, 204 to curl by design) and Polar checkout (200) all respond.
+- **The wall:** an npx install (registry, Glama, README, Cursor, Claude Code) starts with 2 tools. Getting further took `mkdir`/`mv`, a JSON config edit or `init` in a terminal, and a restart.
+- **Fix, `asc_connect` (tasks/0004, FLOWS F8):** a setup-mode tool that takes the Issuer ID, finds the `.p8` (`~/.appstoreconnect/private_keys`, `~/Downloads`, `~/Desktop`, or the client's `ASC_PRIVATE_KEY_PATH`), tests it against Apple before touching anything, moves only Downloads/Desktop keys, saves `~/.asc-mcp/credentials.json`, and hot-swaps all 41 tools into the running session with one `tools/list_changed`. Code: `src/connect.ts`, `runSetupMode` and `registerFullTools` in `src/index.ts`. Copy: README, site hero + `#setup`, llms.txt, guide, doctor, `/privacy` (credentials.json bullet, dated 12 Nov).
+- **Verified:** driven against real Apple (3 tools to 41, restart starts connected, 401 refuses with nothing moved); 577 root and 139 worker tests pass, with 17 in `tests/connect.test.ts`. The env and Pro paths give instructions and `tools/list` byte-identical to 1.10.3, so existing users see no change. The change-reviewer passed completeness, security, legal, SEO and slop. Its two fixes are in: a `key_path` outside Downloads stays in place, and the reply notes that prompts need a restart. The change-tester passed the MCP flow, and the site at 320/375/1280 after the hero overflow fix.
+- **Not done: release.** npm answered 401 and needs the operator's web login. Steps in order: `launch/release-1.11.0.txt` (npm release, then worker, then site). Do not deploy the site or worker before npm serves 1.11.0, because the site would promise a tool nobody can install.
+- **Open question (operator, legal fork):** we cannot count how many installs stay stuck in setup mode, because that needs client telemetry and a privacy change. Judge 1.11.0 on trial starts over the 2 weeks after release.
 
 **4 November, last: 1.10.3 is live on every surface.** npm `latest` 1.10.3, tag `v1.10.3`, GitHub release with `.mcpb` (manifest 1.10.3), MCP registry 1.10.3 (workflow 41789196970 success), plugin pin 1.10.3, site `a0fb0434` at v1.10.3. Driven on the published package from a clean HOME: `init` with no key prints `mkdir -p` + `mv`; free user on the real account, 11 `list_reviews` + `metadata_diff` spent 1 preview call; Pro (row 20) gets plain replies, no footer, no `preview.json`. The operator approved the npm login and the publish; npm's web 2FA only appears under a pty (`script -q <log> npm publish --access public --auth-type=web`).
 
