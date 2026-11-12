@@ -12,7 +12,10 @@ export const BASE_INSTRUCTIONS =
   "Slash-command Prompts seed multi-tool workflows. triage_reviews and draft_review_response " +
   "use MCP Sampling (your own client's model, zero extra cost). draft_review_response never " +
   "auto-posts: it returns a draft only. When you know the app's local Xcode project folder, pass it " +
-  "to release_preflight as project_path.";
+  "to release_preflight as project_path. When a tool fails, its reply ends with a Next: line saying " +
+  "what to do and whether you or the user does it: follow it, and tell the user any step only they " +
+  "can do (Apple's website, a key file, their email) in plain words. When unsure what is wrong, call " +
+  "asc_setup_check.";
 
 /**
  * The free tier's half, and the only place a free user learns what they have.

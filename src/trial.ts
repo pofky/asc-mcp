@@ -81,7 +81,7 @@ export async function requestTrial(
     return {
       ok: false,
       error: "bad_response",
-      message: `The license server returned an unreadable response (HTTP ${response.status}).`,
+      message: `The license server returned an unreadable response (HTTP ${response.status}), so no trial was started. Next: retry in a minute. If it keeps failing, the user can email povkonop@gmail.com and a person sets up the trial by hand.`,
     };
   }
 
@@ -103,7 +103,7 @@ export async function requestTrial(
     message:
       typeof body.message === "string"
         ? body.message
-        : `The license server refused the request (HTTP ${response.status}).`,
+        : `The license server refused the request (HTTP ${response.status}), so no trial was started. Next: retry in a minute. If it keeps failing, the user can email povkonop@gmail.com and a person sets up the trial by hand.`,
     checkout_url: typeof body.checkout_url === "string" ? body.checkout_url : undefined,
   };
 }

@@ -109,7 +109,12 @@ export class ASCClient {
         },
       });
 
-      if (!response.ok) break;
+      // A failed later page used to end the list quietly, so a partial list of
+      // reviews or builds read as the whole account. Say so instead.
+      if (!response.ok) {
+        const body = await response.text();
+        throw new ASCAPIError(response.status, `${path} (page ${page + 1})`, body);
+      }
 
       const pageData = (await response.json()) as ASCResponse<T>;
       if (Array.isArray(pageData.data)) {
@@ -185,7 +190,7 @@ export class ASCAPIError extends Error {
 function friendlyHint(status: number, body: string): string {
   switch (status) {
     case 401:
-      return "Authentication failed. Your Issuer ID, Key ID, or .p8 likely don't match. Re-check the Issuer ID (UUID on the Integrations page) and that the .p8 matches the Key ID. Run `npx @pofky/asc-mcp doctor` to pinpoint it.";
+      return "Authentication failed. Your Issuer ID, Key ID, or .p8 likely don't match. Re-check the Issuer ID (UUID on the Integrations page) and that the .p8 matches the Key ID. asc_setup_check (or `npx @pofky/asc-mcp doctor` in a terminal) pinpoints which one.";
     case 403:
       return "Your API key authenticated but lacks permission for this action. The id may not belong to an app in this account (check it with list_apps), the key's role may be too low (needs App Manager or higher), or this specific capability (e.g. cloud signing, creating an app record) is not available to API keys at all. See `asc_guide topic:limitations`.";
     case 404:
