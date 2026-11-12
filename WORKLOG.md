@@ -8,6 +8,7 @@ Production read: 1.10.3 installed 130 times in the week (baseline 66), trials by
 Every flow after setup driven on the published 1.10.3 and live endpoints: all work. New `asc_connect` (setup mode only)
 takes the Issuer ID, files the downloaded .p8, tests it against Apple and hot-swaps all 41 tools into the running
 session. PRD `tasks/0004`, flow F8. Driven against real Apple: 3 tools to 41, one list_changed, restart starts connected.
+Released 12 Nov on npm, GitHub, MCP registry, worker `974f679a` and site `e42870bd`; driven on the published package as a new and an existing user.
 
 **Flow audit for current and new users (2026-11-04).**
 
