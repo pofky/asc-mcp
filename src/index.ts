@@ -45,7 +45,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PRO_PRICE, UPGRADE_URL, takePreviewNotice, previewScope, previewReplyKind, EMPTY_PREVIEW_NOTE } from "./gate.js";
 import { BASE_INSTRUCTIONS, instructionsFor } from "./instructions.js";
-import { toolMeta, type ToolName } from "./tool-meta.js";
+import { toolMeta, type ToolName, type SetupOnlyToolName } from "./tool-meta.js";
+import { connectAccount, loadSavedCredentials, INTEGRATIONS_URL } from "./connect.js";
 
 /**
  * Read from package.json rather than a literal. A hand-maintained constant
@@ -92,13 +93,17 @@ if (!process.env.ASC_LICENSE_KEY && process.argv[2] !== "init") {
   if (saved) process.env.ASC_LICENSE_KEY = saved;
 }
 
+// The Issuer ID (and a key path outside Apple's folder) that `asc_connect`
+// saved, where the client config leaves them unset. The config always wins.
+loadSavedCredentials();
+
 /**
  * Register a tool with the title and read/write hints tool-meta.ts holds for
  * it. The name is typed, so a tool with no row there does not compile.
  */
 function annotated(server: McpServer) {
   return (
-    name: ToolName,
+    name: ToolName | SetupOnlyToolName,
     description: string,
     inputSchema: z.ZodRawShape,
     handler: (...a: any[]) => any,
@@ -107,7 +112,8 @@ function annotated(server: McpServer) {
 
 const MISSING_CREDS_MESSAGE =
   "Missing App Store Connect credentials.\n\n" +
-  "Fastest path: run `npx @pofky/asc-mcp init` (auto-detects your .p8, prints a paste-ready config).\n\n" +
+  "Fastest path: in your agent's chat, paste your Issuer ID and it calls asc_connect, which finds the downloaded .p8 and connects without a restart.\n" +
+  "From a terminal: run `npx @pofky/asc-mcp init` (auto-detects your .p8, prints a paste-ready config).\n\n" +
   "Or set manually:\n" +
   "  ASC_KEY_ID       - Your API key ID (auto-detected from a .p8 in ~/.appstoreconnect/private_keys)\n" +
   "  ASC_ISSUER_ID    - Your team's issuer ID\n" +
@@ -139,6 +145,17 @@ function getConfig(): ASCConfig | null {
   };
 }
 
+const SETUP_INSTRUCTIONS =
+  "asc-mcp, running in SETUP MODE: it is not connected to an App Store Connect account yet. " +
+  "The user needs an App Store Connect API key, which only Apple's website can create: " +
+  `at ${INTEGRATIONS_URL} (Users and Access > Integrations > App Store Connect API), Generate API Key, any name, Access "App Manager", then Download (Apple allows one download). ` +
+  "Then ask them to paste the Issuer ID shown above the keys list, and call asc_connect with it: it finds the downloaded .p8, files it, tests it against Apple and unlocks every tool in this session, with no config file, terminal or restart. " +
+  "If they already have a key, skip straight to asking for the Issuer ID. asc_setup_check diagnoses anything that goes wrong. " +
+  "Once connected, the read tools work free, ten Pro read tools give 5 free calls, and the write and control tools need Pro, which asc_start_trial unlocks free for 7 days.";
+
+const CONNECT_HINT =
+  "Fastest fix, no terminal or config file: give your agent the Issuer ID from the page above and it calls asc_connect, which finds the downloaded .p8, files it, tests it and unlocks every tool in this chat.";
+
 /**
  * Credential-less start: connect anyway with the two free orientation tools so
  * the client shows a working server that can explain the fix, instead of a
@@ -156,41 +173,93 @@ async function runSetupMode() {
       // whose entire job in this mode is to look healthy enough to explain the
       // fix. Setup mode has no prompts, so it must not claim any.
       capabilities: { tools: {} },
-      instructions:
-        "asc-mcp, running in SETUP MODE: no App Store Connect credentials were found, so only asc_setup_check and asc_guide are available. Call asc_setup_check first and relay the fix it prints. Once credentials are in place and the user restarts this server, the full tool set appears; the write and control tools then need Pro, which asc_start_trial unlocks free for 7 days.",
+      instructions: SETUP_INSTRUCTIONS,
     },
   );
 
   const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
   const tool = annotated(server);
 
-  tool(
-    "asc_setup_check",
-    "Diagnose your setup: checks the .p8 key, Key ID, Issuer ID, a LIVE authenticated connection to App Store Connect, and your license tier. For anything wrong, returns the exact fix. Run this first if something isn't working. Free.",
-    {},
-    async () => text(formatDoctor(await runDoctor())),
-  );
+  const setupTools = [
+    tool(
+      "asc_setup_check",
+      "Diagnose your setup: checks the .p8 key, Key ID, Issuer ID, a LIVE authenticated connection to App Store Connect, and your license tier. For anything wrong, returns the exact fix. Run this first if something isn't working. Free.",
+      {},
+      async () => text(formatDoctor(await runDoctor()) + "\n\n" + CONNECT_HINT),
+    ),
+    tool(
+      "asc_guide",
+      "START HERE. Returns the exact end-to-end playbook for an App Store task, with every manual ASC-website/Xcode step that no API can do flagged inline. Free.",
+      { topic: z.string().optional().describe("Which playbook. Omit for the overview + topic list.") },
+      async (args: { topic?: string }) => text(await ascGuide(args as any)),
+    ),
+  ];
 
-  tool(
-    "asc_guide",
-    "START HERE. Returns the exact end-to-end playbook for an App Store task, with every manual ASC-website/Xcode step that no API can do flagged inline. Free.",
-    { topic: z.string().optional().describe("Which playbook. Omit for the overview + topic list.") },
-    async (args: { topic?: string }) => text(await ascGuide(args as any)),
+  let connecting = false;
+  const connectTool = tool(
+    "asc_connect",
+    "Connect the user's App Store Connect account from this chat, so no config file or terminal is needed. Ask the user for their Issuer ID (the UUID above the keys list at " +
+      INTEGRATIONS_URL +
+      "); never invent one. It finds their downloaded AuthKey_XXXXXXXXXX.p8 (in ~/.appstoreconnect/private_keys, ~/Downloads or ~/Desktop) and moves it into ~/.appstoreconnect/private_keys, tests the pair against Apple, saves the Issuer ID in ~/.asc-mcp/credentials.json, and unlocks every tool in this session. Free.",
+    {
+      issuer_id: z.string().describe("The user's Issuer ID, a UUID copied from App Store Connect > Users and Access > Integrations. Ask for it; never guess."),
+      key_path: z
+        .string()
+        .optional()
+        .describe("Path to the .p8, only if it is not in ~/.appstoreconnect/private_keys, ~/Downloads or ~/Desktop, or if several were found."),
+    },
+    async (args: { issuer_id: string; key_path?: string }) => {
+      if (connecting) return text("Already connecting. Wait for that call to finish.");
+      connecting = true;
+      try {
+        const result = await connectAccount(args);
+        if (!result.ok) return text(result.message);
+
+        const config: ASCConfig = { ...result.config, licenseKey: process.env.ASC_LICENSE_KEY };
+        const tier = await startupTier(config);
+        // Swap the setup tools for the full set on this same connection. The
+        // SDK sends tools/list_changed for each change, and a client that
+        // honours it shows the new tools on its next turn.
+        // Each add or remove would send its own notification (44 of them), so
+        // they are held and one goes out at the end.
+        const notify = server.sendToolListChanged.bind(server);
+        server.sendToolListChanged = () => {};
+        try {
+          for (const t of setupTools) t.remove();
+          connectTool.remove();
+          registerFullTools(server, config, tier);
+        } finally {
+          server.sendToolListChanged = notify;
+        }
+        notify();
+
+        const apps = result.apps === undefined ? "" : ` ${result.apps} app${result.apps === 1 ? "" : "s"} in the account.`;
+        return text(
+          [
+            `Connected to App Store Connect with key ${config.keyId}.${apps}`,
+            ...result.notes,
+            result.saved
+              ? "Saved in ~/.asc-mcp/credentials.json (the Issuer ID only; the key stays in its own file), so the next start connects by itself."
+              : "It could not be saved on this machine, so after a restart run asc_connect again.",
+            "",
+            result.saved
+              ? "Every tool is now available in this session. If your client still lists only the setup tools, restart it once; it will start connected. The slash-command prompts (/asc-start and the others) also appear after a restart."
+              : "Every tool is now available in this session.",
+            "",
+            instructionsFor(tier, lastLicenseStatus()?.reason, Boolean(process.env.ASC_LICENSE_KEY) && lastLicenseStatus() === null),
+          ].join("\n"),
+        );
+      } finally {
+        connecting = false;
+      }
+    },
   );
 
   await server.connect(new StdioServerTransport());
 }
 
-async function main() {
-  const config = getConfig();
-  if (!config) return runSetupMode();
-  const client = new ASCClient(config);
-  // Mutable on purpose. `asc_start_trial` reassigns it, and every tool closure
-  // below reads it at call time, so a trial started mid-conversation unlocks the
-  // running session with no config reload and no client restart. Sending someone
-  // away to restart their agent at the exact moment they agreed to try the thing
-  // is how you lose them.
-  let tier: Tier = await validateLicense(config.licenseKey);
+async function startupTier(config: ASCConfig): Promise<Tier> {
+  const tier: Tier = await validateLicense(config.licenseKey);
 
   if (tier === "pro") {
     // A trial says so, with the clock. This line is printed on every start and
@@ -221,6 +290,14 @@ async function main() {
     );
   }
 
+  return tier;
+}
+
+async function main() {
+  const config = getConfig();
+  if (!config) return runSetupMode();
+  const tier = await startupTier(config);
+
   const server = new McpServer(
     {
       name: "asc-mcp",
@@ -234,6 +311,34 @@ async function main() {
       instructions: instructionsFor(tier, lastLicenseStatus()?.reason, Boolean(process.env.ASC_LICENSE_KEY) && lastLicenseStatus() === null),
     },
   );
+
+  registerFullTools(server, config, tier);
+
+  // --- Prompts (slash commands in Claude Desktop / Code) ---
+  const prompts = registerPrompts(server);
+  console.error(
+    `asc-mcp: ${prompts.length} prompt(s) registered: ${prompts.map((p) => "/" + p.name).join(", ")}`,
+  );
+
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  // Sampling/Elicitation capability is only known after initialize; per-tool
+  // degradation handles the mismatch (see triage_reviews + draft_review_response).
+}
+
+/**
+ * Every tool of a connected server. Called by main(), and by `asc_connect` in
+ * setup mode on the server that is already talking to the client: the SDK then
+ * sends tools/list_changed, so the full set appears without a restart.
+ */
+function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Tier): void {
+  const client = new ASCClient(config);
+  // Mutable on purpose. `asc_start_trial` reassigns it, and every tool closure
+  // below reads it at call time, so a trial started mid-conversation unlocks the
+  // running session with no config reload and no client restart. Sending someone
+  // away to restart their agent at the exact moment they agreed to try the thing
+  // is how you lose them.
+  let tier: Tier = initialTier;
 
   // --- Free tools ---
 
@@ -947,16 +1052,6 @@ async function main() {
     safe((args) => setupAppStoreSigning(client, args, tier)),
   );
 
-  // --- Prompts (slash commands in Claude Desktop / Code) ---
-  const prompts = registerPrompts(server);
-  console.error(
-    `asc-mcp: ${prompts.length} prompt(s) registered: ${prompts.map((p) => "/" + p.name).join(", ")}`,
-  );
-
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  // Sampling/Elicitation capability is only known after initialize; per-tool
-  // degradation handles the mismatch (see triage_reviews + draft_review_response).
 }
 
 function dispatchCli(argv: string[]): number | null {

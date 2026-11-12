@@ -67,7 +67,7 @@ export async function runDoctor(): Promise<DoctorReport> {
       name: "API key file (.p8)",
       status: "fail",
       detail: "No .p8 found in ~/.appstoreconnect/private_keys/ and ASC_PRIVATE_KEY_PATH is unset.",
-      fix: `Create a key at ${INTEGRATIONS_URL} (role: Admin or App Manager), download the .p8 once, then: mkdir -p ~/.appstoreconnect/private_keys && mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/private_keys/`,
+      fix: `Create a key at ${INTEGRATIONS_URL} (role: Admin or App Manager) and download the .p8 once. Then give your agent the Issuer ID: asc_connect finds the download and files it. Or by hand: mkdir -p ~/.appstoreconnect/private_keys && mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/private_keys/`,
     });
   } else if (!existsSync(resolvePath(keyPath))) {
     checks.push({
@@ -104,7 +104,7 @@ export async function runDoctor(): Promise<DoctorReport> {
       name: "Issuer ID",
       status: "fail",
       detail: "ASC_ISSUER_ID is unset.",
-      fix: `Copy the Issuer ID (a UUID at the top of ${INTEGRATIONS_URL}) and set ASC_ISSUER_ID. Run \`npx @pofky/asc-mcp init\` to generate the config.`,
+      fix: `Copy the Issuer ID (a UUID at the top of ${INTEGRATIONS_URL}) and paste it to your agent, which saves it with asc_connect. Or run \`npx @pofky/asc-mcp init\` to generate the config.`,
     });
   } else {
     checks.push({ name: "Issuer ID", status: "ok", detail: issuerId });

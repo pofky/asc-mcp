@@ -157,7 +157,7 @@ describe("blank plugin settings", () => {
     });
     // HOME has no key to discover, so this lands in setup mode. With the
     // literal kept, it would have started in full mode pointing at nothing.
-    expect(tools.map((t) => t.name).sort()).toEqual(["asc_guide", "asc_setup_check"]);
+    expect(tools.map((t) => t.name).sort()).toEqual(["asc_connect", "asc_guide", "asc_setup_check"]);
     expect(err).toContain("setup mode");
   }, 30_000);
 });

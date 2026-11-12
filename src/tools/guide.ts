@@ -44,9 +44,9 @@ const FLOWS: Record<Exclude<GuideTopic, "overview" | "limitations">, Flow> = {
     when: "Before anything else, once per machine.",
     steps: [
       "Create an API key: App Store Connect > Users and Access > Integrations > App Store Connect API > generate a key with the Admin or App Manager role. Download the .p8 (one time only).",
-      "Move the .p8 into ~/.appstoreconnect/private_keys/ (Apple's standard path; create it first with `mkdir -p ~/.appstoreconnect/private_keys`). The 10-char Key ID is read from the filename, so that one file is enough.",
-      "Run `npx @pofky/asc-mcp init` in a terminal. It auto-detects the key, asks for your Issuer ID (the UUID at the top of the Integrations page) and an optional Pro license key, and prints a paste-ready MCP config block.",
-      "Paste the block into your client config and restart the client. Claude Code global: ~/.claude.json. Claude Desktop: Library/Application Support/Claude/claude_desktop_config.json. Per project: .mcp.json in the project root. Or re-run `init --write` and let it write whichever you pick.",
+      "Add the server to the client (Claude Code: `claude mcp add asc-mcp -- npx -y @pofky/asc-mcp`; other clients: an `npx -y @pofky/asc-mcp` entry in their MCP config). Until it is connected it shows three setup tools.",
+      "Give the agent the Issuer ID (the UUID above the keys list on the Integrations page). It calls `asc_connect`, which finds the .p8 in ~/.appstoreconnect/private_keys, ~/Downloads or ~/Desktop, moves it into ~/.appstoreconnect/private_keys, tests it against Apple, saves the Issuer ID in ~/.asc-mcp/credentials.json and unlocks every tool in the running session. If the client keeps showing only the setup tools, restart it once.",
+      "From a terminal instead: `npx @pofky/asc-mcp init --write` finds the key, asks for the Issuer ID and writes the client config (Claude Code ~/.claude.json, Claude Desktop claude_desktop_config.json, or .mcp.json per project), then restart the client.",
       "Verify with `list_apps`. If it returns your apps, you are connected.",
     ],
     manual: [

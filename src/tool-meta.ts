@@ -71,11 +71,23 @@ const TOOL_META = {
 
 export type ToolName = keyof typeof TOOL_META;
 
+/**
+ * Tools that exist only in setup mode, before credentials. Kept out of
+ * TOOL_META so TOOL_NAMES stays exactly the connected server's set.
+ * `asc_connect` moves a key file and writes ~/.asc-mcp/credentials.json.
+ */
+const SETUP_ONLY_META = {
+  asc_connect: ["Connect your App Store Connect account", "write"],
+} as const satisfies Record<string, readonly [title: string, effect: Effect]>;
+
+export type SetupOnlyToolName = keyof typeof SETUP_ONLY_META;
+
 export const TOOL_NAMES = Object.keys(TOOL_META) as ToolName[];
 
 /** The `title` and `annotations` a registration needs, for a tool by name. */
-export function toolMeta(name: ToolName): { title: string; annotations: ToolAnnotations } {
-  const [title, effect] = TOOL_META[name];
+export function toolMeta(name: ToolName | SetupOnlyToolName): { title: string; annotations: ToolAnnotations } {
+  const [title, effect] =
+    name in SETUP_ONLY_META ? SETUP_ONLY_META[name as SetupOnlyToolName] : TOOL_META[name as ToolName];
   return {
     title,
     annotations:

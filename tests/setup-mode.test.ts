@@ -75,11 +75,12 @@ describe("setup mode (no credentials)", () => {
       const list = messages.find((m) => m.id === 2);
       expect(list, `no tools/list response. stderr: ${err}`).toBeDefined();
       const names = (list.result.tools as Array<{ name: string }>).map((t) => t.name).sort();
-      expect(names).toEqual(["asc_guide", "asc_setup_check"]);
+      expect(names).toEqual(["asc_connect", "asc_guide", "asc_setup_check"]);
 
       // The reason has to reach the user, who only ever sees the client's log.
       expect(err).toContain("setup mode");
       expect(err).toContain("asc-mcp init");
+      expect(err).toContain("asc_connect");
     },
     30_000,
   );
