@@ -1559,7 +1559,7 @@ async function handleKeyLookup(
 function handlePrivacy(headers: Record<string, string>): Response {
   return html(`
     <h1>Privacy Policy</h1>
-    <p><em>Last updated: October 31, 2026</em></p>
+    <p><em>Last updated: November 12, 2026</em></p>
 
     <h2>What we collect</h2>
     <p>When you purchase a Pro license, we store:</p>
@@ -1607,6 +1607,7 @@ function handlePrivacy(headers: Record<string, string>): Response {
     <ul>
       <li><code>~/.asc-mcp/license.json</code>: your license key, in plain text, written when <code>asc_start_trial</code> returns a key: when you start a trial, or on a machine that already fetched its paid key before 31 October 2026. On macOS and Linux it is given owner-only permissions. It is read on startup when no <code>ASC_LICENSE_KEY</code> is set in your client. Delete the file to remove it.</li>
       <li><code>~/.asc-mcp/preview.json</code>: one number, how many of the 5 free preview calls to Pro read tools have been used on this machine.</li>
+      <li><code>~/.asc-mcp/credentials.json</code>: your App Store Connect Issuer ID, and the path to your <code>.p8</code> key only when it is outside <code>~/.appstoreconnect/private_keys</code>. Written when you call <code>asc_connect</code> and Apple accepts the pair, with owner-only permissions on macOS and Linux. It holds no key material. The same call moves a downloaded <code>AuthKey_*.p8</code> from Downloads or the Desktop into <code>~/.appstoreconnect/private_keys</code>, and never replaces a file already there. Your client's own settings always take precedence over this file. Delete it to remove it.</li>
       <li><code>~/.asc-mcp/last-verdict.json</code>: the result of the last successful Pro license check and a SHA-256 hash of the key, not the key, so a paid license keeps working for up to 14 days if our server cannot be reached.</li>
       <li>Your MCP client configs: the same call adds the key as <code>ASC_LICENSE_KEY</code> to every asc-mcp entry it finds in the Claude Desktop config, <code>~/.claude.json</code> (including per-project entries), <code>.mcp.json</code> in the current folder, and the Cursor, Windsurf and Cline configs. It changes nothing else in those files and does not touch a file that has no asc-mcp entry. The first time it edits a file it leaves a copy of the original beside it, named with <code>.bak</code>. That copy holds whatever the file held, including settings for your other servers.</li>
     </ul>
