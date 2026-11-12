@@ -1,9 +1,11 @@
 # FLOWS.md
 
 App: asc-mcp
-Last amended: 2026-11-12, in-chat setup (tasks/0004)
+Last amended: 2026-11-12, failure replies name the next step (tasks/0005)
 
 The interface is the agent conversation. The "labels" below are the report's exact text.
+
+Failure contract, every flow (tasks/0005): a tool call that throws returns `isError: true` and text ending in a `Next:` line that says what to do and who does it, the agent (call a named tool) or the person (Apple's website, Xcode, their connection). Built in `src/errors.ts`. A reply that is empty, refused or partial says what was already applied, then the next step. The server instructions tell the agent to follow `Next:` and to tell the person any step only they can do.
 
 ## Flow index
 
@@ -12,11 +14,11 @@ The interface is the agent conversation. The "labels" below are the report's exa
 | F1 | Preflight loop | "Run a preflight before I submit" | A report that can be trusted, then fixes in the same conversation | Conversion, retention | tasks/0002 |
 | F2 | Preflight as first look | A free user asks for an audit | The product shown on the user's own app | Activation | tasks/0002 |
 | F3 | A subscriber gets their key | Checkout, `/key`, or `asc_start_trial` | The key, and only in the owner's mailbox | Retention | v1.10.1 |
-| F4 | Starting a trial | `asc_start_trial`, or the instructions when a call is refused | 7 days of every tool in the running session | Conversion | v1.10.1 |
+| F4 | Starting a trial | `asc_start_trial`, or the instructions when a call is refused | 7 days of every tool in the running session | Conversion | tasks/0005 |
 | F5 | A license that is not answered or has ended | Startup, any tool | The truth about the key, and no offer the server would refuse | Retention | v1.10.1 |
-| F6 | Creating or changing something on sale | `create_iap`, `create_subscription`, `set_app_price`, `set_app_availability` | A second call before anything customers can see changes | Trust | v1.10.1 |
+| F6 | Creating or changing something on sale | `create_iap`, `create_subscription`, `set_app_price`, `set_app_availability` | A second call before anything customers can see changes | Trust | tasks/0005 |
 | F7 | A visitor who does not know the jargon | Landing page `#plain` | What the product does, in plain words | Activation | tasks/0003 |
-| F8 | First setup from the page or README | Hero command, README `## Setup` | A connected agent and a running trial, setup finished in the chat | Activation | tasks/0004 |
+| F8 | First setup from the page or README | Hero command, README `## Setup` | A connected agent and a running trial, setup finished in the chat | Activation | tasks/0005 |
 
 ---
 
@@ -113,6 +115,7 @@ Success: `Pro trial started`, and the refused call works when retried.
 - This Apple account has already trialled, or the address once had a paid subscription: `No new trial is available for <address>`, the price, and a checkout link. A second Apple account on the same address may trial: the email is deliberately not an anchor, so nobody can use up a stranger's trial by typing their address.
 - A live subscription on the address: F3.
 - Daily cap reached: `Trials are temporarily unavailable`, and an address to write to.
+- License server unreachable, unreadable or refusing: `no trial was started. Next: retry in a minute`, then the address to write to for a trial set up by hand.
 
 ## F5. A license that is not answered or has ended
 
@@ -136,6 +139,9 @@ Success: the first call says exactly what would happen and changes nothing, and 
 
 - `create_iap`, `create_subscription`: `This creates ... at $<price> ... Nothing was changed. Re-run with confirm: true`. Bad arguments are reported first.
 - `set_app_price`: a first price needs no confirm, so preflight's fix is one call. Changing an existing price needs it. Negative: `Refusing`. Not a price point: `The nearest is $<price>. Nothing was changed.`
+- `set_app_price` when Apple already has a schedule: `Nothing was changed`, the requested price was not applied, and where the person changes it. It no longer shows the requested price as the current one.
+- `create_iap`, `create_subscription` after `confirm: true`: `set up (state <Apple's state>)`; `MISSING_METADATA` names `set_iap_review_screenshot`. No price point from Apple: nothing was set, call again or set it on the Pricing page.
+- `manage_phased_release` on a version that is not approved or live: refuses, lists the states, points to `review_status`.
 - `set_app_availability`: first setup and widening need no confirm. A territory that is on going off needs it. An unknown code: `Nothing was changed: <code> is not a territory`.
 
 ## F7. A visitor who does not know the jargon reads the landing page
@@ -177,9 +183,11 @@ Success: `asc_setup_check` says every check is OK, then `Pro trial started`.
 - `key_path` outside Downloads and Desktop: used where it is and its path saved, since other tools may reference it.
 - Home not writable: connects for this session, says to run `asc_connect` again after a restart.
 - A client that ignores `tools/list_changed`: the reply says to restart once; the restart reads `~/.asc-mcp/credentials.json` and starts connected.
-- Terminal path, unchanged: `npx @pofky/asc-mcp init --write`, `doctor`. `No .p8 found in the standard location.` still prints the `mkdir -p` and `mv` lines.
+- Terminal path: `npx @pofky/asc-mcp init --write`, `doctor`. A chosen config file that is not valid JSON is left untouched and the block is printed to paste.
+- Connected, then a call fails: the failure contract above. A missing or damaged `.p8` names the download page and the restart; a 401 or 403 sends the agent to `asc_setup_check`. `No .p8 found in the standard location.` still prints the `mkdir -p` and `mv` lines.
 - A paid user with a key: the refusal says `init --write --license <key>` or `ASC_LICENSE_KEY`, and `/key` if it is lost.
 - `/key` after a request: the mail comes from asc-mcp, sender address license@brewist.app, the mail service asc-mcp uses.
 
+Change log: 2026-11-12, tasks/0005. Every reply audited for the next step and who takes it; four replies hid or misstated state and were fixed.
 Change log: 2026-11-12, tasks/0004. Installs doubled while trial starts went to zero; every step after setup worked, so the setup itself (terminal, JSON config, restart) moved into the chat.
 Change log: 2026-11-04, first-time-user audit. The key folder did not exist on a fresh Mac so the documented `mv` failed; the hero sent "Start free" to pricing and never said an Apple key is needed; the Issuer ID was not located on the site; the role said App Manager in some places and Admin or App Manager in others.

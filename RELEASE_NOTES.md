@@ -1,3 +1,15 @@
+# v1.11.1: every failure says what to do next, and who does it
+
+No tool was added or removed. Every reply was audited for one question: when something is wrong, empty or needs a manual step, does the person or the agent know what to do next?
+
+- A tool call that fails is now marked as an error to your client and ends with a `Next:` line: what to do, and whether the agent does it (call a tool) or you do (Apple's website, Xcode, your connection). This covers Apple's 401, 403, 404, 409, 429 and 5xx, a dropped connection, a missing or damaged `.p8`, and anything unexpected, which points to `asc_setup_check` and then to the issue tracker.
+- About 30 replies now name the next step: review rejected (Apple's API has no reasons, so it says where you read them), build processing failed or timed out, no beta groups, no apps, no versions, no sales report for that day, archive, export and upload failures, signing, screenshots, in-app purchases and subscriptions, preflight findings that need Xcode.
+- Replies no longer hide what already happened: a failed submission lists products already sent to review, a partial screenshot upload lists files already uploaded, a partial `set_app_metadata` lists what was applied.
+- Fixed: `set_app_price` showed the requested price as the current one. `set_app_metadata` said "Nothing to set" when it was given export compliance but no build existed. `manage_phased_release` could act on a version that was not approved or live; it now refuses. `init` printed nothing to paste when the chosen config file was not valid JSON. A list that failed on a later page (reviews, builds) came back partial without saying so; it now reports the failure.
+- Create subscription and in-app purchase now report Apple's state instead of saying "ready".
+
+Existing users need nothing from this release. Successful replies change only where they now add the next step.
+
 # v1.11.0: finish setup inside the chat
 
 Installs doubled in early November while trial starts fell to zero. Every step after setup worked when driven end to end, so the wall was setup itself: a terminal command, a JSON config file and a restart before anything showed value.
