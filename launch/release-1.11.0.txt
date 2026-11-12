@@ -1,8 +1,2 @@
 cd /Volumes/T7/Projects/appstore-connect-mcp
-npm login --auth-type=web
-npm run release -- 1.11.0
-npm view @pofky/asc-mcp version
-cd license-worker && npx wrangler deploy && cd ..
-npx wrangler pages deploy site --project-name asc-mcp --branch master
-curl -s https://asc-mcp.pages.dev/ | grep -c "claude mcp add asc-mcp"
-curl -s https://asc-mcp-license.remewdy.workers.dev/privacy | grep -c credentials.json
+npm publish --access public --auth-type=web
