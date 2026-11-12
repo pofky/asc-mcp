@@ -2,6 +2,8 @@
 
 ## Currently Active
 
+**1.11.1 and 1.11.2 (2026-11-13): every failure names the next step and who acts; discovery pages and search terms live.** PRDs 0005, 0006.
+
 **No new subscribers: setup was the wall; 1.11.0 finishes setup in the chat (2026-11-12).**
 
 Production read: 1.10.3 installed 130 times in the week (baseline 66), trials by month 13, 6, 3, 0, last paid 18 Oct.

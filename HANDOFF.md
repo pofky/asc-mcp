@@ -1,8 +1,15 @@
 # Handoff: appstore-connect-mcp
 
-Updated 2026-11-12. Branch `master`.
+Updated 2026-11-13. Branch `master`.
 
 ## Where things stand
+
+**12 to 13 November, last: 1.11.1 and 1.11.2 live on every surface. Every failure names the next step; discovery fixed where we control it.**
+
+- **1.11.1 (tasks/0005, FLOWS failure contract):** every thrown tool failure returns `isError: true` and a `Next:` line saying who acts (`src/errors.ts`); about 30 tool replies name the next step; fixed set_app_price misstating the current price, set_app_metadata's false "Nothing to set", manage_phased_release acting on an unapproved version, init printing nothing after a JSON parse failure, getAll's silent partial lists. Driven on the build: missing key, damaged key, Apple 404, success unchanged. Real Claude Code (2.1.322) connected via asc_connect and listed apps in one chat without restart.
+- **1.11.2 (tasks/0006, F9):** search terms in npm description and keywords, registry description, README (install first); GitHub homepage, description and 7 topics; two answer-first pages `/writing/fastlane-alternative-for-ai-agents/` and `/writing/can-ai-submit-app-to-app-store/` (Lighthouse 100/100/100); fastlane statements sourced to docs.fastlane.tools/app-store-connect-api. Registry 1.11.2 (workflow success), site `64bcb73d`.
+- **Owner only:** (1) Claude plugin directory REFUSED by policy: local MCP servers only from Verified organizations; not a channel until the org is verified. (2) PulseMCP: our top "app store connect" result (~609 visitors/week) shows the deprecated April 3-tool copy; listing changes are paused there; send `launch/pulsemcp-listing-update.txt` to hello@pulsemcp.com. (3) Glama search card still says "13 curated tools": sign in on Glama and edit.
+- **Judge by 26 Nov:** trial starts after 12 Nov in D1, and whether asc-mcp now appears for "MCP server for App Store Connect".
 
 **12 November: no new subscribers since 18 Oct. The cause is setup, not a broken flow. 1.11.0 moves setup into the chat. Released 12 Nov on every surface.**
 
