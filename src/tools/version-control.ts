@@ -198,7 +198,14 @@ export async function submitForReview(
     },
   });
   const submission = subRes && !Array.isArray(subRes.data) ? subRes.data : null;
-  if (!submission) return "Failed to open a review submission.";
+  if (!submission) {
+    return (
+      `Could not open a review submission (Apple returned no submission), so version ${target.attributes.versionString} was not submitted.` +
+      (productItems.length ? ` These products were already sent to review: ${productItems.join(", ")}.` : "") +
+      " The AI calls review_status to see where the version stands, then calls submit_for_review again with confirm: true." +
+      " If it fails again, the human submits in App Store Connect > the app > Distribution."
+    );
+  }
 
   // Steps 2 and 3 used to run bare. A failure in either left an open
   // reviewSubmission on the account with no items and nobody told about it,

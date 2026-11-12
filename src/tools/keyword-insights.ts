@@ -83,7 +83,7 @@ export async function keywordInsights(
     : [versionsResp.data];
 
   if (versions.length === 0) {
-    return "No versions found for this app.";
+    return "No versions found for this app. The AI checks app_id with list_apps; if it is right, the AI calls create_version (with confirm: true) to start the first version.";
   }
 
   const versionId = versions[0].id;

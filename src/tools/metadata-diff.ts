@@ -101,7 +101,7 @@ export async function metadataDiff(
         "Use release_preflight to audit the current version instead."
       );
     }
-    return "No versions found for this app.";
+    return "No versions found for this app. The AI checks app_id with list_apps; if it is right, the AI calls create_version (with confirm: true) to start the first version.";
   }
 
   // Find the right pair: ideally pending vs live

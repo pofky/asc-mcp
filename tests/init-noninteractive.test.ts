@@ -79,6 +79,24 @@ describe("init in a non-interactive shell", () => {
     expect(cfg.mcpServers["appstore-connect"].env.ASC_ISSUER_ID).toBe("issuer-uuid");
   });
 
+  it("still prints the block when the chosen config is not valid JSON", () => {
+    const home = scratch();
+    const path = join(home, "broken.json");
+    writeFileSync(path, "{not json");
+
+    const out = runInit(home, { ...KEY_ENV, ASC_ISSUER_ID: "issuer-uuid" }, ["--write", "--config", path]);
+
+    // The file is left alone, the user is told why, and the block they need is
+    // printed, instead of "wrote" being assumed and nothing being shown.
+    expect(readFileSync(path, "utf-8")).toBe("{not json");
+    expect(out).toContain("Could not parse");
+    expect(out).toContain("paste the block printed below");
+    expect(out).toContain("Paste this into your client's MCP config");
+    const block = JSON.parse(out.slice(out.indexOf("{\n"), out.lastIndexOf("}") + 1));
+    expect(block.mcpServers["appstore-connect"].env.ASC_ISSUER_ID).toBe("issuer-uuid");
+    expect(out).not.toContain("Restart your MCP client, then run");
+  });
+
   it("takes the Issuer ID from a flag, so nothing has to be in the environment", () => {
     const out = runInit(scratch(), KEY_ENV, ["--issuer", "flag-uuid"]);
     expect(out).toContain('"ASC_ISSUER_ID": "flag-uuid"');

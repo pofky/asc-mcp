@@ -18,6 +18,13 @@ interface MediaAttrs {
   uploadOperations?: UploadOperation[];
 }
 
+/**
+ * One file per call, and the caller replaces any earlier review screenshot
+ * before reserving, so a failed attempt can simply be repeated.
+ */
+const RETRY_HINT =
+  "Each attempt first deletes the product's earlier review screenshot, so the product may now have none. The AI calls set_iap_review_screenshot again with the same arguments.";
+
 /** Reserve -> PUT chunks -> commit, for any ASC media resource. */
 async function reserveUploadCommit(
   client: ASCClient,
@@ -33,7 +40,9 @@ async function reserveUploadCommit(
   const reserve = await client.post<MediaAttrs>(reservePath, {
     data: { type: reserveType, attributes: { fileName, fileSize }, relationships },
   });
-  if (!reserve || Array.isArray(reserve.data)) return `Reservation failed for ${fileName}.`;
+  if (!reserve || Array.isArray(reserve.data)) {
+    return `Reservation failed for ${fileName}: Apple did not accept the upload request. ${RETRY_HINT}`;
+  }
   const id = reserve.data.id;
   const ops = reserve.data.attributes.uploadOperations ?? [];
 
@@ -42,7 +51,7 @@ async function reserveUploadCommit(
     const headers: Record<string, string> = {};
     for (const h of op.requestHeaders ?? []) headers[h.name] = h.value;
     const put = await fetch(op.url, { method: op.method, headers, body: chunk });
-    if (!put.ok) return `Chunk upload failed for ${fileName} (HTTP ${put.status}).`;
+    if (!put.ok) return `Chunk upload failed for ${fileName} (HTTP ${put.status}). ${RETRY_HINT}`;
   }
 
   const checksum = createHash("md5").update(data).digest("hex");
@@ -106,7 +115,13 @@ export async function setIapReviewScreenshot(
   );
   const iaps = (Array.isArray(iapsRes.data) ? iapsRes.data : [iapsRes.data]).filter(Boolean);
   const iap = iaps.find((i) => i.attributes.productId === args.product_id);
-  if (!iap) return `Product "${args.product_id}" not found among subscriptions or in-app purchases.`;
+  if (!iap) {
+    return (
+      `Product "${args.product_id}" not found among subscriptions or in-app purchases. Nothing was uploaded. ` +
+      "The AI checks the exact product_id (case-sensitive) in App Store Connect > the app > Monetization, " +
+      "or creates the product first with create_iap or create_subscription."
+    );
+  }
 
   const existing = await client.get<Record<string, never>>(
     `/v2/inAppPurchases/${iap.id}/appStoreReviewScreenshot`,

@@ -83,7 +83,7 @@ export async function releaseNotes(args: {
   try {
     git(cwd, ["rev-parse", "--is-inside-work-tree"]);
   } catch {
-    return "Error: not a git repository. Run this tool from a git project directory.";
+    return `Error: not a git repository (${cwd}). The AI calls release_notes again with project_path set to the app's git project folder.`;
   }
 
   // Find the base tag to diff from
@@ -105,12 +105,14 @@ export async function releaseNotes(args: {
   try {
     commits = git(cwd, logArgs).trim();
   } catch {
-    return "Error: could not read git log.";
+    return args.since_tag
+      ? `Error: could not read git log. since_tag "${args.since_tag}" may not exist in ${cwd}. The AI calls release_notes again with a tag that exists, or without since_tag to use the latest tag.`
+      : `Error: could not read git log in ${cwd}. The AI calls release_notes again with project_path set to the app's git project folder.`;
   }
 
   if (!commits) {
     return sinceTag
-      ? `No new commits since tag '${sinceTag}'.`
+      ? `No new commits since tag '${sinceTag}'. The AI calls release_notes again with an older since_tag, or the human writes the What's New text and the AI saves it with update_version_metadata (whats_new).`
       : "No commits found in this repository.";
   }
 

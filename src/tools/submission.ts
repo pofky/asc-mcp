@@ -73,6 +73,7 @@ export async function setAppMetadata(
   const gate = requirePro(tier, "Setting app submission metadata", "set_app_metadata");
   if (gate) return gate;
   const changes: string[] = [];
+  let encryptionSkipped: string | null = null;
 
   // Resolved before any write, so a refusal never leaves half the fields applied.
   const needsVersion = args.copyright !== undefined || args.uses_non_exempt_encryption !== undefined;
@@ -100,7 +101,16 @@ export async function setAppMetadata(
   // Copyright is a version attribute.
   if (args.copyright !== undefined) {
     const v = picked.version;
-    if (!v) return "No editable version to set copyright on.";
+    if (!v) {
+      const skipped = [args.content_rights ? "content_rights" : "", args.uses_non_exempt_encryption !== undefined ? "uses_non_exempt_encryption" : ""].filter(Boolean);
+      return (
+        "Copyright was not set: this app has no version open for editing. " +
+        (changes.length ? `Already applied: ${changes.join(", ")}. ` : "") +
+        (skipped.length ? `Not attempted: ${skipped.join(", ")}. ` : "") +
+        "The AI calls create_version, then set_app_metadata again with copyright" +
+        (skipped.length ? ` and ${skipped.join(", ")}.` : ".")
+      );
+    }
     await client.patch(`/v1/appStoreVersions/${v.id}`, {
       data: { type: "appStoreVersions", id: v.id, attributes: { copyright: args.copyright } },
     });
@@ -129,11 +139,23 @@ export async function setAppMetadata(
         },
       });
       changes.push(`export compliance usesNonExemptEncryption=${args.uses_non_exempt_encryption}`);
+    } else {
+      // Say so instead of falling through: with nothing else set this used to
+      // read "Nothing to set", as if no argument had been passed.
+      encryptionSkipped =
+        "Export compliance was not set: no build is attached to the version and no processed build exists. " +
+        "The AI uploads one with upload_binary, waits for it with wait_for_build, attaches it with attach_build, " +
+        "then calls set_app_metadata again with uses_non_exempt_encryption.";
     }
   }
 
-  if (!changes.length) return "Nothing to set. Provide at least one of category/copyright/content-rights/encryption.";
-  return "App submission metadata set:\n" + changes.map((c) => `- ${c}`).join("\n");
+  if (!changes.length) {
+    return (
+      encryptionSkipped ??
+      "Nothing to set: no field was passed. The AI calls set_app_metadata again with at least one of primary_category, secondary_category, copyright, content_rights, uses_non_exempt_encryption."
+    );
+  }
+  return "App submission metadata set:\n" + changes.map((c) => `- ${c}`).join("\n") + (encryptionSkipped ? `\n${encryptionSkipped}` : "");
 }
 
 export interface AppPriceArgs {
@@ -188,12 +210,14 @@ export async function setAppPrice(
     const diff = Math.abs(price - args.price_usd);
     if (!best || diff < best.diff) best = { id: p.id, price: p.attributes.customerPrice, diff };
   }
-  if (!best) return "No matching app price point found.";
+  if (!best) {
+    return "Nothing was changed: Apple returned no USA price points for this app. The AI checks app_id with list_apps; if it is right, the human sets the price in App Store Connect > the app > Pricing and Availability.";
+  }
   // Apple only has fixed price points. Taking the nearest silently charged a price
   // nobody asked for, so say what is close and let the caller choose. Half a cent:
   // the points are given to the cent.
   if (best.diff >= 0.005) {
-    return `Apple has no USA price point at $${args.price_usd}. The nearest is $${best.price}. Nothing was changed.`;
+    return `Apple has no USA price point at $${args.price_usd}. The nearest is $${best.price}. Nothing was changed. The AI asks the human which price they want, then calls set_app_price with price_usd ${best.price} (or another Apple price).`;
   }
 
   const tempId = "${price-1}";
@@ -220,7 +244,7 @@ export async function setAppPrice(
     });
   } catch (err) {
     if (err instanceof ASCAPIError && /already exists|conflict/i.test(err.body)) {
-      return `App price schedule already exists. Current base ≈ $${best.price}.`;
+      return `Nothing was changed: Apple already has a price schedule for this app and refused a new one. The requested $${args.price_usd} was not applied. The human can change the price in App Store Connect > the app > Pricing and Availability.`;
     }
     throw err;
   }
@@ -262,7 +286,9 @@ export async function setReviewContact(
 
   const { version: v, refusal } = await editableVersion(client, args.app_id, args.platform);
   if (refusal) return refusal;
-  if (!v) return "No editable version to attach review details to.";
+  if (!v) {
+    return "Nothing was changed: this app has no version open for editing, so there is nowhere to attach review details. The AI calls create_version, then set_review_contact again.";
+  }
 
   const attributes: Record<string, string | boolean> = {
     contactFirstName: args.first_name,

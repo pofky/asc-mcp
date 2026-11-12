@@ -36,7 +36,7 @@ export async function listApps(
   const apps = Array.isArray(response.data) ? response.data : [response.data];
 
   if (apps.length === 0) {
-    return "No apps found in your App Store Connect account.";
+    return "No apps found in your App Store Connect account. Either this API key belongs to a different team than the app, or no app record exists yet. Apps cannot be created through the API: the human creates the app in App Store Connect > Apps > + > New App, or makes an API key in the right team. Then the AI calls list_apps again.";
   }
 
   // SKU is already in the response, and it is the identifier Sales and Trends

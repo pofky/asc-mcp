@@ -87,12 +87,21 @@ export async function waitForBuild(
         return `Build ${newest.attributes.version} is VALID and ready [${newest.id}]. Attach it with attach_build.`;
       }
       if (newest.attributes.processingState === "FAILED" || newest.attributes.processingState === "INVALID") {
-        return `Build ${newest.attributes.version} processing ${newest.attributes.processingState}. Check App Store Connect for details.`;
+        return (
+          `Build ${newest.attributes.version} processing ${newest.attributes.processingState}: Apple rejected this binary, so it cannot be attached or submitted. ` +
+          "The human reads the reason in Apple's email to the account holder or in App Store Connect > the app > TestFlight, and fixes it in Xcode. " +
+          "Then the AI runs build_and_archive and upload_binary with a higher build number (CFBundleVersion), and wait_for_build again."
+        );
       }
     }
     await new Promise((r) => setTimeout(r, poll));
   }
-  return `Timed out after ${Math.round(maxWait / 1000)}s waiting for a VALID build. Last seen: ${last}.`;
+  return (
+    `Timed out after ${Math.round(maxWait / 1000)}s waiting for a VALID build. Last seen: ${last}. ` +
+    (last === "no builds yet"
+      ? "Apple has no build for this app, so the upload did not reach Apple or is not listed yet. The AI calls list_builds once; if it is still empty, the AI runs upload_binary again."
+      : "Apple is still processing it (this can take over 30 minutes). The AI calls wait_for_build again, or list_builds to check once.")
+  );
 }
 
 /**
@@ -134,7 +143,7 @@ export async function attachBuild(
     const builds = Array.isArray(res.data) ? res.data : [res.data];
     const newest = builds[0];
     if (!newest) {
-      return "No processed (VALID) build available yet. Wait for processing or check list_builds.";
+      return "No processed (VALID) build available yet. If one was just uploaded, the AI calls wait_for_build, then attach_build again. If list_builds shows none, the AI uploads one with upload_binary first.";
     }
     buildId = newest.id;
     buildVersion = newest.attributes.version;

@@ -43,10 +43,10 @@ export function explainFailure(err: unknown): string {
   if (err instanceof ASCAPIError) {
     if (err.status === 401) return "Apple returned 401. The Issuer ID, Key ID or .p8 do not match.";
     if (err.status === 403) return "Apple returned 403. Either this app id is not in the account your key belongs to (check it with list_apps), or the key's role is too low (App Manager or higher).";
-    if (err.status === 404) return "Apple returned 404 for this resource.";
+    if (err.status === 404) return "Apple returned 404 for this resource. The AI checks app_id with list_apps, then runs release_preflight again.";
     if (err.status === 429) return "Apple returned 429, rate limited. Retry in a minute.";
     if (err.status >= 500) return `Apple returned ${err.status}, a problem on Apple's end. Retry shortly.`;
-    return `Apple returned ${err.status}.`;
+    return `Apple returned ${err.status}. The AI runs release_preflight again; if it repeats, the AI runs asc_setup_check.`;
   }
   return `The request did not complete: ${String(err instanceof Error ? err.message : err).slice(0, 120)}`;
 }

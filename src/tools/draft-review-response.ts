@@ -93,13 +93,13 @@ export async function draftReviewResponse(
     const data = Array.isArray(response.data) ? response.data[0] : response.data;
     if (!data) {
       return emptyResult(args, "default_factual", {
-        note: `Review ${args.review_id} not found.`,
+        note: `Review ${args.review_id} not found. No draft was made. The AI gets a valid review_id from list_reviews (with app_id ${args.app_id}) and calls draft_review_response again.`,
       });
     }
     review = data.attributes;
   } catch (err) {
     return emptyResult(args, "default_factual", {
-      note: `Could not fetch review: ${err instanceof Error ? err.message : String(err)}`,
+      note: `Could not fetch review: ${err instanceof Error ? err.message : String(err)}. No draft was made. The AI checks review_id with list_reviews and calls draft_review_response again.`,
     });
   }
 
@@ -339,7 +339,7 @@ export function formatDraftForAgent(res: DraftResult): string {
   }
 
   if (!res.draft) {
-    return res.note ?? "No draft produced.";
+    return res.note ?? "No draft produced. The AI calls draft_review_response again, or writes the reply itself from the review text in list_reviews.";
   }
   const lines = [
     `# Draft response (locale ${res.locale}, tone ${res.tone_used})`,

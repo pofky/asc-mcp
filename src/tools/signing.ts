@@ -62,7 +62,9 @@ export async function setupAppStoreSigning(
   });
   const app = Array.isArray(appRes.data) ? appRes.data[0] : appRes.data;
   const appBundle = (app as { attributes?: { bundleId?: string } })?.attributes?.bundleId;
-  if (!appBundle) return "Could not resolve the app's bundle id.";
+  if (!appBundle) {
+    return "Could not resolve the app's bundle id, so no profiles were installed. The AI checks app_id with list_apps and calls setup_app_store_signing again.";
+  }
 
   const profRes = await client.getAll<ProfileAttrs>("/v1/profiles", {
     "fields[profiles]": "name,uuid,profileContent,profileType",
@@ -91,10 +93,15 @@ export async function setupAppStoreSigning(
       `No IOS_APP_STORE provisioning profiles found for ${appBundle}.\n` +
       "Create one in the Developer portal (Certificates, Identifiers & Profiles > Profiles > +, " +
       "App Store distribution) or let Xcode generate it once via Product > Archive > Distribute App. " +
-      "Profile creation is not available to API keys."
+      "Profile creation is not available to API keys, so the human does this. Nothing was installed. Then the AI calls setup_app_store_signing again."
     );
   }
-  if (!teamId) return "Installed profiles but could not read the team id from them.";
+  if (!teamId) {
+    return (
+      `Installed ${installed.length} profile(s) but could not read the team id from them, so no ExportOptions.plist was written. ` +
+      "The human regenerates the App Store profile in the Apple Developer portal (Certificates, Identifiers & Profiles > Profiles), then the AI calls setup_app_store_signing again."
+    );
+  }
 
   const mappings = installed
     .map((m) => `    <key>${m.bundleId}</key><string>${m.name}</string>`)

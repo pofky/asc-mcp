@@ -28,6 +28,31 @@ const AGREEMENT_HINT =
   "Paid Applications agreement is not active. In App Store Connect go to Business > Agreements " +
   "and accept the Paid Apps agreement, then add Tax and Banking details. Prices cannot be set until then.";
 
+function tooLong(tool: string, field: string, length: number, limit: number): string {
+  return `${field} too long: it is ${length} characters and Apple allows ${limit}. Nothing was created. The AI shortens it and calls ${tool} again with confirm: true.`;
+}
+
+/**
+ * What the AI does next, by the product's state. Only MISSING_METADATA is
+ * called "not ready": any other state is reported as Apple gave it, because
+ * guessing at what an unfamiliar state needs would be claiming what is not known.
+ */
+function nextStep(kind: "Subscription" | "In-app purchase", args: { app_id: string; product_id: string }, state: string, priceWarned: boolean): string {
+  if (state === "READY_TO_SUBMIT") {
+    return (
+      `${kind} ${args.product_id} is ready for review. The AI calls submit_for_review with confirm: true to send it with the app version ` +
+      "(an app's very first in-app purchases are the exception: submit_for_review then explains the steps the human does on Apple's website)."
+    );
+  }
+  if (state !== "MISSING_METADATA") return "";
+  return (
+    `${kind} ${args.product_id} is not ready for review yet (state ${state}). ` +
+    (priceWarned ? "First fix the price warning above. " : "") +
+    `Next: the AI calls set_iap_review_screenshot with app_id ${args.app_id}, product_id ${args.product_id} and file set to the absolute path of a PNG or JPEG screenshot of the purchase screen (the human supplies one if none exists). ` +
+    "Then the AI checks the state again by calling this tool again with the same arguments and confirm: true."
+  );
+}
+
 /** Find the price point id (USA territory) whose customer price matches the target. */
 async function findPricePoint(
   client: ASCClient,
@@ -80,8 +105,8 @@ export async function createSubscription(
   const gate = requirePro(tier, "Creating a subscription", "create_subscription");
   if (gate) return gate;
 
-  if (args.display_name.length > NAME_LIMIT) return `display_name too long: ${args.display_name.length}/${NAME_LIMIT}.`;
-  if (args.description.length > DESC_LIMIT) return `description too long: ${args.description.length}/${DESC_LIMIT}.`;
+  if (args.display_name.length > NAME_LIMIT) return tooLong("create_subscription", "display_name", args.display_name.length, NAME_LIMIT);
+  if (args.description.length > DESC_LIMIT) return tooLong("create_subscription", "description", args.description.length, DESC_LIMIT);
 
   // A product is a thing customers can be charged for, and it stays on the account.
   if (!args.confirm) {
@@ -90,6 +115,7 @@ export async function createSubscription(
 
   const locale = args.locale ?? "en-US";
   const steps: string[] = [];
+  let priceWarned = false;
 
   // 1. Find or create the subscription group.
   const groupsRes = await client.get<{ referenceName: string }>(
@@ -107,7 +133,13 @@ export async function createSubscription(
       },
     });
     groupId = gr && !Array.isArray(gr.data) ? gr.data.id : undefined;
-    if (!groupId) return "Failed to create subscription group.";
+    if (!groupId) {
+      return (
+        "Apple returned no id for the new subscription group, so it may or may not exist. Nothing else was created. " +
+        "The AI calls create_subscription again with the same arguments and confirm: true: it reuses a group with the same group_reference_name instead of duplicating it. " +
+        "If it fails again, the human checks App Store Connect > the app > Monetization > Subscriptions."
+      );
+    }
     await client.post("/v1/subscriptionGroupLocalizations", {
       data: {
         type: "subscriptionGroupLocalizations",
@@ -143,7 +175,13 @@ export async function createSubscription(
       },
     });
     subId = subRes && !Array.isArray(subRes.data) ? subRes.data.id : undefined;
-    if (!subId) return "Failed to create the subscription.";
+    if (!subId) {
+      return (
+        `Apple returned no id for subscription ${args.product_id}, so it may or may not have been created. ` +
+        `The AI calls create_subscription again with the same arguments and confirm: true: it reuses a subscription with this product_id in the group instead of duplicating it. ` +
+        "If it fails again, the human checks App Store Connect > the app > Monetization > Subscriptions."
+      );
+    }
     steps.push(`created subscription ${args.product_id}`);
   } else {
     steps.push(`reused subscription ${args.product_id}`);
@@ -215,7 +253,10 @@ export async function createSubscription(
 
   const usa = await findPricePoint(client, `/v1/subscriptions/${subId}/pricePoints`, args.price_usd);
   if (!usa) {
-    steps.push("WARNING: no matching USA price point; set price manually");
+    priceWarned = true;
+    steps.push(
+      `WARNING: Apple returned no USA price points for this subscription, so no price was set. The AI calls create_subscription again with confirm: true (it reuses what exists and only fills the missing price); if it repeats, the human sets the price on the subscription's Pricing page in App Store Connect > the app > Monetization > Subscriptions.`,
+    );
   } else {
     try {
       if (!coveredTerr.has("USA")) {
@@ -303,7 +344,8 @@ export async function createSubscription(
   const finalState = finalRes && !Array.isArray(finalRes.data) ? finalRes.data.attributes.state : "unknown";
   steps.push(`state: ${finalState}`);
 
-  return `Subscription ${args.product_id} ready:\n- ${steps.join("\n- ")}`;
+  const next = nextStep("Subscription", args, finalState, priceWarned);
+  return `Subscription ${args.product_id} set up (state ${finalState}):\n- ${steps.join("\n- ")}` + (next ? `\n\n${next}` : "");
 }
 
 export interface CreateIAPArgs {
@@ -340,8 +382,8 @@ export async function createIAP(
       `(NON_CONSUMABLE or CONSUMABLE). See asc_guide topic:iap.`
     );
   }
-  if (args.display_name.length > NAME_LIMIT) return `display_name too long: ${args.display_name.length}/${NAME_LIMIT}.`;
-  if (args.description.length > IAP_DESC_LIMIT) return `description too long: ${args.description.length}/${IAP_DESC_LIMIT}.`;
+  if (args.display_name.length > NAME_LIMIT) return tooLong("create_iap", "display_name", args.display_name.length, NAME_LIMIT);
+  if (args.description.length > IAP_DESC_LIMIT) return tooLong("create_iap", "description", args.description.length, IAP_DESC_LIMIT);
 
   // A product is a thing customers can be charged for, and it stays on the account.
   if (!args.confirm) {
@@ -350,6 +392,7 @@ export async function createIAP(
 
   const locale = args.locale ?? "en-US";
   const steps: string[] = [];
+  let priceWarned = false;
 
   // 1. Find or create the IAP record (v2).
   const existing = await client.get<{ productId: string }>(
@@ -373,7 +416,13 @@ export async function createIAP(
       },
     });
     iapId = iapRes && !Array.isArray(iapRes.data) ? iapRes.data.id : undefined;
-    if (!iapId) return "Failed to create the in-app purchase.";
+    if (!iapId) {
+      return (
+        `Apple returned no id for in-app purchase ${args.product_id}, so it may or may not have been created. ` +
+        "The AI calls create_iap again with the same arguments and confirm: true: it reuses a purchase with this product_id instead of duplicating it. " +
+        "If it fails again, the human checks App Store Connect > the app > Monetization > In-App Purchases."
+      );
+    }
     steps.push(`created ${args.type} ${args.product_id}`);
   } else {
     steps.push(`reused ${args.product_id}`);
@@ -431,7 +480,10 @@ export async function createIAP(
   } else {
     const pp = await findPricePoint(client, `/v2/inAppPurchases/${iapId}/pricePoints`, args.price_usd);
     if (!pp) {
-      steps.push("WARNING: no matching price point found; set price manually");
+      priceWarned = true;
+      steps.push(
+        `WARNING: Apple returned no USA price points for this purchase, so no price was set. The AI calls create_iap again with confirm: true (it reuses what exists and only sets the missing price); if it repeats, the human sets the price on the purchase's Pricing page in App Store Connect > the app > Monetization > In-App Purchases.`,
+      );
     } else {
       const tempId = "${price-1}";
       try {
@@ -463,5 +515,15 @@ export async function createIAP(
     }
   }
 
-  return `In-app purchase ${args.product_id} ready:\n- ${steps.join("\n- ")}`;
+  // The state is Apple's to compute and was never read here, so "ready" was a guess.
+  const stateRes = await client
+    .get<{ state: string }>(`/v2/inAppPurchases/${iapId}`, { "fields[inAppPurchases]": "state" })
+    .catch(() => null);
+  const state = stateRes && !Array.isArray(stateRes.data) ? stateRes.data.attributes.state : null;
+  if (state) steps.push(`state: ${state}`);
+  const next = state ? nextStep("In-app purchase", args, state, priceWarned) : "";
+  return (
+    `In-app purchase ${args.product_id} set up${state ? ` (state ${state})` : " (Apple's state could not be read: the AI calls create_iap again with the same arguments and confirm: true to read it)"}:\n- ${steps.join("\n- ")}` +
+    (next ? `\n\n${next}` : "")
+  );
 }

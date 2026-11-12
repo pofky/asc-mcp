@@ -48,7 +48,7 @@ export async function reviewStatus(
     : [versionsResponse.data];
 
   if (versions.length === 0) {
-    return "No versions found for this app.";
+    return "No versions found for this app. The AI checks app_id with list_apps; if it is right, the AI calls create_version (with confirm: true) to start the first version.";
   }
 
   const reviewStates = [
@@ -78,18 +78,24 @@ export async function reviewStatus(
     } else if (state === "WAITING_FOR_REVIEW") {
       result += "Your app is **in the review queue**. It has not been picked up by a reviewer yet.\n";
     } else if (state === "PENDING_APPLE_RELEASE") {
-      result += "Your app has been **approved** and is pending Apple's release.\n";
+      result += "Your app has been **approved** and is pending Apple's release. Apple publishes it on its own, so nobody needs to act. The AI can call review_status again later to see it go live.\n";
     } else if (state === "PENDING_DEVELOPER_RELEASE") {
-      result += "Your app has been **approved** and is waiting for you to release it.\n";
+      result += "Your app has been **approved** and is waiting for you to release it. To publish it, the AI calls release_version with confirm: true, but only when the human wants it live now.\n";
     } else if (state === "READY_FOR_REVIEW") {
-      result += "Your version is **ready for review** but has not been submitted yet.\n";
+      result += "Your version is **ready for review** but has not been submitted yet. To send it, the AI calls submit_for_review with confirm: true, once the human agrees.\n";
     }
   } else if (latestVersion.attributes.appStoreState === "READY_FOR_SALE") {
     result += "Your latest version is **live on the App Store**. No pending reviews.\n";
   } else if (latestVersion.attributes.appStoreState === "REJECTED") {
-    result += "Your latest version was **rejected**. Check App Store Connect for rejection details.\n";
+    result += "Your latest version was **rejected**. Apple's API does not return the reasons: the human reads them in App Store Connect > the app > App Review (Resolution Center). Then the AI fixes what it can (update_version_metadata, or a new build with attach_build) and calls submit_for_review with confirm: true.\n";
   } else if (latestVersion.attributes.appStoreState === "METADATA_REJECTED") {
-    result += "Your latest version has a **metadata rejection**. Update metadata and resubmit.\n";
+    result += "Your latest version has a **metadata rejection**. The human reads the flagged fields in App Store Connect > the app > App Review (Resolution Center), because Apple's API does not return them. Then the AI fixes them with update_version_metadata, runs release_preflight, and calls submit_for_review with confirm: true.\n";
+  } else if (latestVersion.attributes.appStoreState === "PREPARE_FOR_SUBMISSION") {
+    result += "Your latest version is **not submitted yet**. The AI runs release_preflight, fixes what it reports, and then calls submit_for_review with confirm: true.\n";
+  } else if (latestVersion.attributes.appStoreState === "DEVELOPER_REJECTED") {
+    result += "Your latest version was **withdrawn from review** and is still editable. When it is ready, the AI runs release_preflight and calls submit_for_review with confirm: true.\n";
+  } else if (latestVersion.attributes.appStoreState === "INVALID_BINARY") {
+    result += "Apple rejected this version's **binary**. The human reads the reason in Apple's email or in App Store Connect > the app > App Review. After the fix in Xcode, the AI runs build_and_archive and upload_binary with a higher build number, waits with wait_for_build, attaches the new build with attach_build, and calls submit_for_review with confirm: true.\n";
   }
 
   // Show all recent versions

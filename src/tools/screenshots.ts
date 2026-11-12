@@ -30,6 +30,22 @@ interface SetAttrs {
 
 
 /**
+ * What a stopped run leaves behind and what the AI does next. Earlier files in
+ * the same call are already committed to Apple, so they must not be sent twice.
+ * The set is found again by display type, so a second call adds to it.
+ */
+function stoppedNote(uploaded: string[], files: string[], failedFile: string, tool: string): string {
+  const remaining = files.filter((f) => !uploaded.includes(basename(f)));
+  return (
+    (uploaded.length
+      ? `Already uploaded before the failure: ${uploaded.join(", ")}. `
+      : "Nothing was uploaded before the failure. ") +
+    `${failedFile} may remain in the set as an incomplete entry, which the human deletes in App Store Connect > the app > the version > screenshots if it shows an error. ` +
+    `The AI calls ${tool} again with only the files that are left (the set for this display_type is reused, so earlier uploads are not repeated): ${remaining.join(", ")}.`
+  );
+}
+
+/**
  * Upload one or more screenshots to a version localization for a given device
  * display type. Implements Apple's 3-step flow: reserve (POST appScreenshots),
  * PUT each chunk to the returned upload URLs, then commit (PATCH uploaded:true
@@ -49,7 +65,9 @@ export async function uploadScreenshots(
   const gate = requirePro(tier, "Uploading screenshots", "upload_screenshots");
   if (gate) return gate;
 
-  if (!args.files?.length) return "No files provided.";
+  if (!args.files?.length) {
+    return 'No files provided. The AI calls upload_screenshots again with files as an array of absolute paths to PNG or JPEG files, in display order, for example ["/Users/name/shots/1.png", "/Users/name/shots/2.png"].';
+  }
   const missing = args.files.filter((f) => !existsSync(f));
   if (missing.length) return `File(s) not found:\n- ${missing.join("\n- ")}`;
 
@@ -91,7 +109,12 @@ export async function uploadScreenshots(
         },
       },
     });
-    if (!created || Array.isArray(created.data)) return "Failed to create screenshot set.";
+    if (!created || Array.isArray(created.data)) {
+      return (
+        `Apple did not create the screenshot set for ${args.display_type}, so nothing was uploaded. ` +
+        "The AI checks that display_type is one Apple accepts (for example APP_IPHONE_67 or APP_IPAD_PRO_3GEN_129) and calls upload_screenshots again with the same files."
+      );
+    }
     set = { type: "appScreenshotSets", id: created.data.id, attributes: created.data.attributes } as never;
   }
   const setId = (set as { id: string }).id;
@@ -113,7 +136,7 @@ export async function uploadScreenshots(
       },
     });
     if (!reserveRes || Array.isArray(reserveRes.data)) {
-      return `Reservation failed for ${fileName}.`;
+      return `Reservation failed for ${fileName}: Apple did not accept the upload request. ${stoppedNote(uploaded, args.files, fileName, "upload_screenshots")}`;
     }
     const shotId = reserveRes.data.id;
     const ops = reserveRes.data.attributes.uploadOperations ?? [];
@@ -125,7 +148,7 @@ export async function uploadScreenshots(
       for (const h of op.requestHeaders ?? []) headers[h.name] = h.value;
       const put = await fetch(op.url, { method: op.method, headers, body: chunk });
       if (!put.ok) {
-        return `Chunk upload failed for ${fileName} (HTTP ${put.status}).`;
+        return `Chunk upload failed for ${fileName} (HTTP ${put.status}). ${stoppedNote(uploaded, args.files, fileName, "upload_screenshots")}`;
       }
     }
 

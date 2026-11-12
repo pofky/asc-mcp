@@ -100,7 +100,7 @@ export async function triageReviews(
       reviews_analyzed: 0,
       themes: [],
       degraded: false,
-      note: "No reviews found for this app in the requested window.",
+      note: "No reviews found for this app in the requested window. The AI calls triage_reviews again with a larger days (up to 90), or calls list_reviews to see which reviews exist.",
     };
   }
 

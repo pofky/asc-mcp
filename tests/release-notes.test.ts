@@ -99,7 +99,8 @@ describe("release_notes shell safety", () => {
 
   it("reports an unknown tag instead of throwing", async () => {
     const out = await releaseNotes({ project_path: repo, since_tag: "v9.9.9" }, "pro");
-    expect(out).toBe("Error: could not read git log.");
+    expect(out).toMatch(/^Error: could not read git log\. since_tag "v9\.9\.9" may not exist/);
+    expect(out).toContain("calls release_notes again");
   });
 });
 
@@ -126,7 +127,8 @@ describe("release_notes input bounds", () => {
 
   it("says so when the directory is not a git repository", async () => {
     const out = await releaseNotes({ project_path: outside }, "pro");
-    expect(out).toBe("Error: not a git repository. Run this tool from a git project directory.");
+    expect(out).toMatch(/^Error: not a git repository/);
+    expect(out).toContain("project_path");
   });
 });
 

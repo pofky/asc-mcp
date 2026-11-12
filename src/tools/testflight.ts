@@ -26,7 +26,9 @@ export async function listBetaGroups(
     limit: "50",
   });
   const groups = Array.isArray(res.data) ? res.data : [res.data];
-  if (!groups.length) return "No beta groups. Create one in TestFlight first.";
+  if (!groups.length) {
+    return "No beta groups for this app. No tool here can create one: the human adds a group in App Store Connect > the app > TestFlight, then the AI calls list_beta_groups again.";
+  }
   return (
     "Beta groups:\n" +
     groups
@@ -80,7 +82,9 @@ export async function assignBuildToGroup(
     });
     const builds = Array.isArray(res.data) ? res.data : [res.data];
     const newest = builds[0];
-    if (!newest) return "No processed (VALID) build available. Check list_builds.";
+    if (!newest) {
+      return "No processed (VALID) build available yet, so nothing was assigned. If one was just uploaded, the AI calls wait_for_build, then assign_build_to_group again. If list_builds shows none, the AI uploads one with upload_binary first.";
+    }
     buildId = newest.id;
     buildVersion = newest.attributes.version;
   }

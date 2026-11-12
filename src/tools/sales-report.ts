@@ -29,6 +29,19 @@ export const salesReportDefinition = {
   },
 };
 
+/**
+ * Leads with "No sales report available", which the preview gate counts as an
+ * empty reply (nothing to show, not charged), unlike the client's own 404
+ * string that did not match it.
+ */
+function noReport(reportDate: string, frequency: string, why: string): string {
+  return (
+    `No sales report available for ${reportDate} (${frequency}): ${why}. ` +
+    "Apple publishes daily reports 1 to 2 days late, and only for days with sales. " +
+    "The AI calls sales_report again with an earlier report_date, or with frequency WEEKLY or MONTHLY (report_date as YYYY-MM for MONTHLY)."
+  );
+}
+
 export async function salesReport(
   client: ASCClient,
   args: { vendor_number?: string; frequency?: string; report_date?: string },
@@ -66,22 +79,22 @@ export async function salesReport(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("Invalid vendor number")) {
-      return "Invalid vendor number. Find yours in App Store Connect, Sales and Trends, top-left account picker (or Payments and Financial Reports, Vendor ID).";
+      return "Invalid vendor number: Apple did not accept it, so no report was fetched. The human finds the right one in App Store Connect > Sales and Trends, top-left account picker (or Payments and Financial Reports > Vendor ID), then the AI calls sales_report again with vendor_number set.";
     }
     if (msg.includes("404")) {
-      return `No sales report available for ${reportDate}. Reports may take 1-2 days to appear.`;
+      return noReport(reportDate, frequency, "Apple answered 404");
     }
-    return `Error fetching sales report: ${msg}`;
+    return `Error fetching sales report: ${msg}. The AI calls sales_report again; if it repeats, it calls asc_setup_check to test the API key.`;
   }
 
   if (tsv.startsWith("No report")) {
-    return tsv;
+    return noReport(reportDate, frequency, "Apple has none for that period");
   }
 
   // Parse TSV into structured summary
   const lines = tsv.trim().split("\n");
   if (lines.length < 2) {
-    return "Report returned no data rows.";
+    return noReport(reportDate, frequency, "the report came back with no data rows");
   }
 
   const headers = lines[0].split("\t");

@@ -66,7 +66,7 @@ export async function dailyBriefing(
     : [appsResponse.data];
 
   if (apps.length === 0) {
-    return result + "No apps found in your account.\n";
+    return result + "No apps found in your account. Either this API key belongs to a different team than the app, or no app record exists yet. Apps cannot be created through the API: the human creates the app in App Store Connect > Apps > + > New App, or makes an API key in the right team. Then the AI calls list_apps again.\n";
   }
 
   result += `**${apps.length} app${apps.length > 1 ? "s" : ""}** in your account\n\n`;
@@ -131,8 +131,8 @@ export async function dailyBriefing(
           result += `- v${v.attributes.versionString} is withdrawn from review. submit_for_review sends it again when it is ready.\n`;
         }
       }
-    } catch {
-      result += `- Could not fetch version info\n`;
+    } catch (err) {
+      result += `- Could not fetch version info (${reason(err)}). The AI calls app_details with app_id ${appId} to retry.\n`;
     }
 
     // Recent reviews. Not conditional on the tier: the gate above is the one
@@ -181,8 +181,8 @@ export async function dailyBriefing(
         } else {
           result += `- No new reviews in the last ${lookbackDays} days\n`;
         }
-      } catch {
-        result += `- Could not fetch reviews\n`;
+      } catch (err) {
+        result += `- Could not fetch reviews (${reason(err)}). The AI calls list_reviews with app_id ${appId} to retry.\n`;
       }
     }
 
@@ -190,6 +190,12 @@ export async function dailyBriefing(
   }
 
   return result;
+}
+
+/** One line of why a fetch failed, for a briefing that goes on without it. */
+function reason(err: unknown): string {
+  const text = err instanceof Error ? err.message : String(err);
+  return text.split("\n")[0].slice(0, 200) || "no reason given";
 }
 
 function formatState(state: string): string {

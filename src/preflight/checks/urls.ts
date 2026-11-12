@@ -18,7 +18,7 @@ function isPlaceholderHost(url: string): boolean {
 
 function judge(rule: RuleId, url: string, outcome: ProbeOutcome | undefined, scope: string, checkedAt: string): Finding {
   const shown = printableUrl(url);
-  if (!outcome) return finding(rule, "unknown", `${shown} was not checked.`, scope);
+  if (!outcome) return finding(rule, "unknown", `${shown} was not checked. The human opens it in a browser and confirms it loads, or the AI runs release_preflight again.`, scope);
   if (outcome.kind === "live") return finding(rule, "pass", `${shown} loads.`, scope);
   if (outcome.kind === "dead") return finding(rule, "fail", `${shown}: ${outcome.detail} (checked ${checkedAt}).`, scope);
   return finding(rule, "unknown", `${shown}: ${outcome.detail}. Open it in a browser and confirm.`, scope);

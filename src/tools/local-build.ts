@@ -49,9 +49,17 @@ export async function buildAndArchive(
   if (!xcodebuild.ok) {
     return "xcodebuild not found. Install Xcode and run `xcode-select --install`.";
   }
-  if (!existsSync(args.project_path)) return `Project not found: ${args.project_path}`;
+  if (!existsSync(args.project_path)) {
+    return (
+      `Project not found: ${args.project_path}. Nothing was built. ` +
+      "The AI calls build_and_archive again with project_path set to the full path of the .xcodeproj, or of the .xcworkspace together with workspace: true."
+    );
+  }
   if (!existsSync(args.export_options_plist)) {
-    return `ExportOptions.plist not found: ${args.export_options_plist}`;
+    return (
+      `ExportOptions.plist not found: ${args.export_options_plist}. Nothing was built. ` +
+      "The AI calls setup_app_store_signing to create one, then calls build_and_archive again with export_options_plist set to the path it prints."
+    );
   }
 
   const outDir = args.output_dir || join(process.cwd(), "build");
@@ -68,7 +76,11 @@ export async function buildAndArchive(
     "-allowProvisioningUpdates",
   ]);
   if (!archive.ok) {
-    return `Archive failed:\n${tail(archive.out)}`;
+    return (
+      `Archive failed, so no .ipa was made:\n${tail(archive.out)}\n\n` +
+      "If the log mentions signing or provisioning, the AI calls setup_app_store_signing and then build_and_archive again. " +
+      "If it shows a code or build error, the human fixes it in Xcode, then the AI calls build_and_archive again."
+    );
   }
 
   const exported = await run("xcodebuild", [
@@ -78,7 +90,10 @@ export async function buildAndArchive(
     "-exportPath", outDir,
   ]);
   if (!exported.ok) {
-    return `Export failed:\n${tail(exported.out)}`;
+    return (
+      `Export failed. The archive was built but no .ipa was made:\n${tail(exported.out)}\n\n` +
+      "This is usually a signing mismatch. The AI calls setup_app_store_signing to regenerate ExportOptions.plist, then build_and_archive again with the path it prints."
+    );
   }
 
   const ipa = readdirSync(outDir).find((f) => f.endsWith(".ipa"));
@@ -104,7 +119,9 @@ export async function uploadBinary(
   if (!args.confirm) {
     return "This uploads a binary to App Store Connect (outward-facing). Re-run with confirm: true.";
   }
-  if (!existsSync(args.ipa_path)) return `IPA not found: ${args.ipa_path}`;
+  if (!existsSync(args.ipa_path)) {
+    return `IPA not found: ${args.ipa_path}. Nothing was uploaded. The AI runs build_and_archive first, then calls upload_binary with ipa_path set to the .ipa path it prints.`;
+  }
 
   const altool = await run("xcrun", ["-f", "altool"]);
   if (!altool.ok) return "altool not found. Install Xcode command line tools.";
@@ -119,7 +136,11 @@ export async function uploadBinary(
     "--apiIssuer", config.issuerId,
   ]);
   if (!result.ok) {
-    return `Upload failed:\n${tail(result.out)}`;
+    return (
+      `Upload failed, so Apple has no new build:\n${tail(result.out)}\n\n` +
+      "If the log says the bundle version was already used, the human raises the build number (CFBundleVersion) in Xcode, then the AI runs build_and_archive and upload_binary again. " +
+      "Otherwise the AI calls upload_binary again with confirm: true."
+    );
   }
   return (
     "Binary uploaded. Apple is now processing it (usually 5 to 30 min).\n" +

@@ -162,6 +162,14 @@ function backupOnce(path: string): void {
   if (!existsSync(bak)) copyFileSync(path, bak);
 }
 
+/** Leads the status writeServerBlock returns when it left a config file alone. */
+const UNPARSEABLE_CONFIG = "Could not parse ";
+
+/** True when the status line says the block really went into the file. */
+function blockWasWritten(status: string): boolean {
+  return !status.startsWith(UNPARSEABLE_CONFIG);
+}
+
 /**
  * Merge the asc-mcp server block into an existing client config file without
  * clobbering other servers. Backs the original up to <path>.bak first. Returns a
@@ -174,7 +182,10 @@ export function writeServerBlock(path: string, env: Record<string, string>): str
     try {
       existing = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
     } catch {
-      return `Could not parse ${path} (not valid JSON). Left it untouched; paste the block manually.`;
+      return (
+        `${UNPARSEABLE_CONFIG}${path} (it is not valid JSON), so it was left untouched. ` +
+        "Fix the JSON in that file, or paste the block printed below into it by hand, then restart the client."
+      );
     }
     backupOnce(path);
   }
@@ -379,8 +390,9 @@ function runInitNonInteractive(
         : null);
 
     if (target) {
-      process.stdout.write(`\n${writeServerBlock(target, env)}\n`);
-      wrote = true;
+      const status = writeServerBlock(target, env);
+      process.stdout.write(`\n${status}\n`);
+      wrote = blockWasWritten(status);
     } else {
       const existing = candidates.filter((c) => existsSync(c.path));
       process.stdout.write(
@@ -464,8 +476,9 @@ export async function runInit(options: InitOptions | boolean = {}): Promise<numb
 
   let wrote = false;
   if (write && opts.configPath) {
-    process.stdout.write(`\n${writeServerBlock(opts.configPath, env)}\n`);
-    wrote = true;
+    const status = writeServerBlock(opts.configPath, env);
+    process.stdout.write(`\n${status}\n`);
+    wrote = blockWasWritten(status);
   } else if (write) {
     const candidates = clientConfigCandidates();
     process.stdout.write("\nWhich client config should I write to?\n");
@@ -479,7 +492,7 @@ export async function runInit(options: InitOptions | boolean = {}): Promise<numb
     if (idx >= 1 && idx <= candidates.length) {
       const status = writeServerBlock(candidates[idx - 1].path, env);
       process.stdout.write(`\n${status}\n`);
-      wrote = true;
+      wrote = blockWasWritten(status);
     }
   }
 

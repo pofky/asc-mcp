@@ -92,13 +92,22 @@ export async function managePhasedRelease(
     { "fields[appStoreVersions]": "versionString,appStoreState", limit: "5" },
   );
   const versions = Array.isArray(versionsRes.data) ? versionsRes.data : [versionsRes.data];
-  // Phased release only applies to a version that is releasing or live. Prefer
-  // one in those states rather than blindly taking versions[0] (the API does
-  // not guarantee ordering); fall back to the first version if none match.
+  // Phased release only applies to a version that is releasing or live. Taking
+  // versions[0] when none matched let "start" target an unreleased version, so
+  // refuse instead and say which states count.
   const PHASED_TARGET = ["PENDING_DEVELOPER_RELEASE", "READY_FOR_SALE"];
-  const version =
-    versions.find((v) => PHASED_TARGET.includes(v.attributes.appStoreState)) ?? versions[0];
-  if (!version) return "No version found.";
+  const candidates = versions.filter(Boolean);
+  if (!candidates.length) {
+    return "Nothing was changed: no version found for this app. The AI checks app_id with list_apps, then calls review_status.";
+  }
+  const version = candidates.find((v) => PHASED_TARGET.includes(v.attributes.appStoreState));
+  if (!version) {
+    const seen = candidates.map((v) => `v${v.attributes.versionString} is ${v.attributes.appStoreState}`).join(", ");
+    return (
+      `Nothing was changed: a phased release applies only to a version that Apple approved and is waiting for release (PENDING_DEVELOPER_RELEASE) or that is live (READY_FOR_SALE). Recent versions: ${seen}. ` +
+      "The AI calls review_status to follow the version, and calls manage_phased_release again once it is approved."
+    );
+  }
 
   // Look up existing phased release on this version.
   const phasedRes = await client.get<{ phasedReleaseState: string }>(
@@ -122,7 +131,7 @@ export async function managePhasedRelease(
   }
 
   if (!existing) {
-    return "No phased release exists on the current version. Use action 'start' first.";
+    return `Nothing was changed: version ${version.attributes.versionString} has no phased release yet. The AI calls manage_phased_release with action "start" and confirm: true first.`;
   }
 
   await client.patch(`/v1/appStoreVersionPhasedReleases/${(existing as { id: string }).id}`, {
