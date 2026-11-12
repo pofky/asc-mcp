@@ -1,7 +1,7 @@
 {
   "name": "asc-mcp",
   "displayName": "asc-mcp",
-  "version": "1.11.0",
+  "version": "1.11.1",
   "description": "A helper for the App Store's paperwork: ask Claude how your app is doing, whether it is ready, or to fix it. Covers review status, reviews and sales, metadata, screenshots, builds, TestFlight, in-app purchases, submit and release. A local MCP server for App Store Connect plus a review-triage skill.",
   "author": {
     "name": "Povilas Konopackas",
@@ -45,7 +45,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@pofky/asc-mcp@1.11.0"
+        "@pofky/asc-mcp@1.11.1"
       ],
       "env": {
         "ASC_ISSUER_ID": "${user_config.asc_issuer_id}",
