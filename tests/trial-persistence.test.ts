@@ -234,6 +234,91 @@ describe("the next session, with no key in the client config", () => {
 });
 
 /**
+ * A key saved to ~/.asc-mcp/license.json while the server is already running:
+ * pasted by hand from the subscription email, or saved by another session.
+ * It used to wait for a reconnect, so the subscriber stayed free with no reason
+ * given. Found shipping Douse, 2026-11-14.
+ */
+describe("a key saved while the server is running", () => {
+  beforeAll(() => {
+    if (!existsSync(ENTRY)) throw new Error("dist/index.js is missing. Run `npm run build` first.");
+  });
+
+  let server: Server | undefined;
+  afterEach(() => server?.close());
+
+  /** Start with no saved key, save LATE-KEY after initialize, then call a tool. Returns the keys validated. */
+  async function keysAfterLateSave(envKey?: string, startKey?: string): Promise<string[]> {
+    const seen: string[] = [];
+    server = createServer((req, res) => {
+      let body = "";
+      req.on("data", (c) => (body += c));
+      req.on("end", () => {
+        const key = req.url === "/validate" ? JSON.parse(body).key : undefined;
+        if (key) seen.push(key);
+        res.setHeader("content-type", "application/json");
+        // OLD-KEY stands for a trial that has ended; every other key is Pro.
+        res.end(JSON.stringify(key === "OLD-KEY" ? { valid: false, tier: "free", reason: "trial_expired" } : { valid: true, tier: "pro" }));
+      });
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as { port: number };
+
+    const home = mkdtempSync(join(tmpdir(), "asc-home-"));
+    mkdirSync(join(home, ".asc-mcp"));
+    if (startKey) writeFileSync(join(home, ".asc-mcp", "license.json"), JSON.stringify({ key: startKey }));
+    const child = spawn(process.execPath, [ENTRY], {
+      env: {
+        ...process.env,
+        HOME: home,
+        USERPROFILE: home,
+        ASC_KEY_ID: "x",
+        ASC_ISSUER_ID: "x",
+        ASC_PRIVATE_KEY_PATH: "/dev/null",
+        ASC_LICENSE_KEY: envKey,
+        ASC_LICENSE_API_URL: `http://127.0.0.1:${port}`,
+      },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const send = (msg: object) => child.stdin.write(JSON.stringify({ jsonrpc: "2.0", ...msg }) + "\n");
+    let out = "";
+    const waitFor = (id: number) =>
+      new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`no reply to ${id}`)), 20_000);
+        const check = () => {
+          if (out.split("\n").some((l) => l.includes(`"id":${id}`))) {
+            clearTimeout(timer);
+            resolve();
+          } else setTimeout(check, 50);
+        };
+        check();
+      });
+    child.stdout.on("data", (c) => (out += c));
+
+    send({ id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "1" } } });
+    await waitFor(1);
+    send({ method: "notifications/initialized" });
+    writeFileSync(join(home, ".asc-mcp", "license.json"), JSON.stringify({ key: "LATE-KEY" }));
+    send({ id: 2, method: "tools/call", params: { name: "asc_guide", arguments: {} } });
+    await waitFor(2);
+    child.kill();
+    return seen;
+  }
+
+  it("is validated on the next tool call, with no reconnect", async () => {
+    expect(await keysAfterLateSave()).toEqual(["LATE-KEY"]);
+  }, 30_000);
+
+  it("replaces an ended trial key that was checked at startup", async () => {
+    expect(await keysAfterLateSave(undefined, "OLD-KEY")).toEqual(["OLD-KEY", "LATE-KEY"]);
+  }, 30_000);
+
+  it("never overrules a key set in the client config", async () => {
+    expect(await keysAfterLateSave("CONFIG-KEY")).toEqual(["CONFIG-KEY"]);
+  }, 30_000);
+});
+
+/**
  * A subscriber who pasted a trial key into their client's own settings, then
  * fetches the paid key in-agent. The client's setting wins on the next start,
  * so "saved, survives a restart" would put a paying customer back on the

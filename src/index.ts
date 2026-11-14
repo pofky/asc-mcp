@@ -353,9 +353,28 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
    */
   const LICENSE_RETRY_MS = 30_000;
   let lastLicenseRetry = 0;
+  /**
+   * A key saved to ~/.asc-mcp/license.json after this server started (pasted by
+   * hand from the subscription email, or saved by another session) used to be
+   * ignored until the client reconnected the server, so a subscriber stayed on
+   * the free tier with nothing saying why. Found shipping Douse, 2026-11-14.
+   * The client config still wins: the saved file is read only when it sets none.
+   */
+  let keyAtLastCheck = process.env.ASC_LICENSE_KEY;
   async function refreshTier(): Promise<void> {
+    if (tier === "pro") return;
+    if (!licenseKeyFromClient) {
+      const saved = savedLicenseKey();
+      if (saved) process.env.ASC_LICENSE_KEY = saved;
+    }
     const key = process.env.ASC_LICENSE_KEY;
-    if (tier === "pro" || !key) return;
+    if (!key) return;
+    if (key !== keyAtLastCheck) {
+      // A different key: the verdict held in memory is about the old one.
+      keyAtLastCheck = key;
+      clearLicenseCache();
+      lastLicenseRetry = 0;
+    }
     if (lastLicenseStatus() === null && Date.now() - lastLicenseRetry >= LICENSE_RETRY_MS) {
       lastLicenseRetry = Date.now();
       tier = await validateLicense(key);
