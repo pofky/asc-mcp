@@ -102,6 +102,9 @@ Success: the key arrives in the mailbox on the subscription, they paste it in, r
 - A machine that fetched its key before 31 October 2026: `asc_start_trial` still returns the key inline, because its fingerprint is on the row.
 - A trial key on a machine whose owner subscribed within 14 days of starting it: nothing to do, `/validate` answers it as the subscription. Later than that, the key ends with the trial, and the gate says `asc_start_trial` emails the paid key.
 - Asked for again within a few minutes: `It was already emailed to <address> in the last few minutes.`
+- Key saved to `~/.asc-mcp/license.json` while the server is already running, and no key in the client config: the next tool call validates it and Pro applies with no restart. A key in the client config still wins over the file.
+
+Change log: 2026-11-14, found shipping Douse. A key saved to `~/.asc-mcp/license.json` mid-session was ignored until a reconnect, so a subscriber stayed free with no reason given; fixed in 94d4fab.
 
 ## F4. Starting a trial
 
