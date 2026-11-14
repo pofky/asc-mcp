@@ -54,6 +54,8 @@ const TOOL_META = {
   manage_phased_release: ["Control a phased release", "write"],
   assign_build_to_group: ["Send a build to a TestFlight group", "write"],
   invite_beta_tester: ["Invite a TestFlight tester", "write"],
+  create_beta_group: ["Create a TestFlight group", "write"],
+  set_beta_test_info: ["Set TestFlight test information", "write"],
   upload_binary: ["Upload a build to App Store Connect", "write"],
   set_age_rating: ["Set the age rating", "write"],
   create_subscription: ["Create a subscription", "write"],
@@ -84,6 +86,9 @@ const SETUP_ONLY_META = {
 export type SetupOnlyToolName = keyof typeof SETUP_ONLY_META;
 
 export const TOOL_NAMES = Object.keys(TOOL_META) as ToolName[];
+
+/** The one number every "N tools" string in src/ quotes. Docs and the site are checked against it by tests/tool-count.test.ts. */
+export const TOOL_COUNT = TOOL_NAMES.length;
 
 /** The `title` and `annotations` a registration needs, for a tool by name. */
 export function toolMeta(name: ToolName | SetupOnlyToolName): { title: string; annotations: ToolAnnotations } {

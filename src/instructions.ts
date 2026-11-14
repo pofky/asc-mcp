@@ -6,6 +6,8 @@
  * `index.ts` boots a server on import, so nothing could test it in place.
  */
 
+import { TOOL_COUNT } from "./tool-meta.js";
+
 /** What every client is told about this server, in both tiers. */
 export const BASE_INSTRUCTIONS =
   "asc-mcp, an MCP server for Apple's App Store Connect API. Tools query that API. " +
@@ -41,7 +43,7 @@ export const FREE_TIER_INSTRUCTIONS =
   "states. The preview is not offered once a trial or subscription has ended on this machine. " +
   "Everything that writes to App Store Connect (metadata, screenshots, builds, TestFlight, in-app " +
   "purchases, submit, release), and triage_reviews, draft_review_response and wait_for_build, are " +
-  "not part of the preview. `asc_start_trial` unlocks all 42 tools for 7 days with no credit card, " +
+  `not part of the preview. \`asc_start_trial\` unlocks all ${TOOL_COUNT} tools for 7 days with no credit card, ` +
   "and it takes effect in the running session, so a refused call can simply be retried. When a " +
   "call is refused, tell the user the price and that the trial exists, and offer to start it; you " +
   "need their email address and must never invent one. Mention the price or the trial once per " +

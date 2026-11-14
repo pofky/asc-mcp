@@ -1,6 +1,7 @@
 import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
+import { INTERNAL_TESTER_MANUAL } from "./testflight-setup.js";
 
 interface GroupAttrs {
   name: string;
@@ -27,7 +28,7 @@ export async function listBetaGroups(
   });
   const groups = Array.isArray(res.data) ? res.data : [res.data];
   if (!groups.length) {
-    return "No beta groups for this app. No tool here can create one: the human adds a group in App Store Connect > the app > TestFlight, then the AI calls list_beta_groups again.";
+    return "No beta groups for this app. The AI calls create_beta_group (internal: true for your own team, false for outside testers; confirm:true to create), then list_beta_groups again.";
   }
   return (
     "Beta groups:\n" +
@@ -114,7 +115,12 @@ export async function inviteBetaTester(
   // Asking a human to approve a send to a group that does not exist wastes the one
   // question this tool gets to ask.
   try {
-    await client.get(`/v1/betaGroups/${args.group_id}`, { "fields[betaGroups]": "name" });
+    const g = await client.get<GroupAttrs>(`/v1/betaGroups/${args.group_id}`, { "fields[betaGroups]": "name,isInternalGroup" });
+    // An internal group takes existing account users, not a new betaTester
+    // record; POST /v1/betaTesters is the external invite path.
+    if (!Array.isArray(g.data) && g.data?.attributes?.isInternalGroup) {
+      return `Group ${args.group_id} is an internal group, so a new tester email does not apply and nothing was sent. ${INTERNAL_TESTER_MANUAL}`;
+    }
   } catch (err) {
     if (err instanceof ASCAPIError && err.status === 404) return `Error: no beta group with id ${args.group_id}. list_beta_groups shows them.`;
     throw err;

@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { Tier } from "./types.js";
 import { LICENSE_API_URL, lastLicenseStatus } from "./license.js";
-import { isReadTool } from "./tool-meta.js";
+import { isReadTool, TOOL_COUNT } from "./tool-meta.js";
 
 /**
  * The direct Polar checkout link. Kept in the package even though the normal
@@ -233,7 +233,7 @@ export function requirePro(
         `  ${upgradeUrl(tool)}\n` +
         `  (direct link: ${CHECKOUT_URL})\n\n` +
         "Or free for 7 days, no card: call the `asc_start_trial` tool with the user's email. " +
-        "It unlocks all 42 tools in this session immediately, no restart.\n") +
+        `It unlocks all ${TOOL_COUNT} tools in this session immediately, no restart.\n`) +
     `\n${keyAdvice()}`
   );
 }

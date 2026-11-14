@@ -30,6 +30,7 @@ import { listBuilds, attachBuild, waitForBuild } from "./tools/builds.js";
 import { uploadScreenshots } from "./tools/screenshots.js";
 import { releaseVersion, managePhasedRelease } from "./tools/release-control.js";
 import { listBetaGroups, assignBuildToGroup, inviteBetaTester } from "./tools/testflight.js";
+import { createBetaGroup, setBetaTestInfo } from "./tools/testflight-setup.js";
 import { buildAndArchive, uploadBinary } from "./tools/local-build.js";
 import { setAgeRating } from "./tools/age-rating.js";
 import { setPrivacyNutrition } from "./tools/privacy.js";
@@ -47,7 +48,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PRO_PRICE, UPGRADE_URL, takePreviewNotice, previewScope, previewReplyKind, EMPTY_PREVIEW_NOTE } from "./gate.js";
 import { BASE_INSTRUCTIONS, instructionsFor } from "./instructions.js";
-import { toolMeta, type ToolName, type SetupOnlyToolName } from "./tool-meta.js";
+import { toolMeta, TOOL_COUNT, type ToolName, type SetupOnlyToolName } from "./tool-meta.js";
 import { connectAccount, loadSavedCredentials, INTEGRATIONS_URL } from "./connect.js";
 
 /**
@@ -436,7 +437,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
     {
       ...toolMeta("asc_start_trial"),
       description:
-        "Start a free 7-day Pro trial, no credit card, unlocking all 42 tools including the full write/control plane. Call this when a Pro tool is refused and the user wants to proceed, and also when they ask for something only a Pro tool can do (editing metadata, screenshots, builds, TestFlight, IAP, submitting, releasing, preflight, briefings, keyword or review intelligence) before you hit the refusal. Either way, ask for their email address first and never invent one. The trial activates in THIS session immediately, so you can retry the tool that was blocked without any restart. Free.",
+        `Start a free 7-day Pro trial, no credit card, unlocking all ${TOOL_COUNT} tools including the full write/control plane. Call this when a Pro tool is refused and the user wants to proceed, and also when they ask for something only a Pro tool can do (editing metadata, screenshots, builds, TestFlight, IAP, submitting, releasing, preflight, briefings, keyword or review intelligence) before you hit the refusal. Either way, ask for their email address first and never invent one. The trial activates in THIS session immediately, so you can retry the tool that was blocked without any restart. Free.`,
       inputSchema: {
         email: z
           .string()
@@ -543,7 +544,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
           persistence,
           skipped.length ? `Left untouched: ${skipped.join(", ")}` : "",
           "",
-          "All 41 tools are unlocked in this session right now. Retry what you were doing.",
+          `All ${TOOL_COUNT} tools are unlocked in this session right now. Retry what you were doing.`,
           result.subscription
             ? "Stored: a one-way hash of your Issuer ID against your subscription, so nobody else can " +
               "fetch this key with your email. Policy at https://asc-mcp-license.remewdy.workers.dev/privacy"
@@ -873,6 +874,41 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
       confirm: z.boolean().optional().describe("Required. Sends a real email to this address, immediately."),
     },
     safe((args) => inviteBetaTester(client, args, tier)),
+  );
+
+  tool(
+    "create_beta_group",
+    "Create a TestFlight beta group (internal = your own App Store Connect users, external = email invitees). Idempotent by name: a group with that name on the app is returned, not duplicated. Without confirm:true it only checks and says what it would create. Adding people to an internal group is a manual App Store Connect step the API does not document; the reply says where. Pro feature.",
+    {
+      app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
+      name: z.string().describe("Group name, e.g. Internal"),
+      internal: z.boolean().describe("true for an internal group, false for external. No default: they are different products."),
+      has_access_to_all_builds: z.boolean().optional().describe("Give the group every build automatically. Omit to leave Apple's default."),
+      confirm: z.boolean().optional().describe("Required to create. Without it the tool only previews."),
+    },
+    safe((args) => createBetaGroup(client, args, tier)),
+  );
+
+  tool(
+    "set_beta_test_info",
+    "Set TestFlight test information: beta app info (feedback email, description, marketing URL, privacy policy URL), the build's What to Test, and the Beta App Review contact. Every value is an input, none is invented. Creates or updates per locale. Without confirm:true it only previews. Pro feature.",
+    {
+      app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
+      locale: z.string().optional().describe("Locale such as en-US. Omit to use the app's primary locale."),
+      feedback_email: z.string().optional().describe("Where testers send feedback"),
+      description: z.string().optional().describe("Beta app description shown in TestFlight"),
+      marketing_url: z.string().optional().describe("https URL with information about the app"),
+      privacy_policy_url: z.string().optional().describe("https URL of the privacy policy"),
+      whats_new: z.string().optional().describe("What to Test for one build. Needs build_id."),
+      build_id: z.string().optional().describe("Build ID for whats_new (from list_builds)"),
+      review_contact_first_name: z.string().optional().describe("Beta App Review contact first name"),
+      review_contact_last_name: z.string().optional().describe("Beta App Review contact last name"),
+      review_contact_email: z.string().optional().describe("Beta App Review contact email"),
+      review_contact_phone: z.string().optional().describe("Beta App Review contact phone, with country code"),
+      review_notes: z.string().optional().describe("Notes for Beta App Review"),
+      confirm: z.boolean().optional().describe("Required to write. Without it the tool only previews."),
+    },
+    safe((args) => setBetaTestInfo(client, args, tier)),
   );
 
   tool(

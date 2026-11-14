@@ -170,12 +170,15 @@ const FLOWS: Record<Exclude<GuideTopic, "overview" | "limitations">, Flow> = {
     when: "Getting a build to testers before App Review.",
     steps: [
       "Upload a build (topic:binary), `wait_for_build` to VALID.",
-      "`list_beta_groups` to find or confirm a group.",
-      "`assign_build_to_group` - newest VALID build by default.",
-      "`invite_beta_tester` - email + name; Apple sends the TestFlight invite.",
+      "`list_beta_groups` to find a group. None yet: `create_beta_group` (internal: true for your own team, false for outside testers; idempotent by name; confirm:true to create).",
+      "Add testers. External group: `invite_beta_tester` (email + name; Apple sends the TestFlight invite). Internal group: MANUAL, see below.",
+      "`set_beta_test_info` - feedback email, description, marketing and privacy URLs, What to Test for the build, Beta App Review contact. Every value comes from the human; without confirm:true it previews.",
+      "`assign_build_to_group` - newest VALID build by default (not needed for a group created with has_access_to_all_builds).",
     ],
     manual: [
-      "Beta App Review (for external groups' first build) and the test-information form may need a one-time touch in the ASC website.",
+      "Adding people to an INTERNAL group is manual: App Store Connect > the app > TestFlight > Internal Testing > the group > Testers (+). The people must already be users on the account. Apple's public API documents no call for it (POST /v1/betaTesters is the external email-invite path), so invite_beta_tester refuses an internal group instead of guessing.",
+      "Beta App Review (external groups' first build) is submitted from the TestFlight tab of the ASC website once the test information above is set.",
+      "Export compliance for a build that uses encryption, if Apple asks, is answered in the ASC website.",
     ],
   },
 
@@ -208,6 +211,11 @@ const LIMITATIONS: { item: string; why: string; doInstead: string }[] = [
     why: "DELETE /v1/apps is forbidden for API keys (probed live: apps allows GET and UPDATE only). Builds and appInfos cannot be deleted either.",
     doInstead:
       "First take it off sale everywhere, which IS automatable: set_app_availability with territories: [] and confirm: true turns all ~175 territories off (Apple requires this even for an app that was never released). Also remove any in-app purchases from sale. Then, in the ASC website: Apps > your app > App Information > Additional Information > Remove App. Needs the Account Holder or Admin role, and it will not appear while the app is in Ready for Review, Waiting for Review, In Review, Metadata Rejected or Rejected. Note the SKU can never be reused in the organisation, and the bundle ID cannot be reused if a build was ever uploaded.",
+  },
+  {
+    item: "Add users to an internal TestFlight group",
+    why: "No documented call: POST /v1/betaTesters is the external email-invite path and no page in Apple's App Store Connect API reference describes an internal-tester call (checked 15 Nov 2026).",
+    doInstead: "ASC website > the app > TestFlight > Internal Testing > the group > Testers (+). The people must already be account users. create_beta_group and set_beta_test_info are automated.",
   },
   {
     item: "Create an App Group",
