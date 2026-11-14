@@ -846,6 +846,7 @@ to null the email and key and keep the anchor. That is a conversion decision.
 
 ## Next in order
 
+0000. **Douse is the live test app (from 2026-11-14).** `/Volumes/T7/Projects/Douse/.mcp.json` runs this repo's local `dist/`; findings land in `Douse/engineering/ASC-MCP-FRICTION.md` with a flow-coverage table per `asc_guide` topic. Unreleased on master: 94d4fab (license key saved mid-session picked up on next call, flow-verified). Release it with the next batch of Douse findings, npm in the same session (see npm-publish-lag memory).
 000. **Judge 1.11.0 by 26 Nov:** count trial starts in D1 (`trial_started_at` after 2026-11-12) and npm installs of 1.11.0. Zero trials across about 250 installs means the wall is somewhere else; next, walk F8 as a stranger in Cursor and Claude Desktop.
 00. **2 November: read D1 rows 21 and 24**, which expire 1 November; `expires_at`
    should move to December. Row 17 did renew, to 29 November. 18 November: row 84's
