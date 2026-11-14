@@ -4,6 +4,16 @@ import { requirePro } from "../gate.js";
 import { fetchAppInfos, pickEditableAppInfo, noEditableAppInfoMessage } from "../app-info.js";
 
 /**
+ * Apple's current scale is 4+, 9+, 13+, 16+, 18+ (introduced with the 2025
+ * overhaul; the old 12+ and 17+ tiers are gone). Sources:
+ * https://developer.apple.com/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions
+ * https://developer.apple.com/documentation/appstoreconnectapi/ageratingdeclaration
+ * Apple's API reference pages are script-rendered, so the read-back below is
+ * best effort: it reports appInfo.appStoreAgeRating only when Apple returns it.
+ */
+export const AGE_RATING_SCALE = "4+/9+/13+/16+/18+";
+
+/**
  * Content-frequency declarations (NONE | INFREQUENT_OR_MILD | FREQUENT_OR_INTENSE).
  * These drive Apple's computed age rating. Anything you don't set keeps its
  * current value, so a fresh app (all null) reads as the lowest rating.
@@ -62,8 +72,8 @@ export interface AgeRatingArgs {
 
 /**
  * Set the app's age-rating declarations. Apple computes the final rating (4+,
- * 9+, 12+, 17+) from these. Example for a wellness app that mentions health
- * topics: { medicalOrTreatmentInformation: "INFREQUENT_OR_MILD" } -> 12+.
+ * 9+, 13+, 16+, 18+) from these. Example for a wellness app that mentions health
+ * topics: { medicalOrTreatmentInformation: "INFREQUENT_OR_MILD" } -> 13+.
  */
 export async function setAgeRating(
   client: ASCClient,
@@ -134,15 +144,39 @@ export async function setAgeRating(
   }
   Object.assign(full, attributes);
 
+  // A fresh app has no frequency answer at all. Then every key the caller did
+  // not pass is filed as NONE/false, which is an answer nobody gave.
+  const freshApp = [...FREQUENCY_KEYS].every((k) => current[k] === undefined || current[k] === null);
+  const defaulted = Object.keys(full).filter((k) => !(k in attributes) && (FREQUENCY_KEYS.has(k) || BOOLEAN_KEYS.has(k)) && (current[k] === undefined || current[k] === null));
+
   await client.patch(`/v1/ageRatingDeclarations/${ardId}`, {
     data: { type: "ageRatingDeclarations", id: ardId, attributes: full },
   });
 
-  const set = Object.entries(attributes).map(([k, v]) => `${k} = ${v}`);
-  return (
-    "Age-rating declarations updated:\n" +
-    set.map((s) => `- ${s}`).join("\n") +
-    "\n\nApple recomputes the displayed rating (4+/9+/12+/17+) from these. " +
-    "Verify it in App Store Connect before submitting."
-  );
+  const line = (k: string) => `- ${k} = ${full[k]}${k in attributes ? "" : defaulted.includes(k) ? " (default written, you did not pass it)" : " (kept current value)"}`;
+  let out =
+    `Age-rating declarations written (${Object.keys(full).length} values, Apple needs the full set):\n` +
+    Object.keys(full).map(line).join("\n");
+  if (freshApp && Object.keys(attributes).length < FREQUENCY_KEYS.size + BOOLEAN_KEYS.size) {
+    out +=
+      `\n\nWarning: this app had no age-rating answers yet, and ${defaulted.length} declaration(s) were filed as NONE or false because you did not pass them. ` +
+      "The human confirms each of those is true for the app. If one is not, the AI calls set_age_rating again with the real value.";
+  }
+
+  // Read back what Apple computed, when the API exposes it.
+  let computed: string | null = null;
+  try {
+    const back = await client.get<Record<string, unknown>>(`/v1/appInfos/${appInfo.id}`, {
+      "fields[appInfos]": "appStoreAgeRating",
+    });
+    const d = Array.isArray(back.data) ? back.data[0] : back.data;
+    const r = d?.attributes?.appStoreAgeRating;
+    if (typeof r === "string" && r) computed = r;
+  } catch {
+    /* not exposed for this key or app: say so below */
+  }
+  out += computed
+    ? `\n\nApple's computed rating: ${computed} (scale ${AGE_RATING_SCALE}).`
+    : `\n\nApple's API did not return the computed rating (scale ${AGE_RATING_SCALE}). The human reads it in App Store Connect > the app > App Information > Age Rating before submitting.`;
+  return out;
 }
