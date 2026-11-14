@@ -233,7 +233,7 @@ export function requirePro(
         `  ${upgradeUrl(tool)}\n` +
         `  (direct link: ${CHECKOUT_URL})\n\n` +
         "Or free for 7 days, no card: call the `asc_start_trial` tool with the user's email. " +
-        "It unlocks all 41 tools in this session immediately, no restart.\n") +
+        "It unlocks all 42 tools in this session immediately, no restart.\n") +
     `\n${keyAdvice()}`
   );
 }

@@ -62,6 +62,7 @@ const TOOL_META = {
   set_app_metadata: ["Set categories, copyright and compliance", "write"],
   set_app_price: ["Set the app price", "write"],
   set_review_contact: ["Set the App Review contact", "write"],
+  register_bundle_id: ["Register a bundle id", "write"],
   set_app_availability: ["Set country availability", "write"],
 
   // Writes to this machine

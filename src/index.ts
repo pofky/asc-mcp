@@ -39,6 +39,7 @@ import { setIapReviewScreenshot } from "./tools/review-screenshot.js";
 import { setAppMetadata, setAppPrice, setReviewContact } from "./tools/submission.js";
 import { setAppAvailability } from "./tools/availability.js";
 import { setupAppStoreSigning } from "./tools/signing.js";
+import { registerBundleId } from "./tools/bundle-id.js";
 import { ascGuide } from "./tools/guide.js";
 import { runDoctor, formatDoctor, trialDaysLeft } from "./doctor.js";
 import { discoverPrivateKey, keyIdFromPath, runInit, parseInitArgs, injectLicenseKey } from "./setup.js";
@@ -435,7 +436,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
     {
       ...toolMeta("asc_start_trial"),
       description:
-        "Start a free 7-day Pro trial, no credit card, unlocking all 41 tools including the full write/control plane. Call this when a Pro tool is refused and the user wants to proceed, and also when they ask for something only a Pro tool can do (editing metadata, screenshots, builds, TestFlight, IAP, submitting, releasing, preflight, briefings, keyword or review intelligence) before you hit the refusal. Either way, ask for their email address first and never invent one. The trial activates in THIS session immediately, so you can retry the tool that was blocked without any restart. Free.",
+        "Start a free 7-day Pro trial, no credit card, unlocking all 42 tools including the full write/control plane. Call this when a Pro tool is refused and the user wants to proceed, and also when they ask for something only a Pro tool can do (editing metadata, screenshots, builds, TestFlight, IAP, submitting, releasing, preflight, briefings, keyword or review intelligence) before you hit the refusal. Either way, ask for their email address first and never invent one. The trial activates in THIS session immediately, so you can retry the tool that was blocked without any restart. Free.",
       inputSchema: {
         email: z
           .string()
@@ -1060,11 +1061,24 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
   );
 
   tool(
+    "register_bundle_id",
+    "Register an explicit bundle id (App ID) in the Apple Developer account, the first step for a brand-new app before its app record and signing profile. Idempotent: an existing identifier is returned, not an error. Without confirm:true it only checks and says what it would register. Pro feature.",
+    {
+      identifier: z.string().describe("Explicit reverse-DNS bundle id, e.g. app.example.ios (no wildcard)"),
+      name: z.string().describe("Portal name: letters, digits and spaces only"),
+      platform: z.enum(["IOS", "MAC_OS", "UNIVERSAL"]).optional().describe("Default IOS"),
+      confirm: z.boolean().optional().describe("Required. This registers a new identifier on your Apple Developer account."),
+    },
+    safe((args) => registerBundleId(client, args, tier)),
+  );
+
+  tool(
     "setup_app_store_signing",
-    "Prepare App Store binary signing without the cloud-signing permission many API keys lack: downloads the app's IOS_APP_STORE provisioning profiles (app + extensions), installs them, and writes a manual-signing ExportOptions.plist for build_and_archive. Needs an Apple Distribution certificate already in the keychain. Pro feature.",
+    "Prepare App Store binary signing without the cloud-signing permission many API keys lack: downloads the app's IOS_APP_STORE provisioning profiles (app + extensions), installs them, and writes a manual-signing ExportOptions.plist for build_and_archive. If the app has no App Store profile yet it creates one (confirm:true) from the account's distribution certificates. Needs an Apple Distribution certificate already in the keychain. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       output_plist: z.string().optional().describe("Where to write ExportOptions.plist (default ./ExportOptions.plist)"),
+      confirm: z.boolean().optional().describe("Needed only when the app has no App Store profile yet: confirm:true creates one on your Apple Developer account."),
     },
     safe((args) => setupAppStoreSigning(client, args, tier)),
   );

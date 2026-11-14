@@ -4,6 +4,8 @@ Updated 2026-11-13. Branch `master`.
 
 ## Where things stand
 
+**14 Nov, unreleased on master (Douse test bed, not published):** new `register_bundle_id` (POST /v1/bundleIds, idempotent, confirm:true to create, Pro) in `src/tools/bundle-id.ts`; `setup_app_store_signing` now creates a missing IOS_APP_STORE profile (POST /v1/profiles with every unexpired distribution cert, confirm:true) instead of stopping; `asc_guide` binary and first-app name the bundle id step. Tool count is now 42 in `src/` strings; README, site/llms.txt and the plugin README still say 41 and must change at release. The profile POST is unit-tested against a fake client, not yet run against real Apple.
+
 **12 to 13 November, last: 1.11.1 and 1.11.2 live on every surface. Every failure names the next step; discovery fixed where we control it.**
 
 - **1.11.1 (tasks/0005, FLOWS failure contract):** every thrown tool failure returns `isError: true` and a `Next:` line saying who acts (`src/errors.ts`); about 30 tool replies name the next step; fixed set_app_price misstating the current price, set_app_metadata's false "Nothing to set", manage_phased_release acting on an unapproved version, init printing nothing after a JSON parse failure, getAll's silent partial lists. Driven on the build: missing key, damaged key, Apple 404, success unchanged. Real Claude Code (2.1.322) connected via asc_connect and listed apps in one chat without restart.
