@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
@@ -21,6 +22,22 @@ function run(
       },
     );
   });
+}
+
+/** The CFBundleVersion inside an .ipa, or null when it cannot be read. Used to tell wait_for_build which build to wait for. */
+async function ipaBuildNumber(ipaPath: string): Promise<string | null> {
+  const dir = mkdtempSync(join(tmpdir(), "asc-ipa-"));
+  try {
+    const unzip = await run("unzip", ["-o", "-q", ipaPath, "Payload/*.app/Info.plist", "-d", dir], { timeoutMs: 60_000 });
+    if (!unzip.ok || !existsSync(join(dir, "Payload"))) return null;
+    const app = readdirSync(join(dir, "Payload")).find((f) => f.endsWith(".app"));
+    if (!app) return null;
+    const plist = await run("plutil", ["-extract", "CFBundleVersion", "raw", "-o", "-", join(dir, "Payload", app, "Info.plist")], { timeoutMs: 30_000 });
+    const value = plist.out.trim();
+    return plist.ok && /^\d+(\.\d+){0,2}$/.test(value) ? value : null;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 function tail(s: string, n = 1200): string {
@@ -178,8 +195,11 @@ export async function uploadBinary(
       "Otherwise the AI calls upload_binary again with confirm: true."
     );
   }
+  const buildNumber = await ipaBuildNumber(args.ipa_path);
   return (
-    "Binary uploaded. Apple is now processing it (usually 5 to 30 min).\n" +
-    "Run wait_for_build to block until it shows VALID (or list_builds to check once), then attach_build."
+    `Binary uploaded${buildNumber ? ` (build ${buildNumber})` : ""}. Apple is now processing it (usually 5 to 30 min).\n` +
+    (buildNumber
+      ? `Run wait_for_build with build_number "${buildNumber}" (Apple lists a new upload only after a few minutes, so without it the newest listed build can be an older one), then attach_build with the build id it returns.`
+      : "Run wait_for_build with build_number set to this upload's CFBundleVersion (Apple lists a new upload only after a few minutes, so without it the newest listed build can be an older one), then attach_build with the build id it returns.")
   );
 }

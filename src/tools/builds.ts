@@ -58,10 +58,12 @@ export async function listBuilds(
  */
 export async function waitForBuild(
   client: ASCClient,
-  args: { app_id: string; max_wait_seconds?: number; poll_seconds?: number },
+  args: { app_id: string; build_number?: string; max_wait_seconds?: number; poll_seconds?: number },
   tier: Tier,
 ): Promise<string> {
   const gate = requirePro(tier, "Waiting for a build", "wait_for_build");
+  const wanted = args.build_number?.trim();
+  if (wanted !== undefined && !/^\d+(\.\d+){0,2}$/.test(wanted)) return "Error: build_number is the CFBundleVersion, digits and up to two dots (for example 2 or 1.0.3).";
   if (gate) return gate;
 
   if (args.max_wait_seconds !== undefined && !(args.max_wait_seconds > 0)) return "Error: max_wait_seconds must be more than 0.";
@@ -76,15 +78,21 @@ export async function waitForBuild(
       sort: "-uploadedDate",
       "fields[builds]": "version,processingState",
       limit: "1",
+      ...(wanted ? { "filter[version]": wanted } : {}),
     });
-    const builds = Array.isArray(res.data) ? res.data : [res.data];
+    const builds = Array.isArray(res.data) ? res.data : res.data ? [res.data] : [];
     const newest = builds[0];
     if (!newest) {
-      last = "no builds yet";
+      last = wanted ? `build ${wanted} not listed yet` : "no builds yet";
     } else {
       last = `${newest.attributes.version}: ${newest.attributes.processingState}`;
       if (newest.attributes.processingState === "VALID") {
-        return `Build ${newest.attributes.version} is VALID and ready [${newest.id}]. Attach it with attach_build.`;
+        if (wanted) return `Build ${newest.attributes.version} is VALID and ready [${newest.id}]. Attach it with attach_build, build_id ${newest.id}.`;
+        return (
+          `Newest listed build ${newest.attributes.version} is VALID [${newest.id}]. ` +
+          "Apple lists a new upload only a few minutes after it is sent, so if you just ran upload_binary this can be an older build: " +
+          "the AI calls wait_for_build again with build_number set to the uploaded CFBundleVersion. Otherwise attach it with attach_build, build_id " + newest.id + "."
+        );
       }
       if (newest.attributes.processingState === "FAILED" || newest.attributes.processingState === "INVALID") {
         return (
@@ -98,8 +106,8 @@ export async function waitForBuild(
   }
   return (
     `Timed out after ${Math.round(maxWait / 1000)}s waiting for a VALID build. Last seen: ${last}. ` +
-    (last === "no builds yet"
-      ? "Apple has no build for this app, so the upload did not reach Apple or is not listed yet. The AI calls list_builds once; if it is still empty, the AI runs upload_binary again."
+    (last === "no builds yet" || last.endsWith("not listed yet")
+      ? `Apple has no ${wanted ? `build ${wanted}` : "build"} for this app, so the upload did not reach Apple or is not listed yet. The AI calls list_builds once; if it is still missing, the AI runs upload_binary again.`
       : "Apple is still processing it (this can take over 30 minutes). The AI calls wait_for_build again, or list_builds to check once.")
   );
 }

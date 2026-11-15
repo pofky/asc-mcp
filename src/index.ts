@@ -788,9 +788,10 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
 
   tool(
     "wait_for_build",
-    "Poll until the newest uploaded build finishes processing (VALID), so the ship flow is one call. Blocks for up to 30 minutes by default; if you should not hold the session that long, call list_builds yourself instead. Pro feature.",
+    "Poll until an uploaded build finishes processing (VALID), so the ship flow is one call. Pass build_number (the CFBundleVersion upload_binary names) right after an upload: Apple lists a new upload only after a few minutes, so the newest listed build can be an older one. Blocks for up to 30 minutes by default; if you should not hold the session that long, call list_builds yourself instead. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
+      build_number: z.string().optional().describe("The build's CFBundleVersion, e.g. \"2\". Waits for that build to be listed and processed. Omit to take the newest listed build."),
       max_wait_seconds: z.number().optional().describe("Max seconds to wait (default 1800, cap 3600)"),
       poll_seconds: z.number().optional().describe("Seconds between polls (default 30, min 10)"),
     },
