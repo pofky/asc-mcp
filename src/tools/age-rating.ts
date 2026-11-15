@@ -14,6 +14,22 @@ import { fetchAppInfos, pickEditableAppInfo, noEditableAppInfoMessage } from "..
 export const AGE_RATING_SCALE = "4+/9+/13+/16+/18+";
 
 /**
+ * The API still reports some brackets by their pre-July-2025 enum names (seen on a new app on
+ * 15 Nov 2026: SEVENTEEN_PLUS). Apple moved 12+ to 13+ and 17+ to 18+ in that change.
+ */
+const LEGACY_BRACKET: Record<string, string> = { TWELVE_PLUS: "13+", SEVENTEEN_PLUS: "18+" };
+const BRACKET: Record<string, string> = {
+  FOUR_PLUS: "4+", NINE_PLUS: "9+", THIRTEEN_PLUS: "13+", SIXTEEN_PLUS: "16+", EIGHTEEN_PLUS: "18+",
+};
+
+/** "SEVENTEEN_PLUS" -> "18+ (Apple's API reports it as SEVENTEEN_PLUS, the pre-2025 name)". */
+export function describeRating(raw: string): string {
+  if (BRACKET[raw]) return `${BRACKET[raw]} (${raw})`;
+  if (LEGACY_BRACKET[raw]) return `${LEGACY_BRACKET[raw]} (Apple's API reports it as ${raw}, the pre-2025 name)`;
+  return raw;
+}
+
+/**
  * Content-frequency declarations (NONE | INFREQUENT_OR_MILD | FREQUENT_OR_INTENSE).
  * These drive Apple's computed age rating. Anything you don't set keeps its
  * current value, so a fresh app (all null) reads as the lowest rating.
@@ -198,7 +214,7 @@ export async function setAgeRating(
     /* not exposed for this key or app: say so below */
   }
   out += computed
-    ? `\n\nApple's computed rating: ${computed} (scale ${AGE_RATING_SCALE}).`
+    ? `\n\nApple's computed rating: ${describeRating(computed)} (scale ${AGE_RATING_SCALE}).`
     : `\n\nApple's API did not return the computed rating (scale ${AGE_RATING_SCALE}). The human reads it in App Store Connect > the app > App Information > Age Rating before submitting.`;
   return out;
 }

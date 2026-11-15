@@ -217,6 +217,12 @@ describe("set_age_rating", () => {
     expect(out).toContain("did not return the computed rating");
   });
 
+  it("names a legacy rating enum by its current bracket", async () => {
+    const f = fake({}, "SEVENTEEN_PLUS");
+    const out = await setAgeRating(f.client, { app_id: "1", declarations: { gambling: false } }, "pro");
+    expect(out).toContain("18+ (Apple's API reports it as SEVENTEEN_PLUS");
+  });
+
   it("writes socialMedia (Apple requires it since Nov 2026) and accepts socialMediaAgeRestricted", async () => {
     const f = fake({});
     await setAgeRating(f.client, { app_id: "1", declarations: { gambling: false } }, "pro");
