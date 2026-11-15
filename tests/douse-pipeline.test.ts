@@ -216,4 +216,14 @@ describe("set_age_rating", () => {
     expect(out).toContain("kept current value");
     expect(out).toContain("did not return the computed rating");
   });
+
+  it("writes socialMedia (Apple requires it since Nov 2026) and accepts socialMediaAgeRestricted", async () => {
+    const f = fake({});
+    await setAgeRating(f.client, { app_id: "1", declarations: { gambling: false } }, "pro");
+    expect(f.patched()!.socialMedia).toBe(false);
+    expect("socialMediaAgeRestricted" in f.patched()!).toBe(false);
+    const g = fake({});
+    await setAgeRating(g.client, { app_id: "1", declarations: { socialMedia: true, socialMediaAgeRestricted: true } }, "pro");
+    expect(g.patched()!.socialMediaAgeRestricted).toBe(true);
+  });
 });

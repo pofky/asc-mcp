@@ -1,4 +1,4 @@
-import type { ASCClient } from "../client.js";
+import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
 import { fetchAppInfos, pickEditableAppInfo, noEditableAppInfoMessage } from "../app-info.js";
@@ -45,7 +45,16 @@ const BOOLEAN_KEYS = new Set([
   "advertising",
   "parentalControls",
   "ageAssurance",
+  // Required by Apple since late 2026: a PATCH without it 409s with
+  // "You must provide a value for the attribute 'socialMedia'" (seen 15 Nov 2026).
+  "socialMedia",
 ]);
+
+/**
+ * Boolean declarations Apple asks only in some cases (socialMediaAgeRestricted
+ * follows socialMedia: true). Accepted from the caller, never defaulted.
+ */
+const OPTIONAL_BOOLEAN_KEYS = new Set(["socialMediaAgeRestricted"]);
 
 /** Override/meta keys: never defaulted, kept at their current value. */
 const KEEP_KEYS = new Set([
@@ -54,6 +63,7 @@ const KEEP_KEYS = new Set([
   "koreaAgeRatingOverride",
   "kidsAgeBand",
   "developerAgeRatingInfoUrl",
+  "gracRatingClassificationNumber",
 ]);
 
 const FREQUENCY_VALUES = new Set([
@@ -94,7 +104,7 @@ export async function setAgeRating(
         continue;
       }
       attributes[key] = v;
-    } else if (BOOLEAN_KEYS.has(key)) {
+    } else if (BOOLEAN_KEYS.has(key) || OPTIONAL_BOOLEAN_KEYS.has(key)) {
       attributes[key] = value === true || value === "true";
     } else {
       bad.push(`${key}: unknown declaration key`);
@@ -149,9 +159,21 @@ export async function setAgeRating(
   const freshApp = [...FREQUENCY_KEYS].every((k) => current[k] === undefined || current[k] === null);
   const defaulted = Object.keys(full).filter((k) => !(k in attributes) && (FREQUENCY_KEYS.has(k) || BOOLEAN_KEYS.has(k)) && (current[k] === undefined || current[k] === null));
 
-  await client.patch(`/v1/ageRatingDeclarations/${ardId}`, {
-    data: { type: "ageRatingDeclarations", id: ardId, attributes: full },
-  });
+  try {
+    await client.patch(`/v1/ageRatingDeclarations/${ardId}`, {
+      data: { type: "ageRatingDeclarations", id: ardId, attributes: full },
+    });
+  } catch (err) {
+    // Apple adds questions without notice; name the new one instead of blaming a value.
+    const missing = err instanceof ASCAPIError && err.status === 409 ? /provide a value for the attribute '([A-Za-z]+)'/.exec(err.message)?.[1] : undefined;
+    if (missing) {
+      return (
+        `Nothing was written: Apple now requires an age-rating answer this tool does not know yet, '${missing}'. ` +
+        "Next: the AI reports it as an asc-mcp bug (the key list in src/tools/age-rating.ts needs it); the human can answer it in App Store Connect > the app > App Information > Age Rating meanwhile."
+      );
+    }
+    throw err;
+  }
 
   const line = (k: string) => `- ${k} = ${full[k]}${k in attributes ? "" : defaulted.includes(k) ? " (default written, you did not pass it)" : " (kept current value)"}`;
   let out =
