@@ -20,7 +20,7 @@ describe("explainError", () => {
 
   it("sends a 404 to list_apps and a 409 to the state readers", () => {
     expect(explainError(new ASCAPIError(404, "/v1/apps/1", "{}"))).toContain("Next: call list_apps");
-    expect(explainError(new ASCAPIError(409, "/v1/x", '{"errors":[{"code":"STATE_ERROR","detail":"d"}]}'))).toContain("review_status");
+    expect(explainError(new ASCAPIError(409, "/v1/appStoreVersions/1", '{"errors":[{"code":"STATE_ERROR","detail":"d"}]}'))).toContain("review_status");
   });
 
   it("warns that a failed change may have applied on a 5xx", () => {
@@ -52,5 +52,20 @@ describe("explainError", () => {
     expect(t).toMatch(/^Error: something odd\n\nNext: call asc_setup_check/);
     expect(t).toContain(ISSUES_URL);
     expect(explainError("a string")).toContain("Error: a string");
+  });
+});
+
+describe("409 hints follow the endpoint family", () => {
+  const body = '{"errors":[{"code":"STATE_ERROR","detail":"d"}]}';
+  it.each(["/v1/bundleIds", "/v1/profiles", "/v1/certificates", "/v1/bundleIdCapabilities"])("%s never points at review_status or app_details", (path) => {
+    const t = explainError(new ASCAPIError(409, path, body));
+    expect(t).not.toMatch(/review_status|app_details/);
+    expect(t).toContain("Next:");
+  });
+  it.each(["/v1/appStoreVersions/1", "/v1/reviewSubmissions", "/v1/appStoreVersionPhasedReleases"])("%s keeps the state readers", (path) => {
+    expect(explainError(new ASCAPIError(409, path, body))).toContain("review_status");
+  });
+  it("an unlisted endpoint gets the neutral line", () => {
+    expect(explainError(new ASCAPIError(409, "/v1/betaGroups", body))).not.toMatch(/review_status/);
   });
 });

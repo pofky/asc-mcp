@@ -173,7 +173,7 @@ export class ASCAPIError extends Error {
     public body: string,
   ) {
     const detail = tryParseErrorDetail(body);
-    const hint = friendlyHint(status, body);
+    const hint = friendlyHint(status, body, path);
     super(
       `ASC API error ${status} on ${path}: ${detail}` +
         (hint ? `\n\nWhat this usually means: ${hint}` : ""),
@@ -187,7 +187,17 @@ export class ASCAPIError extends Error {
  * Returns "" when the raw detail is already clear enough (e.g. validation 422s
  * carry their own message).
  */
-function friendlyHint(status: number, body: string): string {
+/** Endpoints for bundle ids, capabilities, certificates and profiles: no app version exists behind them. */
+export function isSigningFamily(path: string): boolean {
+  return /^\/v1\/(bundleIds|bundleIdCapabilities|certificates|profiles)(\/|\?|$|\s)/.test(path);
+}
+
+/** Endpoints where a 409 really can mean the version or submission is in the wrong state. */
+export function isVersionFamily(path: string): boolean {
+  return /^\/v1\/(appStoreVersions|appStoreVersionSubmissions|reviewSubmissions|reviewSubmissionItems|appStoreVersionPhasedReleases|appStoreVersionReleaseRequests|builds|appInfos|appInfoLocalizations|appStoreVersionLocalizations|appStoreReviewDetails|appScreenshotSets|appScreenshots)(\/|\?|$|\s)/.test(path);
+}
+
+function friendlyHint(status: number, body: string, path = ""): string {
   switch (status) {
     case 401:
       return "Authentication failed. Your Issuer ID, Key ID, or .p8 likely don't match. Re-check the Issuer ID (UUID on the Integrations page) and that the .p8 matches the Key ID. asc_setup_check (or `npx @pofky/asc-mcp doctor` in a terminal) pinpoints which one.";
@@ -208,6 +218,12 @@ function friendlyHint(status: number, body: string): string {
       }
       if (/ENTITY_ERROR\.RELATIONSHIP|ENTITY_ERROR\.ATTRIBUTE_REQUIRED|required/i.test(body) && !/STATE_ERROR/.test(body)) {
         return "Something the request needs is missing or points at the wrong resource. The detail above names it.";
+      }
+      if (isSigningFamily(path)) {
+        return "Apple refused this signing request (bundle id, certificate or profile). The detail above says why; nothing was changed.";
+      }
+      if (path && !isVersionFamily(path)) {
+        return "Apple refused this because of a conflict with the resource's current state or an existing resource. The detail above says which; nothing was changed.";
       }
       return "State conflict: the version/product isn't in a state that allows this. For example, you can only edit/submit a version in PREPARE_FOR_SUBMISSION or a rejected state. Check current state with `app_details` or `review_status`.";
     case 429:

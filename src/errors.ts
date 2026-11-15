@@ -9,7 +9,7 @@
  * The agent is told in the server instructions to follow that line.
  */
 
-import { ASCAPIError } from "./client.js";
+import { ASCAPIError, isSigningFamily, isVersionFamily } from "./client.js";
 import { INTEGRATIONS_URL } from "./connect.js";
 
 /** Where a person reports something the product got wrong. */
@@ -36,12 +36,18 @@ function isKeyFile(err: unknown): boolean {
   return /^ERR_OSSL|ERR_CRYPTO|DECODER|asn1|PEM|unsupported key|private key/i.test(`${code} ${err.message}`);
 }
 
-function nextForApple(status: number): string {
+function nextForApple(status: number, path = ""): string {
   if (status === 401 || status === 403) {
     return "Next: call asc_setup_check, which tests the key and Issuer ID against Apple and names the exact fix. If it says the key was revoked or lacks a role, the user creates a new key (App Manager or Admin) at " +
       `${INTEGRATIONS_URL}, then restarts the MCP client.`;
   }
   if (status === 404) return "Next: call list_apps to get the right app id, then retry with it.";
+  if (status === 409 && isSigningFamily(path)) {
+    return "Next: the detail above names what Apple objects to. Fix that value (or pick a different identifier or name) and call the same tool again; nothing was changed.";
+  }
+  if (status === 409 && !isVersionFamily(path)) {
+    return "Next: the detail above names what Apple objects to. Fix it and retry, or call asc_setup_check if it is unclear.";
+  }
   if (status === 409) {
     return "Next: call review_status or app_details to see the version's current state; the detail above names what Apple objects to.";
   }
@@ -59,7 +65,7 @@ function nextForApple(status: number): string {
  */
 export function explainError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
-  if (err instanceof ASCAPIError) return `Error: ${msg}\n\n${nextForApple(err.status)}`;
+  if (err instanceof ASCAPIError) return `Error: ${msg}\n\n${nextForApple(err.status, err.path)}`;
   if (isNetwork(err)) {
     return (
       `Error: could not reach App Store Connect from this computer (${msg}${codeOf(err) ? `, ${codeOf(err)}` : ""}).\n\n` +

@@ -1,4 +1,4 @@
-import type { ASCClient } from "../client.js";
+import { ASCAPIError, type ASCClient } from "../client.js";
 import type { Tier } from "../types.js";
 import { requirePro } from "../gate.js";
 
@@ -71,18 +71,55 @@ export async function registerBundleId(
 
   if (!args.confirm) {
     return (
-      `This registers bundle id ${identifier} ("${name}", ${platform}) on your Apple Developer account. ` +
+      `Bundle id ${identifier} is not on this Apple Developer account. Whether another Apple developer account already owns it is only known when Apple creates it, because bundle ids are unique across all accounts. ` +
+      `Confirming registers ${identifier} ("${name}", ${platform}) on your account. ` +
       `An identifier can be deleted in the Developer portal until a build is uploaded under it, but never reused after that. Nothing was changed. ` +
       `The AI calls register_bundle_id again with the same arguments and confirm: true.`
     );
   }
 
-  const res = await client.post<BundleIdAttrs>("/v1/bundleIds", {
-    data: { type: "bundleIds", attributes: { identifier, name, platform } },
-  });
+  let res;
+  try {
+    res = await client.post<BundleIdAttrs>("/v1/bundleIds", {
+      data: { type: "bundleIds", attributes: { identifier, name, platform } },
+    });
+  } catch (err) {
+    if (err instanceof ASCAPIError && err.status === 409 && /not available/i.test(err.body)) {
+      return identifierTaken(client, identifier);
+    }
+    throw err;
+  }
   const created = res && !Array.isArray(res.data) ? res.data : undefined;
   return (
     `Registered bundle id ${identifier} ("${name}", ${platform})${created ? `, resource id ${created.id}` : ""}. In-App Purchase is on by default.\n` +
     `Next: the human creates the app record in App Store Connect (Apps > + > pick this bundle id; the API cannot). Then the AI calls list_apps for the app_id and setup_app_store_signing.`
+  );
+}
+
+/** Longest shared reverse-DNS prefix (whole labels) of the ids, or "" when they share none. */
+function commonPrefix(ids: string[]): string {
+  if (ids.length === 0) return "";
+  const parts = ids.map((i) => i.split("."));
+  const first = parts[0];
+  let n = 0;
+  while (n < first.length - 1 && parts.every((p) => p.length > n + 1 && p[n] === first[n])) n++;
+  return first.slice(0, n).join(".");
+}
+
+/** Reply for Apple's 409 "identifier is not available": another account owns it. Nothing was registered. */
+async function identifierTaken(client: ASCClient, identifier: string): Promise<string> {
+  let pattern = "";
+  try {
+    const res = await client.getAll<BundleIdAttrs>("/v1/bundleIds", { "fields[bundleIds]": "identifier", limit: "200" });
+    const rows = (Array.isArray(res.data) ? res.data : [res.data]).filter(Boolean);
+    const prefix = commonPrefix(rows.map((r) => r.attributes.identifier).filter((i) => !i.includes("*")));
+    if (prefix) pattern = ` Your account's existing apps share the prefix ${prefix}, so ${prefix}.<appname> is a likely free choice.`;
+  } catch {
+    // The suggestion is a convenience; the refusal stands without it.
+  }
+  return (
+    `Another Apple developer account already owns the identifier ${identifier} (bundle ids are unique across all accounts, so it can be free here and still taken). Nothing was registered.` +
+    `${pattern} Pick a different reverse-DNS id under a domain or prefix you own. The app's Xcode project bundle id, the StoreKit configuration and any in-app purchase product ids built from it must follow the new id.\n` +
+    `Next: the AI asks the human to choose the new bundle id, then calls register_bundle_id again with it (and confirm: true once they agree).`
   );
 }

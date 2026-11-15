@@ -8,6 +8,7 @@ import { describe, it, expect } from "vitest";
 import { registerBundleId } from "../src/tools/bundle-id.js";
 import { setupAppStoreSigning } from "../src/tools/signing.js";
 import { ascGuide } from "../src/tools/guide.js";
+import { ASCAPIError } from "../src/client.js";
 
 interface Call { method: string; path: string; body?: unknown }
 
@@ -144,5 +145,47 @@ describe("asc_guide names the new step", () => {
     expect(i).toBeGreaterThan(-1);
     const later = topic === "binary" ? "setup_app_store_signing" : "app RECORD";
     expect(i).toBeLessThan(out.indexOf(later));
+  });
+});
+
+describe("register_bundle_id: identifier owned by another account", () => {
+  const body = JSON.stringify({
+    errors: [{ status: "409", code: "ENTITY_ERROR.ATTRIBUTE.INVALID", title: "There is a problem with the request entity", detail: "An App ID with Identifier 'app.douse.ios' is not available. Please enter a different string." }],
+  });
+  function takenClient(mine: string[]) {
+    return {
+      getAll: async () => ({ data: mine.map((i, n) => ({ id: `M${n}`, attributes: { identifier: i, name: "x", platform: "IOS" } })) }),
+      post: async () => { throw new ASCAPIError(409, "/v1/bundleIds", body); },
+    } as never;
+  }
+
+  it("preview says the id is not on this account and ownership is known at create time", async () => {
+    const f = fake({});
+    const out = await registerBundleId(f.client, { identifier: "app.example.ios", name: "Example" }, "pro");
+    expect(out).toContain("not on this Apple Developer account");
+    expect(out).toContain("only known when Apple creates it");
+  });
+
+  it("explains in plain words, suggests the account prefix, names the follow-ups and has no review_status", async () => {
+    const out = await registerBundleId(takenClient(["com.acme.one", "com.acme.two"]), { identifier: "app.douse.ios", name: "Douse", confirm: true }, "pro");
+    expect(out).toContain("Another Apple developer account already owns");
+    expect(out).toContain("Nothing was registered");
+    expect(out).toContain("com.acme");
+    expect(out).toContain("StoreKit");
+    expect(out).toContain("in-app purchase product ids");
+    expect(out).toMatch(/Next: the AI asks the human to choose the new bundle id, then calls register_bundle_id again/);
+    expect(out).not.toContain("review_status");
+    expect(out).not.toContain("What this usually means");
+  });
+
+  it("still replies when the account has no shared prefix", async () => {
+    const out = await registerBundleId(takenClient([]), { identifier: "app.douse.ios", name: "Douse", confirm: true }, "pro");
+    expect(out).toContain("Another Apple developer account already owns");
+    expect(out).not.toContain("share the prefix");
+  });
+
+  it("other 409s on bundleIds are rethrown", async () => {
+    const c = { getAll: async () => ({ data: [] }), post: async () => { throw new ASCAPIError(409, "/v1/bundleIds", '{"errors":[{"detail":"other"}]}'); } } as never;
+    await expect(registerBundleId(c, { identifier: "app.x.ios", name: "X", confirm: true }, "pro")).rejects.toThrow(/409/);
   });
 });
