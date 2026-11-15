@@ -865,7 +865,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
 
   tool(
     "invite_beta_tester",
-    "Invite an external tester by email and add them to a beta group. Needs confirm:true: Apple emails a real person from your account and it cannot be recalled. Pro feature.",
+    "Add a tester to a beta group. External group: invites any email. Internal group: adds an App Store Connect user on the account, matched by email. Needs confirm:true: Apple emails a real person from your account and it cannot be recalled. Pro feature.",
     {
       group_id: z.string().describe("Beta group ID (from list_beta_groups)"),
       email: z.string().describe("Tester email address"),
@@ -878,7 +878,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
 
   tool(
     "create_beta_group",
-    "Create a TestFlight beta group (internal = your own App Store Connect users, external = email invitees). Idempotent by name: a group with that name on the app is returned, not duplicated. Without confirm:true it only checks and says what it would create. Adding people to an internal group is a manual App Store Connect step the API does not document; the reply says where. Pro feature.",
+    "Create a TestFlight beta group (internal = your own App Store Connect users, external = email invitees). Idempotent by name: a group with that name on the app is returned, not duplicated. Without confirm:true it only checks and says what it would create. Add testers with invite_beta_tester (internal groups take App Store Connect users on the account). Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       name: z.string().describe("Group name, e.g. Internal"),

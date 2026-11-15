@@ -19,14 +19,18 @@ export interface CreateBetaGroupArgs {
 }
 
 /**
- * Where an internal tester gets added. Apple's public API documents no call
- * for it, so the tool says so instead of guessing an endpoint.
+ * Internal testers are App Store Connect users. invite_beta_tester adds one by
+ * POST /v1/betaTesters with the internal group in betaGroups (driven live on
+ * 15 Nov 2026: the tester was created and joined the group). This text is the
+ * fallback when the key cannot read /v1/users.
  */
 export const INTERNAL_TESTER_MANUAL =
-  "Adding people to an INTERNAL group is a manual step: in App Store Connect open the app > TestFlight > Internal Testing > the group > Testers (+) and tick the account users. " +
-  "Apple's public API documents no call for it: POST /v1/betaTesters (BetaTesterCreateRequest takes email, firstName, lastName and the betaGroups or builds relationships) is the external email-invite path, " +
-  "and no page under developer.apple.com/documentation/appstoreconnectapi describes an internal-tester call, so none is attempted here. " +
+  "If the tool cannot add them, in App Store Connect open the app > TestFlight > Internal Testing > the group > Testers (+) and tick the account users. " +
   "The person must already be a user on the account (Users and Access).";
+
+/** How to add internal testers, for Next: lines. */
+export const INTERNAL_TESTER_NEXT =
+  "the AI calls invite_beta_tester with this group id and the email of an App Store Connect user on the account (confirm:true)";
 
 /**
  * Create a TestFlight beta group (POST /v1/betaGroups). Idempotent by name:
@@ -58,7 +62,7 @@ export async function createBetaGroup(
         : "";
     return (
       `Beta group "${name}" already exists on this app (${kind}, id ${existing.id}). Nothing was changed.${mismatch}\n` +
-      `Next: ${existing.attributes.isInternalGroup ? "the human adds testers (" + INTERNAL_TESTER_MANUAL + ") " : "the AI calls invite_beta_tester with this id "}then set_beta_test_info and assign_build_to_group.`
+      `Next: ${existing.attributes.isInternalGroup ? INTERNAL_TESTER_NEXT + ", " : "the AI calls invite_beta_tester with this id, "}then set_beta_test_info and assign_build_to_group.`
     );
   }
 
@@ -87,7 +91,7 @@ export async function createBetaGroup(
   return (
     `Created ${kind} beta group "${name}"${row ? `, id ${row.id}` : ""}.\n` +
     (args.internal
-      ? `Next: the human adds testers. ${INTERNAL_TESTER_MANUAL}\nThen the AI calls set_beta_test_info and assign_build_to_group${args.has_access_to_all_builds ? " (optional: this group already gets every build)" : ""}.`
+      ? `Next: ${INTERNAL_TESTER_NEXT}.\nThen the AI calls set_beta_test_info and assign_build_to_group${args.has_access_to_all_builds ? " (optional: this group already gets every build)" : ""}.`
       : "Next: the AI calls invite_beta_tester with this group id, then set_beta_test_info and assign_build_to_group.")
   );
 }

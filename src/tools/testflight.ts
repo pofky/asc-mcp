@@ -97,6 +97,53 @@ export async function assignBuildToGroup(
 }
 
 /** Invite an external tester by email and add them to a beta group. */
+interface UserAttrs { username: string; firstName?: string; lastName?: string; roles?: string[] }
+
+/** Adds an App Store Connect user to an internal group (POST /v1/betaTesters with the group). */
+async function addInternalTester(
+  client: ASCClient,
+  args: { group_id: string; email: string; confirm?: boolean },
+): Promise<string> {
+  let users: { id: string; attributes: UserAttrs }[];
+  try {
+    users = (await client.getAll<UserAttrs>("/v1/users", { limit: "200", "fields[users]": "username,firstName,lastName,roles" })).data as never;
+  } catch (err) {
+    if (err instanceof ASCAPIError && (err.status === 403 || err.status === 401)) {
+      return `Group ${args.group_id} is internal, and this API key cannot read the account's users (Apple said ${err.status}), so nothing was added. An Admin key can. ${INTERNAL_TESTER_MANUAL}`;
+    }
+    throw err;
+  }
+  const want = args.email.trim().toLowerCase();
+  const user = users.find((u) => u.attributes.username?.toLowerCase() === want);
+  if (!user) {
+    const names = users.map((u) => `${u.attributes.firstName ?? ""} ${u.attributes.lastName ?? ""}`.trim()).filter(Boolean);
+    return (
+      `${args.email} is not a user on this App Store Connect account, so it cannot join internal group ${args.group_id}; nothing was sent. ` +
+      `Internal testers must be account users (${names.length} on the account${names.length ? ": " + names.join(", ") : ""}). ` +
+      "Next: the AI calls invite_beta_tester again with one of their emails, or the human adds the person in Users and Access first, or uses an external group."
+    );
+  }
+  const name = `${user.attributes.firstName ?? ""} ${user.attributes.lastName ?? ""}`.trim();
+  if (!args.confirm) {
+    return `This adds ${name || args.email} (${args.email}), a user on the account, to internal group ${args.group_id}. Apple may email them that a build is ready. Re-run with confirm: true.`;
+  }
+  try {
+    await client.post("/v1/betaTesters", {
+      data: {
+        type: "betaTesters",
+        attributes: { email: user.attributes.username, firstName: user.attributes.firstName ?? "", lastName: user.attributes.lastName ?? "" },
+        relationships: { betaGroups: { data: [{ type: "betaGroups", id: args.group_id }] } },
+      },
+    });
+  } catch (err) {
+    if (err instanceof ASCAPIError && err.status === 409) {
+      return `${name || args.email} is already a tester in internal group ${args.group_id} (Apple said 409). Nothing changed.`;
+    }
+    throw err;
+  }
+  return `Added ${name || args.email} to internal group ${args.group_id}. They install builds from the TestFlight app on a device signed in with that Apple Account.`;
+}
+
 export async function inviteBetaTester(
   client: ASCClient,
   args: { group_id: string; email: string; first_name?: string; last_name?: string; confirm?: boolean },
@@ -116,10 +163,10 @@ export async function inviteBetaTester(
   // question this tool gets to ask.
   try {
     const g = await client.get<GroupAttrs>(`/v1/betaGroups/${args.group_id}`, { "fields[betaGroups]": "name,isInternalGroup" });
-    // An internal group takes existing account users, not a new betaTester
-    // record; POST /v1/betaTesters is the external invite path.
+    // An internal group takes App Store Connect users only. Match the email to
+    // a user on the account before asking to confirm, and use their own name.
     if (!Array.isArray(g.data) && g.data?.attributes?.isInternalGroup) {
-      return `Group ${args.group_id} is an internal group, so a new tester email does not apply and nothing was sent. ${INTERNAL_TESTER_MANUAL}`;
+      return addInternalTester(client, args);
     }
   } catch (err) {
     if (err instanceof ASCAPIError && err.status === 404) return `Error: no beta group with id ${args.group_id}. list_beta_groups shows them.`;

@@ -60,7 +60,7 @@ describe("create_beta_group", () => {
       },
     });
     expect(out).toContain("NEW1");
-    expect(out).toContain("manual");
+    expect(out).toContain("invite_beta_tester");
   });
 
   it("creates an external group and points at invite_beta_tester", async () => {
@@ -93,10 +93,39 @@ describe("create_beta_group", () => {
 });
 
 describe("invite_beta_tester on an internal group", () => {
-  it("refuses with the manual step and never posts", async () => {
+  const users = [{ id: "U1", attributes: { username: "Owner@Example.com", firstName: "Ann", lastName: "Owner", roles: ["ADMIN"] } }];
+
+  it("adds an account user with their own name after confirm", async () => {
+    const f = fake({ "/v1/betaGroups/G1": grp("G1", "Internal", true), "/v1/users": users });
+    const out = await inviteBetaTester(f.client, { group_id: "G1", email: "owner@example.com", confirm: true }, "pro");
+    expect(out).toContain("Added Ann Owner");
+    const w = f.writes();
+    expect(w).toHaveLength(1);
+    expect(w[0].path).toBe("/v1/betaTesters");
+    expect(JSON.stringify(w[0].body)).toContain('"id":"G1"');
+    expect(JSON.stringify(w[0].body)).toContain("Owner@Example.com");
+  });
+
+  it("previews without confirm and never posts", async () => {
+    const f = fake({ "/v1/betaGroups/G1": grp("G1", "Internal", true), "/v1/users": users });
+    const out = await inviteBetaTester(f.client, { group_id: "G1", email: "owner@example.com" }, "pro");
+    expect(out).toContain("confirm: true");
+    expect(f.writes()).toHaveLength(0);
+  });
+
+  it("refuses an email that is not an account user", async () => {
+    const f = fake({ "/v1/betaGroups/G1": grp("G1", "Internal", true), "/v1/users": users });
+    const out = await inviteBetaTester(f.client, { group_id: "G1", email: "stranger@example.com", confirm: true }, "pro");
+    expect(out).toContain("not a user on this App Store Connect account");
+    expect(out).toContain("Ann Owner");
+    expect(f.writes()).toHaveLength(0);
+  });
+
+  it("falls back to the website when the key cannot read users", async () => {
     const f = fake({ "/v1/betaGroups/G1": grp("G1", "Internal", true) });
-    const out = await inviteBetaTester(f.client, { group_id: "G1", email: "a@b.co", confirm: true }, "pro");
-    expect(out).toContain("internal group");
+    const client = f.client as unknown as { getAll: unknown };
+    client.getAll = async () => { throw new ASCAPIError(403, "/v1/users", "{}"); };
+    const out = await inviteBetaTester(f.client, { group_id: "G1", email: "owner@example.com", confirm: true }, "pro");
     expect(out).toContain(INTERNAL_TESTER_MANUAL);
     expect(f.writes()).toHaveLength(0);
   });
@@ -249,15 +278,15 @@ describe("set_beta_test_info", () => {
 });
 
 describe("asc_guide testflight", () => {
-  it("names the steps in order and the manual internal step", async () => {
+  it("names the steps in order and how internal testers are added", async () => {
     const out = await ascGuide({ topic: "testflight" });
     const order = ["create_beta_group", "invite_beta_tester", "set_beta_test_info", "assign_build_to_group"].map((t) => out.indexOf(t));
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(out).toContain("INTERNAL");
+    expect(out).toContain("App Store Connect user on the account");
   });
 
-  it("limitations list the internal tester gap", async () => {
-    expect(await ascGuide({ topic: "limitations" })).toContain("internal TestFlight group");
+  it("limitations no longer list internal testers as manual", async () => {
+    expect(await ascGuide({ topic: "limitations" })).not.toContain("internal TestFlight group");
   });
 });
