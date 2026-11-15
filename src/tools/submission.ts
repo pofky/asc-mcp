@@ -130,7 +130,24 @@ export async function setAppMetadata(
   // unanswered while this reported success, and preflight failed again on re-run.
   if (args.uses_non_exempt_encryption !== undefined) {
     const buildId = (picked.version && (await attachedBuildId(client, picked.version.id))) ?? (await newestValidBuildId(client, args.app_id, args.platform));
-    if (buildId) {
+    // Apple sets the answer once, and a build whose Info.plist carries
+    // ITSAppUsesNonExemptEncryption already has it: a PATCH then fails with 409
+    // "cannot update when the value is already set". Read it first.
+    const current = buildId
+      ? await client
+          .get<{ usesNonExemptEncryption?: boolean | null }>(`/v1/builds/${buildId}`, { "fields[builds]": "usesNonExemptEncryption" })
+          .then((r) => (Array.isArray(r.data) ? undefined : r.data?.attributes?.usesNonExemptEncryption))
+          .catch(() => undefined)
+      : undefined;
+    if (buildId && typeof current === "boolean") {
+      if (current === args.uses_non_exempt_encryption) {
+        changes.push(`export compliance already usesNonExemptEncryption=${current} on build ${buildId} (set by the build, often its Info.plist ITSAppUsesNonExemptEncryption); nothing to write`);
+      } else {
+        encryptionSkipped =
+          `Export compliance was not changed: build ${buildId} already answers usesNonExemptEncryption=${current}, and Apple does not allow changing it once set. ` +
+          "The human sets ITSAppUsesNonExemptEncryption in the app's Info.plist to the right value; the AI uploads a new build and attaches it.";
+      }
+    } else if (buildId) {
       await client.patch(`/v1/builds/${buildId}`, {
         data: {
           type: "builds",

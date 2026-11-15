@@ -94,6 +94,29 @@ describe("set_app_metadata says what it applied and what it could not", () => {
   });
 });
 
+describe("set_app_metadata export compliance already answered by the build", () => {
+  const routes = (value: boolean) => ({
+    "/v1/apps/1/appStoreVersions": version("PREPARE_FOR_SUBMISSION"),
+    "/v1/appStoreVersions/v1/build": { data: { id: "b1" } },
+    "/v1/builds/b1": { data: { id: "b1", attributes: { usesNonExemptEncryption: value } } },
+  });
+
+  it("does not PATCH a build that already has the same answer (Apple 409s it)", async () => {
+    const { client, calls } = fake(routes(false));
+    const out = await setAppMetadata(client, { app_id: "1", uses_non_exempt_encryption: false }, "pro");
+    expect(calls.some((c) => c.method === "PATCH")).toBe(false);
+    expect(out).toContain("already usesNonExemptEncryption=false");
+  });
+
+  it("says the answer cannot change once set, and names the Info.plist key", async () => {
+    const { client, calls } = fake(routes(false));
+    const out = await setAppMetadata(client, { app_id: "1", uses_non_exempt_encryption: true }, "pro");
+    expect(calls.some((c) => c.method === "PATCH")).toBe(false);
+    expect(out).toContain("was not changed");
+    expect(out).toContain("ITSAppUsesNonExemptEncryption");
+  });
+});
+
 describe("set_app_price", () => {
   it("does not present the requested price as the current one when Apple refuses a second schedule", async () => {
     const { client } = fake({
