@@ -572,7 +572,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
 
   tool(
     "app_details",
-    "Get detailed info about an app including versions, build status, and release state.",
+    "Get detailed info about an app: recent versions with release state and copyright, and the newest version's App Review contact (name, phone, email, demo account), so another app can reuse the account's real answers.",
     { app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID (use list_apps to find it)") },
     safe((args) => appDetails(client, args)),
   );
