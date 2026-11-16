@@ -1,0 +1,6 @@
+cd /Volumes/T7/Projects/appstore-connect-mcp
+npm login --auth-type=web
+npm run release -- 1.12.0
+script -q /tmp/npm-publish.log npm publish --access public --auth-type=web < /dev/null
+git push origin master && git push origin v1.12.0
+npx wrangler pages deploy site --project-name asc-mcp --branch master
