@@ -1,5 +1,5 @@
 /**
- * Fixes found while planning Douse's release: build_and_archive returns its own
+ * Fixes found while planning a new test app's release: build_and_archive returns its own
  * .ipa, upload_screenshots checks sizes and delivery, set_age_rating shows
  * everything it wrote. Fake clients and a fake xcodebuild, no Apple calls.
  */

@@ -237,7 +237,7 @@ describe("the next session, with no key in the client config", () => {
  * A key saved to ~/.asc-mcp/license.json while the server is already running:
  * pasted by hand from the subscription email, or saved by another session.
  * It used to wait for a reconnect, so the subscriber stayed free with no reason
- * given. Found shipping Douse, 2026-11-14.
+ * given. Found shipping a test app, 2026-11-14.
  */
 describe("a key saved while the server is running", () => {
   beforeAll(() => {

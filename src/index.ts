@@ -359,7 +359,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
    * A key saved to ~/.asc-mcp/license.json after this server started (pasted by
    * hand from the subscription email, or saved by another session) used to be
    * ignored until the client reconnected the server, so a subscriber stayed on
-   * the free tier with nothing saying why. Found shipping Douse, 2026-11-14.
+   * the free tier with nothing saying why. Found shipping a test app, 2026-11-14.
    * The client config still wins: the saved file is read only when it sets none.
    */
   let keyAtLastCheck = process.env.ASC_LICENSE_KEY;

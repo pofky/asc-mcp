@@ -1,6 +1,6 @@
 # v1.12.0: a brand-new app, from bundle id to TestFlight, in the chat
 
-Built by taking a new iOS app from an empty developer account to TestFlight through asc-mcp itself. Each time it fell back to the website or a terminal, or a reply was wrong, the cause is fixed here. Creating the app record stays on Apple's website, because Apple's API refuses it. 44 tools, up from 41.
+Built by taking a new iOS app from a new bundle id to TestFlight through asc-mcp itself. Each time it fell back to the website or a terminal, or a reply was wrong, the cause is fixed here or the reply now names the manual step. Creating the app record stays on Apple's website, because Apple's API refuses it. 44 tools, up from 41.
 
 New:
 - `register_bundle_id` registers a new app's bundle id, the first step of a brand-new app. If another Apple account already owns the id, it says so, says nothing was registered, and suggests your account's own prefix.

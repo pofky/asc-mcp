@@ -1,5 +1,5 @@
 /**
- * Douse friction row 16: right after upload_binary, Apple had not listed the new build, so wait_for_build
+ * Found shipping a test app: right after upload_binary, Apple had not listed the new build, so wait_for_build
  * called the previous build "ready". With build_number it waits for that build; without it, it says the
  * newest listed build may be an older one.
  */

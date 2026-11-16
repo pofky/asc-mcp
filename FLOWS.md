@@ -1,7 +1,7 @@
 # FLOWS.md
 
 App: asc-mcp
-Last amended: 2026-11-12, discovery pages and listings (tasks/0006)
+Last amended: 2026-11-16, a brand-new app from bundle id to TestFlight (tasks/0007)
 
 The interface is the agent conversation. The "labels" below are the report's exact text.
 
@@ -20,6 +20,7 @@ Failure contract, every flow (tasks/0005): a tool call that throws returns `isEr
 | F7 | A visitor who does not know the jargon | Landing page `#plain` | What the product does, in plain words | Activation | tasks/0003 |
 | F8 | First setup from the page or README | Hero command, README top install block | A connected agent and a running trial, setup finished in the chat | Activation | tasks/0005 |
 | F9 | Found through search, an LLM answer or a directory | A search or LLM query, a directory listing, the homepage fastlane link | An honest answer that leads to the install line | Acquisition | tasks/0006 |
+| F10 | A brand-new app, bundle id to TestFlight | "Set up my new app com.example.app", `asc_guide topic:first-app` | Bundle id, signing profile, uploaded build and a TestFlight group, with the one website step named when it comes | Activation, conversion (all Pro writes) | tasks/0007 |
 
 ---
 
@@ -104,7 +105,7 @@ Success: the key arrives in the mailbox on the subscription, they paste it in, r
 - Asked for again within a few minutes: `It was already emailed to <address> in the last few minutes.`
 - Key saved to `~/.asc-mcp/license.json` while the server is already running, and no key in the client config: the next tool call validates it and Pro applies with no restart. A key in the client config still wins over the file.
 
-Change log: 2026-11-14, found shipping Douse. A key saved to `~/.asc-mcp/license.json` mid-session was ignored until a reconnect, so a subscriber stayed free with no reason given; fixed in 94d4fab.
+Change log: 2026-11-14, found while shipping a new test app. A key saved to `~/.asc-mcp/license.json` mid-session was ignored until a reconnect, so a subscriber stayed free with no reason given; fixed in 94d4fab.
 
 ## F4. Starting a trial
 
@@ -218,4 +219,33 @@ Success: they reach F8 with a correct picture of what still needs a person.
 - Directories we cannot edit: Claude plugin directory refuses local servers from unverified organizations (owner); PulseMCP shows the deprecated April entry and has paused changes (email drafted in `launch/pulsemcp-listing-update.txt`).
 
 Change log: 2026-11-12, tasks/0006. asc-mcp did not appear for "MCP server for App Store Connect"; two answer-first pages, search terms in npm, GitHub, registry, README and llms.txt.
+
+## F10. A brand-new app, bundle id to TestFlight
+
+Who: a developer with a new app in Xcode and nothing yet in App Store Connect.
+Goal: a build installed through TestFlight, without the Developer portal.
+Entry: "set up my new app", or `asc_guide topic:first-app`.
+Success: a VALID build assigned to an internal group with the person in it.
+
+### Steps
+
+| # | Screen | User does | UI element (exact label) | System shows |
+|---|--------|-----------|--------------------------|--------------|
+| 1 | Chat | Names the bundle id | `register_bundle_id` without confirm | `Bundle id <id> is not on this Apple Developer account. ... Confirming registers <id> ...` |
+| 2 | Chat | Agrees | `register_bundle_id` with `confirm: true` | `Registered bundle id <id> ... Next: the human creates the app record in App Store Connect (Apps > + > pick this bundle id; the API cannot).` |
+| 3 | App Store Connect website | Creates the app record | Apps, +, New App | The app, then `list_apps` returns its id |
+| 4 | Chat | Asks for signing | `setup_app_store_signing`, then again with `confirm: true` | A preview naming the distribution certificates, then the profile installed and `ExportOptions.plist` written |
+| 5 | Chat | Asks to build and upload | `build_and_archive` (optional `pre_build_command`), `upload_binary` with `confirm: true` | The `.ipa` from this run; the upload reply names the build number to wait for |
+| 6 | Chat | Waits | `wait_for_build` with `build_number` | `Build <n> is VALID and ready [<id>]. Attach it with attach_build, build_id <id>.` only for that build |
+| 7 | Chat | Sets up TestFlight | `create_beta_group`, `set_beta_test_info`, `invite_beta_tester`, `assign_build_to_group`, each previewed then confirmed | `Created internal beta group "<name>"`, `Added <name> to internal group <id>.`, `Assigned build <n> ... Testers can now install it.` |
+
+### States on this flow
+
+- Bundle id owned by another Apple account: `Another Apple developer account already owns the identifier <id> ... Nothing was registered.` with the account's own prefix suggested.
+- Bundle id already on this account: returned as is, `Nothing was changed`, and the next step is the app record.
+- No distribution certificate on the account: `no unexpired distribution certificate on the account to put in one`, and the website step to create one.
+- Internal tester with a key that cannot read users: `this API key cannot read the account's users ... An Admin key can.` and the website path.
+- Called without `build_number`: `Newest listed build <n> is VALID [<id>].`, followed by a warning that it may predate an upload still in progress.
+
+Change log: 2026-11-16, tasks/0007. A new app's first steps went to the portal or the website, and several replies were wrong on a real app; found and fixed by taking a test app through this flow.
 

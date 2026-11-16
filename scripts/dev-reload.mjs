@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Dev-only stdio proxy: runs dist/index.js as a child and restarts it whenever
-// dist/ is rebuilt, so a client session that dogfoods asc-mcp (Douse) picks up
+// dist/ is rebuilt, so a client session that dogfoods asc-mcp picks up
 // each fix without a /mcp reconnect. The client keeps one connection; after a
 // restart the proxy replays the client's initialize handshake to the new child
 // (swallowing its reply) and sends notifications/tools/list_changed so the

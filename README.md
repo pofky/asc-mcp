@@ -2,7 +2,7 @@
 
 > **Ship your iOS app from your coding agent, from a new bundle id to App Store review.** An MCP server for App Store Connect: 44 tools that register the bundle id, create the signing profile, archive and upload the build, set up TestFlight, write the metadata, age rating and screenshots, create in-app purchases, submit and release, plus an intelligence layer that audits a version before you submit and summarizes your reviews. Every step Apple's API cannot do is flagged before you reach it. 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper. A fastlane alternative for AI agents.
 
-**New in 1.12:** a brand-new app's first steps now run in the chat too: bundle id, App Store signing profile, TestFlight groups and internal testers. This release was built by taking a new iOS app from an empty account to TestFlight through asc-mcp itself; each Apple trap it hit on the way is fixed, and named in the reply when it can still happen.
+**New in 1.12:** a brand-new app's first steps now run in the chat too: bundle id, App Store signing profile, TestFlight groups and internal testers. This release was built by taking a new iOS app from a new bundle id to TestFlight through asc-mcp itself; each Apple trap it hit on the way is fixed or named in the reply. Creating the app record itself stays on Apple's website, and `asc_guide` tells you when.
 
 [asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/month, VAT included (sales tax added in the US, Canada and India)](https://asc-mcp.pages.dev/#pricing)
 

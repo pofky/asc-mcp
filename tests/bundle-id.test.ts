@@ -150,7 +150,7 @@ describe("asc_guide names the new step", () => {
 
 describe("register_bundle_id: identifier owned by another account", () => {
   const body = JSON.stringify({
-    errors: [{ status: "409", code: "ENTITY_ERROR.ATTRIBUTE.INVALID", title: "There is a problem with the request entity", detail: "An App ID with Identifier 'app.douse.ios' is not available. Please enter a different string." }],
+    errors: [{ status: "409", code: "ENTITY_ERROR.ATTRIBUTE.INVALID", title: "There is a problem with the request entity", detail: "An App ID with Identifier 'app.example.ios' is not available. Please enter a different string." }],
   });
   function takenClient(mine: string[]) {
     return {
@@ -167,7 +167,7 @@ describe("register_bundle_id: identifier owned by another account", () => {
   });
 
   it("explains in plain words, suggests the account prefix, names the follow-ups and has no review_status", async () => {
-    const out = await registerBundleId(takenClient(["com.acme.one", "com.acme.two"]), { identifier: "app.douse.ios", name: "Douse", confirm: true }, "pro");
+    const out = await registerBundleId(takenClient(["com.acme.one", "com.acme.two"]), { identifier: "app.example.ios", name: "Example", confirm: true }, "pro");
     expect(out).toContain("Another Apple developer account already owns");
     expect(out).toContain("Nothing was registered");
     expect(out).toContain("com.acme");
@@ -179,7 +179,7 @@ describe("register_bundle_id: identifier owned by another account", () => {
   });
 
   it("still replies when the account has no shared prefix", async () => {
-    const out = await registerBundleId(takenClient([]), { identifier: "app.douse.ios", name: "Douse", confirm: true }, "pro");
+    const out = await registerBundleId(takenClient([]), { identifier: "app.example.ios", name: "Example", confirm: true }, "pro");
     expect(out).toContain("Another Apple developer account already owns");
     expect(out).not.toContain("share the prefix");
   });
