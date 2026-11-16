@@ -1,6 +1,8 @@
 # asc-mcp
 
-> **Ship an App Store release from your coding agent.** An MCP server for App Store Connect: 44 tools that edit version metadata, upload screenshots, attach builds, drive TestFlight, create in-app purchases, submit and release, plus an intelligence layer that audits a version before you submit and summarizes your reviews. 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper. A fastlane alternative for AI agents: the App Store Connect API, as typed tools your agent calls directly.
+> **Ship your iOS app from your coding agent, from a new bundle id to App Store review.** An MCP server for App Store Connect: 44 tools that register the bundle id, create the signing profile, archive and upload the build, set up TestFlight, write the metadata, age rating and screenshots, create in-app purchases, submit and release, plus an intelligence layer that audits a version before you submit and summarizes your reviews. Every step Apple's API cannot do is flagged before you reach it. 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper. A fastlane alternative for AI agents.
+
+**New in 1.12:** a brand-new app's first steps now run in the chat too: bundle id, App Store signing profile, TestFlight groups and internal testers. This release was built by taking a new iOS app from an empty account to TestFlight through asc-mcp itself; each Apple trap it hit on the way is fixed, and named in the reply when it can still happen.
 
 [asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/month, VAT included (sales tax added in the US, Canada and India)](https://asc-mcp.pages.dev/#pricing)
 
@@ -147,15 +149,15 @@ $9 per month, VAT included; in the US, Canada and India sales tax is added at ch
 
 ### Control & Ship (Pro)
 
-These tools write to App Store Connect. Every outward-facing action (submit, release, upload binary) requires an explicit `confirm: true`, so nothing leaves your machine by accident.
+These tools write to App Store Connect. Every write that is hard to take back (register a bundle id, create a signing profile or beta group, invite a tester, replace screenshots, upload a binary, submit, release) previews what it would do and acts only with an explicit `confirm: true`, so nothing leaves your machine by accident.
 
 | Tool | What it does |
 |------|-------------|
 | `create_version` | Create a new editable App Store version for your next release |
 | `update_version_metadata` | Edit description, keywords, what's-new, promo text, URLs, app name, subtitle. Validates Apple's character limits and refuses over-limit writes |
-| `upload_screenshots` | Upload screenshots for a device display type (reserve, upload, commit, with checksum) |
+| `upload_screenshots` | Upload screenshots for a device display type. Refuses pixel sizes Apple rejects before reserving anything, `replace: true` swaps the whole set, and the reply reports Apple's processing state |
 | `list_builds` | List recent builds and their processing state (VALID = ready) |
-| `wait_for_build` | Poll until a build finishes processing, so the chain does not need a manual pause |
+| `wait_for_build` | Poll until the build you just uploaded (by build number) finishes processing, so the chain never attaches an older build |
 | `attach_build` | Attach a build to the editable version (defaults to newest processed build) |
 | `submit_for_review` | Submit the version to App Review (modern reviewSubmissions flow). `confirm: true` required |
 | `release_version` | Release an approved version to the public App Store. `confirm: true` required |
@@ -164,22 +166,23 @@ These tools write to App Store Connect. Every outward-facing action (submit, rel
 | `create_beta_group` | Create an internal or external TestFlight group (idempotent by name) |
 | `set_beta_test_info` | Set TestFlight feedback email, description, URLs, What to Test and the Beta App Review contact |
 | `assign_build_to_group` | Push a build to a beta group so testers can install it |
-| `invite_beta_tester` | Invite an external tester by email and add them to a group |
+| `invite_beta_tester` | Add a tester to a group: any email for an external group, an App Store Connect user on your account for an internal one |
 | `set_app_metadata` | Set primary/secondary category, copyright, content-rights, and export-compliance (encryption) in one call |
 | `set_app_price` | Set the base price by creating the price schedule (`price_usd: 0` for free), auto-equalized to all territories |
 | `set_app_availability` | Make the app available in all App Store territories (or a subset), with auto-include for future ones |
 | `set_review_contact` | Set the App Review contact and optional demo account on the version |
-| `set_age_rating` | Set the v2 age-rating declaration (full content-descriptor set) |
+| `set_age_rating` | Set the age-rating declaration, including Apple's newest required questions. Lists every value written, defaults included, and reads back the rating Apple computed on the 4+/9+/13+/16+/18+ scale |
 | `set_privacy_nutrition` | Guidance + deep link for the App Privacy nutrition labels (not API-addressable) |
 | `set_eu_trader_status` | Guidance + deep link for the EU DSA trader status (not API-addressable) |
 | `create_iap` | Create a non-consumable/consumable IAP with localization, availability, and an auto-equalized price |
 | `create_subscription` | Create a subscription group, sub, localization, availability, price, and free trial |
 | `set_iap_review_screenshot` | Attach the App Review screenshot to a subscription or IAP |
-| `setup_app_store_signing` | Download the app's App Store provisioning profiles and write a manual-signing `ExportOptions.plist` (works with a least-privilege API key) |
-| `build_and_archive` | Build, archive, and export a signed `.ipa` via xcodebuild (needs Xcode on your Mac) |
+| `register_bundle_id` | Register a new app's bundle id in your developer account, the first step of a brand-new app. Says so plainly when another Apple account already owns the id |
+| `setup_app_store_signing` | Create the App Store provisioning profile if the app has none, install it and write a manual-signing `ExportOptions.plist` (works with a least-privilege API key) |
+| `build_and_archive` | Build, archive, and export a signed `.ipa` via xcodebuild (needs Xcode on your Mac). Runs a generator such as `xcodegen generate` first with `pre_build_command`, and always returns the `.ipa` this run produced |
 | `upload_binary` | Upload the `.ipa` to App Store Connect via altool, using your API key. `confirm: true` required |
 
-The whole flow chains: `setup_app_store_signing` to `build_and_archive` to `upload_binary` to `wait_for_build` (blocks until VALID) to `attach_build` to `update_version_metadata` to `upload_screenshots` to `set_app_metadata`/`set_app_price`/`set_app_availability`/`set_age_rating`/`set_review_contact` to `release_preflight` to `submit_for_review` to `release_version`. The `/asc-ship-release` slash command drives it for you.
+The whole flow chains, from a brand-new app: `register_bundle_id` to `setup_app_store_signing` to `build_and_archive` to `upload_binary` to `wait_for_build` (blocks until VALID) to `create_beta_group`/`invite_beta_tester` for TestFlight to `attach_build` to `update_version_metadata` to `upload_screenshots` to `set_app_metadata`/`set_app_price`/`set_app_availability`/`set_age_rating`/`set_review_contact` to `release_preflight` to `submit_for_review` to `release_version`. The `/asc-ship-release` slash command drives it for you.
 
 `release_preflight` is the check to run before you submit: it reads every API-addressable field, loads the support, privacy and terms links in the record, and with `project_path` checks privacy manifests, required-reason APIs, listed SDKs and purpose strings on your machine. Every rule ends in PASS, WARN, FAIL or UNKNOWN, and any UNKNOWN withholds the clean verdict. Project files are checked only with `project_path`, and the verdict says when they were not. It ends with the manual steps for the few things Apple only allows in the website (first-IAP bundling, App Privacy nutrition labels, EU trader status). It is not a prediction of App Review's decision.
 

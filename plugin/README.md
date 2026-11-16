@@ -1,6 +1,6 @@
 # asc-mcp
 
-Run an App Store release from a conversation. asc-mcp connects Claude to your App Store Connect account: read review status, reviews and sales, edit metadata, upload screenshots, attach a build, manage TestFlight, create in-app purchases, submit for review and release.
+Run an App Store release from a conversation, starting from a brand-new app's bundle id if you need to. asc-mcp connects Claude to your App Store Connect account: read review status, reviews and sales, edit metadata, upload screenshots, attach a build, manage TestFlight, create in-app purchases, submit for review and release.
 
 This plugin bundles two things:
 

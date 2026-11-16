@@ -1,10 +1,10 @@
 # asc-mcp (App Store Connect MCP server)
 
-> An MCP server that lets an AI coding agent drive App Store Connect end to end: edit version metadata, upload screenshots, build and upload a binary, run TestFlight, create in-app purchases and subscriptions, audit a version before submission, submit for review, and release. 44 tools, 6 slash-command prompts. Free 7-day trial of everything with no credit card, started from inside the agent; after that Pro is $9 per month (VAT included; in the US, Canada and India sales tax is added at checkout).
+> An MCP server that lets an AI coding agent drive App Store Connect end to end, from a brand-new app's bundle id to App Store review: register the bundle id, create the App Store signing profile, edit version metadata, upload screenshots, build and upload a binary, run TestFlight, create in-app purchases and subscriptions, audit a version before submission, submit for review, and release. 44 tools, 6 slash-command prompts. Free 7-day trial of everything with no credit card, started from inside the agent; after that Pro is $9 per month (VAT included; in the US, Canada and India sales tax is added at checkout).
 
 ## Facts
 
-- Package: `@pofky/asc-mcp` on npm. Current version 1.11.1 (published 12 November 2026).
+- Package: `@pofky/asc-mcp` on npm. Current version 1.12.0 (published 16 November 2026).
 - Install: add `npx -y @pofky/asc-mcp` as an MCP server (Claude Code: `claude mcp add asc-mcp -- npx -y @pofky/asc-mcp`), then give the agent your Issuer ID: the `asc_connect` tool finds the downloaded `.p8`, files it in `~/.appstoreconnect/private_keys`, tests it against Apple and unlocks every tool in the running session, with no config file and no restart. From a terminal, `npx @pofky/asc-mcp init --write` writes the client config instead.
 - One-click install on Claude Desktop (macOS and Windows): download the `.mcpb` bundle from https://github.com/pofky/asc-mcp/releases/latest and open it. Claude installs it in one click and collects the Issuer ID and the `.p8` file natively, with no config file editing and no restart. Every other client uses the `npx` server above.
 - Tool count: 44 tools and 6 prompts. 6 tools are free with no limit. Of the other 38, 10 that only read work 5 times in total per machine with no license, as a preview; past that, all 38 require Pro or a running trial.
@@ -13,7 +13,7 @@
 - Pricing: free for the first 7 days via `asc_start_trial`, then Pro is $9 per month, with VAT included, and in the US, Canada and India sales tax is added at checkout, billed through Polar, cancel any time. Purchase: https://buy.polar.sh/polar_cl_y86PS4ruc848PXevVvSYS49S8gZY8JYWF192v1UEgjj
 - License key recovery: https://asc-mcp-license.remewdy.workers.dev/key
 - Architecture: the App Store Connect `.p8` private key stays on the user's machine. JWTs are signed locally. API calls go directly from the user's computer to api.appstoreconnect.apple.com with no proxy. The only call to the asc-mcp license server in normal use validates the license key; starting a trial sends the values listed above.
-- Safety: `submit_for_review`, `release_version` and `upload_binary` refuse to run without an explicit `confirm: true`. `draft_review_response` writes a reply and never posts it.
+- Safety: `submit_for_review`, `release_version` and `upload_binary` refuse to run without an explicit `confirm: true`. Registering a bundle id, creating a signing profile or TestFlight group, inviting a tester and replacing screenshots preview what they would do and act only with `confirm: true`. `draft_review_response` writes a reply and never posts it.
 - Requirements: Node 18 or newer, any stdio MCP client (Claude Code, Claude Desktop, Cursor, Windsurf, Cline). Building and uploading a binary additionally needs a Mac with Xcode.
 - License: MIT. Source: https://github.com/pofky/asc-mcp
 - Maintainer: Povilas Konopackas, sole trader (individuali veikla), Lithuania. Not affiliated with Apple Inc.
@@ -59,6 +59,9 @@ A: Nothing for the first 7 days: `asc_start_trial` unlocks all 44 tools with no 
 **Q: Can an AI agent submit my app to the App Store?**
 A: Yes, apart from four website-only steps: creating the app record, the App Privacy nutrition label, EU trader status, and an app's very first in-app purchases. asc-mcp flags each of these before you hit them and hands over the exact steps and deep link.
 
+**Q: Can it set up a brand-new app, or only update one that exists?**
+A: Both. For a new app it registers the bundle id, creates the App Store provisioning profile from your distribution certificate, archives and uploads the build, creates TestFlight groups and adds testers, then fills in metadata, age rating, screenshots and in-app purchases. The one step in between that Apple keeps on its website is creating the app record itself; `asc_guide topic:first-app` names it at the point you reach it.
+
 **Q: Is my App Store Connect API key sent anywhere?**
 A: No. The `.p8` is read locally, tokens are signed locally, and requests go straight to Apple. The one exception is narrow and user-initiated: calling `asc_start_trial` sends the email address you give it, which gets the key, one reminder before the trial ends and one note after it (each with an unsubscribe link), plus a SHA-256 hash of your Issuer ID computed on your machine so one Apple account cannot take unlimited trials. The Issuer ID itself, the Key ID and the `.p8` are never transmitted. Privacy policy: https://asc-mcp-license.remewdy.workers.dev/privacy
 
@@ -67,7 +70,7 @@ A: Wrappers map endpoints one to one, which can mean hundreds of tools and leave
 
 ## Citation
 
-asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.11.1, updated 12 November 2026).
+asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.12.0, updated 16 November 2026).
 
 ## How it compares (verified 7 September 2026)
 

@@ -1,3 +1,24 @@
+# v1.12.0: a brand-new app, from bundle id to TestFlight, in the chat
+
+Built by taking a new iOS app from an empty developer account to TestFlight through asc-mcp itself. Each time it fell back to the website or a terminal, or a reply was wrong, the cause is fixed here. Creating the app record stays on Apple's website, because Apple's API refuses it. 44 tools, up from 41.
+
+New:
+- `register_bundle_id` registers a new app's bundle id, the first step of a brand-new app. If another Apple account already owns the id, it says so, says nothing was registered, and suggests your account's own prefix.
+- `setup_app_store_signing` creates the App Store provisioning profile when the app has none (from your distribution certificates, with `confirm: true`), installs it and writes `ExportOptions.plist`.
+- `create_beta_group` creates an internal or external TestFlight group, idempotent by name. `set_beta_test_info` sets the feedback email, description, What to Test and the Beta App Review contact.
+- `invite_beta_tester` now adds App Store Connect users on your account to an internal group. It used to send you to the website for that.
+
+Fixed, each one hit on a real app:
+- `wait_for_build` takes the build number you just uploaded. Before, right after an upload it could report the previous build as ready, and attaching that would ship the wrong binary. `upload_binary` now names the number to wait for.
+- `set_age_rating` knows Apple's newest required question (social media), which made every full declaration fail. It lists every value it writes, defaults included, warns on a fresh app, and shows the rating Apple computed on the current 4+/9+/13+/16+/18+ scale.
+- `set_app_metadata` reads a build's export compliance before writing it. Apple refuses a second answer, and the error used to blame the value's format.
+- `build_and_archive` returns the `.ipa` this run produced, never an older one in the folder, and `pre_build_command` runs a generator such as `xcodegen generate` first.
+- `upload_screenshots` refuses a pixel size Apple will reject before reserving anything, `replace: true` swaps a whole set, and the reply reports Apple's processing state instead of assuming success.
+- A Pro key saved to `~/.asc-mcp/license.json` while the server is running is used on the next call, with no restart.
+- Error hints are matched to the kind of call that failed, so a signing or bundle id error no longer points at review status.
+
+Existing users need nothing from this release. Every new write previews without `confirm: true`.
+
 # v1.11.2: easier to find
 
 No code changed. The npm and MCP registry descriptions now say what people search for: an App Store Connect MCP server, and a fastlane alternative for AI agents. The README puts the install line first.

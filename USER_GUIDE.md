@@ -44,24 +44,25 @@ Manual interruptions you must do yourself:
 When: Brand-new app, never been on the store. The hardest flow because of first-time-only Apple constraints.
 
 Steps:
+1. `register_bundle_id` - registers the explicit bundle id in the Developer account (idempotent; confirm:true to create). The app record's bundle id picker only lists registered ids.
    MANUAL: the app RECORD must already exist. `POST /v1/apps` is forbidden for API keys, so create the app (name, bundle ID, SKU, primary language) once in App Store Connect > Apps > +. App Groups are portal-only too.
-1. `list_apps` to get the numeric app_id.
-2. Build + upload a binary so a build exists to attach (see topic:binary), or upload via Xcode/Transporter. Then `wait_for_build` until VALID.
-3. `set_app_metadata` - primary/secondary category, copyright, content rights, export compliance (most apps: uses_non_exempt_encryption=false).
-4. `set_app_price` - price_usd:0 for free, or an exact USA price point. Required before submit. Changing a price the app already has needs confirm:true.
-5. `update_version_metadata` - description, keywords, what's-new (note: what's-new is NOT editable on a first 1.0 with no prior release; the tool drops it and reports it skipped), promo text, marketing/support/privacy-policy URLs, name, subtitle. Char limits validated.
-6. `set_app_availability` - all_territories:true, or a list of territories. Turning territories off on an app already set up needs confirm:true.
-7. `set_age_rating` - pass only the declarations that apply; the tool fetches, merges the full V2 set, and submits (it is NOT a partial PATCH).
-8. `set_review_contact` - name, phone, email, demo account if the app needs login. Required before submit.
-9. `attach_build` - newest VALID build by default.
-10. `upload_screenshots` per display type: APP_IPHONE_67 at minimum, plus APP_IPAD_PRO_3GEN_129 if the app runs on iPad. See topic:screenshots.
+2. `list_apps` to get the numeric app_id.
+3. Build + upload a binary so a build exists to attach (see topic:binary), or upload via Xcode/Transporter. Then `wait_for_build` until VALID.
+4. `set_app_metadata` - primary/secondary category, copyright, content rights, export compliance (most apps: uses_non_exempt_encryption=false).
+5. `set_app_price` - price_usd:0 for free, or an exact USA price point. Required before submit. Changing a price the app already has needs confirm:true.
+6. `update_version_metadata` - description, keywords, what's-new (note: what's-new is NOT editable on a first 1.0 with no prior release; the tool drops it and reports it skipped), promo text, marketing/support/privacy-policy URLs, name, subtitle. Char limits validated.
+7. `set_app_availability` - all_territories:true, or a list of territories. Turning territories off on an app already set up needs confirm:true.
+8. `set_age_rating` - pass only the declarations that apply; the tool fetches, merges the full V2 set, and submits (it is NOT a partial PATCH).
+9. `set_review_contact` - name, phone, email, demo account if the app needs login. Required before submit.
+10. `attach_build` - newest VALID build by default.
+11. `upload_screenshots` per display type: APP_IPHONE_67 at minimum, plus APP_IPAD_PRO_3GEN_129 if the app runs on iPad. See topic:screenshots.
    MANUAL: App Privacy nutrition label. Not in the API. Run `set_privacy_nutrition` for the exact checklist + deep link, then set it in the ASC website.
    MANUAL: EU DSA trader status. Not in the API. Run `set_eu_trader_status` for steps + deep link; it's a legal decision, set it in the website.
-11. If the app has in-app purchases or subscriptions, create them now (topic:iap / topic:subscriptions). The FIRST ones must be submitted WITH the version (next step).
-12. `release_preflight` with `project_path` if you have the Xcode project - fix every FAIL, confirm anything UNKNOWN by hand, and re-run. It ends with the manual steps for this app's state.
-13. MANUAL (if first IAPs exist): the app's very first in-app purchases CANNOT be bundled with the version via the API. In the ASC website, open the version, Add for Review, tick the products, and submit them together. `submit_for_review` detects this and ABORTS rather than orphaning the version. After the first release is live, later IAPs submit via the API fine.
-14. `submit_for_review` with confirm:true (only if there are no first-IAPs blocking; otherwise submit in the website per the step above).
-15. After approval: `release_version` (confirm:true) to go live now, or `manage_phased_release` start for a 7-day rollout.
+12. If the app has in-app purchases or subscriptions, create them now (topic:iap / topic:subscriptions). The FIRST ones must be submitted WITH the version (next step).
+13. `release_preflight` with `project_path` if you have the Xcode project - fix every FAIL, confirm anything UNKNOWN by hand, and re-run. It ends with the manual steps for this app's state.
+14. MANUAL (if first IAPs exist): the app's very first in-app purchases CANNOT be bundled with the version via the API. In the ASC website, open the version, Add for Review, tick the products, and submit them together. `submit_for_review` detects this and ABORTS rather than orphaning the version. After the first release is live, later IAPs submit via the API fine.
+15. `submit_for_review` with confirm:true (only if there are no first-IAPs blocking; otherwise submit in the website per the step above).
+16. After approval: `release_version` (confirm:true) to go live now, or `manage_phased_release` start for a 7-day rollout.
 
 Manual interruptions you must do yourself:
 - App record + App Group creation - ASC website / Developer portal only.
@@ -160,12 +161,14 @@ When: Getting a build to testers before App Review.
 
 Steps:
 1. Upload a build (topic:binary), `wait_for_build` to VALID.
-2. `list_beta_groups` to find or confirm a group.
-3. `assign_build_to_group` - newest VALID build by default.
-4. `invite_beta_tester` - email + name; Apple sends the TestFlight invite.
+2. `list_beta_groups` to find a group. None yet: `create_beta_group` (internal: true for your own team, false for outside testers; idempotent by name; confirm:true to create).
+3. Add testers with `invite_beta_tester` (confirm:true). External group: any email + name, Apple sends the TestFlight invite. Internal group: the email of an App Store Connect user on the account; the tool checks it against the account's users first (needs an Admin key).
+4. `set_beta_test_info` - feedback email, description, marketing and privacy URLs, What to Test for the build, Beta App Review contact. Every value comes from the human; without confirm:true it previews.
+5. `assign_build_to_group` - newest VALID build by default (not needed for a group created with has_access_to_all_builds).
 
 Manual interruptions you must do yourself:
-- Beta App Review (for external groups' first build) and the test-information form may need a one-time touch in the ASC website.
+- Beta App Review (external groups' first build) is submitted from the TestFlight tab of the ASC website once the test information above is set.
+- Export compliance for a build that uses encryption, if Apple asks, is answered in the ASC website.
 
 ---
 
@@ -174,11 +177,12 @@ Manual interruptions you must do yourself:
 When: You need a build on App Store Connect and want to do it from the agent.
 
 Steps:
+1. `register_bundle_id` - for a brand-new app, register its explicit bundle id first (idempotent; confirm:true to create). The app record and the profile both need it.
    MANUAL: an Apple Distribution certificate must already exist in your login keychain. Certificate creation and cloud signing are not available to least-privilege API keys.
-1. `setup_app_store_signing` - downloads the app's IOS_APP_STORE provisioning profiles (app + extensions), installs them, and writes a manual-signing ExportOptions.plist. This sidesteps the cloud-signing permission most API keys lack.
-2. `build_and_archive` - xcodebuild archive + export using that ExportOptions.plist. Requires Xcode on this Mac. Give it the .xcodeproj/.xcworkspace, scheme, and the generated plist.
-3. `upload_binary` confirm:true - uploads the .ipa via altool with your API key.
-4. `wait_for_build` until the build is VALID, then `attach_build`.
+2. `setup_app_store_signing` - downloads the app's IOS_APP_STORE provisioning profiles (app + extensions), installs them (a new app with none gets one created from the account's distribution certificates with confirm:true), and writes a manual-signing ExportOptions.plist. This sidesteps the cloud-signing permission most API keys lack.
+3. `build_and_archive` - xcodebuild archive + export using that ExportOptions.plist. Requires Xcode on this Mac. Give it the .xcodeproj/.xcworkspace, scheme, and the generated plist.
+4. `upload_binary` confirm:true - uploads the .ipa via altool with your API key.
+5. `wait_for_build` until the build is VALID, then `attach_build`.
 
 Manual interruptions you must do yourself:
 - Building requires the local Xcode toolchain; the API cannot compile.

@@ -385,7 +385,8 @@ describe("the built app", () => {
     const fail = of(f, "manifest.reasons", "fail");
     expect(fail[0].saw).toContain("system boot time");
     expect(fail[0].saw).toContain("the built app");
-  });
+    // Runs clang and Apple's binary tools: 13 s measured on a busy Mac, past the 5 s default.
+  }, 60_000);
 
   it.runIf(onMac)("says so when there is no built app", async () => {
     write("App/Main.swift", "let x = 1\n");
