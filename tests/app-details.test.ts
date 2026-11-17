@@ -1,4 +1,4 @@
-/** Douse friction row 17: app_details shows each version's copyright and the newest version's review contact. */
+/** app_details shows each version's copyright and the newest version's review contact. */
 import { describe, it, expect } from "vitest";
 import { appDetails } from "../src/tools/app-details.js";
 

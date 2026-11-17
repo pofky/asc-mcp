@@ -89,7 +89,7 @@ export async function appDetails(
       result += "\n";
       result += `  - Copyright: ${v.attributes.copyright || "not set"}\n`;
     }
-    // The newest version's App Review contact, so a second app can reuse the account's real answers (Douse friction row 17).
+    // The newest version's App Review contact, so a second app can reuse the account's real answers (found shipping a test app).
     const newest = versions[0];
     try {
       const detail = await client.get<ReviewDetailAttributes>(`/v1/appStoreVersions/${newest.id}/appStoreReviewDetail`);
