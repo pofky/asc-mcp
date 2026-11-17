@@ -290,3 +290,126 @@ describe("asc_guide testflight", () => {
     expect(await ascGuide({ topic: "limitations" })).not.toContain("internal TestFlight group");
   });
 });
+
+/**
+ * Seen on real Apple 17 Nov 2026 (asc-mcp 1.12.0, unlaunched test app): a
+ * PATCH to betaAppReviewDetails with only notes, while the contact was still
+ * empty, gave 409 ENTITY_ERROR.ATTRIBUTE.REQUIRED for all four contact
+ * fields, after the beta localization had already been created.
+ */
+describe("set_beta_test_info and Apple's required review contact", () => {
+  const REQUIRED_409 = JSON.stringify({
+    errors: ["contactEmail", "contactPhone", "contactFirstName", "contactLastName"].map((a) => ({
+      status: "409",
+      code: "ENTITY_ERROR.ATTRIBUTE.REQUIRED",
+      title: "The provided entity is missing a required attribute",
+      detail: `You must provide a value for the attribute '${a}' with this request`,
+      source: { pointer: `/data/attributes/${a}` },
+    })),
+  });
+  const emptyDetail = { id: "RD1", attributes: { contactFirstName: null, contactLastName: null, contactEmail: null, contactPhone: null, notes: null } };
+  const fullDetail = { id: "RD1", attributes: { contactFirstName: "Ann", contactLastName: "Lee", contactEmail: "ann@example.com", contactPhone: "+44 20 7946 0000", notes: null } };
+  const routes = (detail: unknown): Routes => ({
+    "/v1/apps/123/betaAppLocalizations": [],
+    "/v1/apps/123/betaAppReviewDetail": detail,
+    "/v1/apps/123": { id: "123", attributes: { primaryLocale: "en-US" } },
+  });
+
+  it("refuses notes on an empty contact before any write, naming every missing field", async () => {
+    const f = fake(routes(emptyDetail));
+    const out = await setBetaTestInfo(
+      f.client,
+      { app_id: "123", feedback_email: "fb@example.com", description: "d", review_notes: "n", confirm: true },
+      "pro",
+    );
+    expect(out).toContain("Nothing was changed");
+    for (const arg of ["review_contact_first_name", "review_contact_last_name", "review_contact_email", "review_contact_phone"]) expect(out).toContain(arg);
+    expect(f.writes()).toHaveLength(0);
+  });
+
+  it("the preview gives the same refusal, so it never promises a write Apple will refuse", async () => {
+    const f = fake(routes(emptyDetail));
+    const out = await setBetaTestInfo(f.client, { app_id: "123", review_notes: "n" }, "pro");
+    expect(out).toContain("Apple needs the full Beta App Review contact");
+    expect(out).not.toContain("This would write");
+  });
+
+  it("names only the fields still missing when some are given", async () => {
+    const f = fake(routes(emptyDetail));
+    const out = await setBetaTestInfo(
+      f.client,
+      { app_id: "123", review_contact_first_name: "A", review_contact_last_name: "B", review_contact_email: "a@b.co", confirm: true },
+      "pro",
+    );
+    expect(out).toContain("missing review_contact_phone.");
+    expect(out).toContain("that value");
+    expect(f.writes()).toHaveLength(0);
+  });
+
+  it("notes alone on a filled contact sends the stored contact along, preview lists only notes", async () => {
+    const f = fake(routes(fullDetail));
+    expect(await setBetaTestInfo(f.client, { app_id: "123", review_notes: "Use demo mode" }, "pro")).toContain("Beta App Review contact (update): notes");
+    await setBetaTestInfo(f.client, { app_id: "123", review_notes: "Use demo mode", confirm: true }, "pro");
+    expect(f.writes()).toEqual([
+      {
+        method: "PATCH",
+        path: "/v1/betaAppReviewDetails/RD1",
+        body: { data: { type: "betaAppReviewDetails", id: "RD1", attributes: { notes: "Use demo mode", contactFirstName: "Ann", contactLastName: "Lee", contactEmail: "ann@example.com", contactPhone: "+44 20 7946 0000" } } },
+      },
+    ]);
+  });
+
+  it("a blank stored value counts as missing", async () => {
+    const f = fake(routes({ id: "RD1", attributes: { ...fullDetail.attributes, contactPhone: "  " } }));
+    const out = await setBetaTestInfo(f.client, { app_id: "123", review_notes: "n", confirm: true }, "pro");
+    expect(out).toContain("missing review_contact_phone");
+    expect(f.writes()).toHaveLength(0);
+  });
+
+  it("when a later write fails, the error says what was already saved", async () => {
+    const f = fake(routes(fullDetail));
+    const client = f.client as unknown as Record<string, unknown>;
+    client.patch = async (path: string) => {
+      throw new ASCAPIError(409, path, REQUIRED_409);
+    };
+    const err = await setBetaTestInfo(
+      f.client,
+      { app_id: "123", description: "d", review_notes: "n", confirm: true },
+      "pro",
+    ).catch((e: Error) => e);
+    expect(err).toBeInstanceOf(ASCAPIError);
+    const msg = (err as Error).message;
+    expect(msg).toContain("Already saved before this failed:\n- beta app info (en-US, create): description");
+    expect(msg).toContain("Not saved: Beta App Review contact (update) (notes)");
+  });
+
+  it("a failure on the first write is unchanged, with no saved list", async () => {
+    const f = fake(routes(fullDetail));
+    const client = f.client as unknown as Record<string, unknown>;
+    client.post = async (path: string) => {
+      throw new ASCAPIError(409, path, REQUIRED_409);
+    };
+    const err = (await setBetaTestInfo(f.client, { app_id: "123", description: "d", confirm: true }, "pro").catch((e: Error) => e)) as Error;
+    expect(err.message).not.toContain("Already saved");
+  });
+});
+
+describe("Apple's required-attribute 409 hint", () => {
+  it("says the value was not sent, listing each field once, instead of 'rejected'", () => {
+    const body = JSON.stringify({
+      errors: ["contactEmail", "contactPhone", "contactEmail"].map((a) => ({
+        code: "ENTITY_ERROR.ATTRIBUTE.REQUIRED",
+        detail: `You must provide a value for the attribute '${a}' with this request`,
+        source: { pointer: `/data/attributes/${a}` },
+      })),
+    });
+    const msg = new ASCAPIError(409, "/v1/betaAppReviewDetails/RD1", body).message;
+    expect(msg).toContain("Apple needs a value that was not sent: contactEmail, contactPhone.");
+    expect(msg).not.toContain("rejected the value");
+  });
+
+  it("a rejected value keeps the old hint", () => {
+    const body = JSON.stringify({ errors: [{ code: "ENTITY_ERROR.ATTRIBUTE.INVALID.INVALID_PHONE_NUMBER", detail: "The format of the phone number is invalid", source: { pointer: "/data/attributes/contactPhone" } }] });
+    expect(new ASCAPIError(409, "/v1/betaAppReviewDetails/RD1", body).message).toContain("Apple rejected the value for contactPhone");
+  });
+});

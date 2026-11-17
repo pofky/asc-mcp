@@ -118,6 +118,14 @@ export interface BetaTestInfoArgs {
   confirm?: boolean;
 }
 
+/** Apple requires all four on the Beta App Review detail. [attribute, tool argument] */
+const REVIEW_CONTACT: Array<[string, string]> = [
+  ["contactFirstName", "review_contact_first_name"],
+  ["contactLastName", "review_contact_last_name"],
+  ["contactEmail", "review_contact_email"],
+  ["contactPhone", "review_contact_phone"],
+];
+
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const URL_RE = /^https?:\/\/[^\s]+\.[^\s]+$/;
 
@@ -226,10 +234,28 @@ export async function setBetaTestInfo(
   if (Object.keys(reviewAttrs).length) {
     // Apple creates the review detail with the app; there is no POST, only PATCH.
     const detail = await optionalGet(client, `/v1/apps/${args.app_id}/betaAppReviewDetail`);
-    const d = detail && !Array.isArray(detail.data) ? detail.data : undefined;
+    const d = detail && !Array.isArray(detail.data) ? (detail.data as Row) : undefined;
     if (!d) return `Nothing was changed: app ${args.app_id} has no Beta App Review detail to update. The human checks the app id (list_apps).`;
+    // Apple refuses any PATCH here (even notes alone) unless all four contact
+    // fields end up set: 409 ENTITY_ERROR.ATTRIBUTE.REQUIRED, seen on real
+    // Apple 17 Nov 2026 on an app whose detail was still empty. Check before
+    // any write, and send the stored values with the change so a partial
+    // update never trips it.
+    const stored = d.attributes ?? {};
+    const missing = REVIEW_CONTACT.filter(([attr]) => !(reviewAttrs[attr] ?? (typeof stored[attr] === "string" ? (stored[attr] as string).trim() : "")));
+    if (missing.length) {
+      return (
+        `Nothing was changed: Apple needs the full Beta App Review contact (first name, last name, email, phone) before it accepts any review detail, ` +
+        `and this app is missing ${missing.map(([, arg]) => arg).join(", ")}. ` +
+        `Next: the AI asks the human for ${missing.length === 1 ? "that value" : "those values"} (the phone with country code, e.g. +44 20 7946 0000), then calls set_beta_test_info again with ${missing.length === 1 ? "it" : "them"}. None is invented.`
+      );
+    }
+    const attributes: Record<string, string> = { ...reviewAttrs };
+    for (const [attr] of REVIEW_CONTACT) {
+      if (attributes[attr] === undefined) attributes[attr] = (stored[attr] as string).trim();
+    }
     plans.push({ label: "Beta App Review contact (update)", method: "PATCH", path: `/v1/betaAppReviewDetails/${d.id}`,
-      body: { data: { type: "betaAppReviewDetails", id: d.id, attributes: reviewAttrs } }, fields: Object.keys(reviewAttrs) });
+      body: { data: { type: "betaAppReviewDetails", id: d.id, attributes } }, fields: Object.keys(reviewAttrs) });
   }
 
   const summary = plans.map((p) => `- ${p.label}: ${p.fields.join(", ")}`).join("\n");
@@ -239,9 +265,21 @@ export async function setBetaTestInfo(
       `The AI calls set_beta_test_info again with the same arguments and confirm: true.`
     );
   }
+  const done: Plan[] = [];
   for (const p of plans) {
-    if (p.method === "POST") await client.post(p.path, p.body);
-    else await client.patch(p.path, p.body);
+    try {
+      if (p.method === "POST") await client.post(p.path, p.body);
+      else await client.patch(p.path, p.body);
+    } catch (err) {
+      if (!done.length || !(err instanceof Error)) throw err;
+      // Earlier writes landed; say so, or the human believes nothing changed.
+      const saved = done.map((x) => `- ${x.label}: ${x.fields.join(", ")}`).join("\n");
+      err.message +=
+        `\n\nAlready saved before this failed:\n${saved}\nNot saved: ${p.label} (${p.fields.join(", ")}). ` +
+        `After fixing it, call set_beta_test_info with only the fields that were not saved.`;
+      throw err;
+    }
+    done.push(p);
   }
   return `Set TestFlight test information:\n${summary}\nNext: the AI calls assign_build_to_group (external groups also need Beta App Review, which uses this information).`;
 }

@@ -1,3 +1,14 @@
+# v1.12.1: TestFlight review contact, caught before Apple refuses it
+
+Found by running 1.12.0 against a real app with no TestFlight information yet.
+
+Fixed:
+- `set_beta_test_info` with review notes, or part of the Beta App Review contact, on an app whose contact was still empty: Apple refuses any change there until first name, last name, email and phone are all set. The preview said it would work and the write failed after the beta description had already been saved. Now the preview and the write both stop before anything is written, name the missing contact fields and ask for them. Once the contact is complete, changing only the notes sends the saved contact along, so Apple accepts it.
+- When a later step of `set_beta_test_info` fails, the error now lists what was already saved, so you retry only what was not.
+- When Apple says a required value is missing, the hint says the value was not sent. It used to say Apple rejected its format.
+
+Existing users need nothing from this release.
+
 # v1.12.0: a brand-new app, from bundle id to TestFlight, in the chat
 
 Built by taking a new iOS app from a new bundle id to TestFlight through asc-mcp itself. Each time it fell back to the website or a terminal, or a reply was wrong, the cause is fixed here or the reply now names the manual step. Creating the app record stays on Apple's website, because Apple's API refuses it. 44 tools, up from 41.

@@ -210,6 +210,12 @@ function friendlyHint(status: number, body: string, path = ""): string {
       // ENTITY_ERROR.ATTRIBUTE.* is a rejected field value, and telling someone
       // to check the version state when Apple rejected their phone format sends
       // them the wrong way entirely.
+      if (/ENTITY_ERROR\.ATTRIBUTE\.REQUIRED/.test(body)) {
+        const fields = [...new Set([...body.matchAll(/"pointer"\s*:\s*"\/data\/attributes\/(\w+)"/g)].map((m) => m[1]))];
+        return (
+          `Apple needs a value that was not sent${fields.length ? `: ${fields.join(", ")}` : ""}. Nothing in this request was saved. Ask the human for ${fields.length === 1 ? "it" : "them"} and retry with ${fields.length === 1 ? "it" : "them"} included.`
+        );
+      }
       if (/ENTITY_ERROR\.ATTRIBUTE/.test(body)) {
         const field = body.match(/"pointer"\s*:\s*"\/data\/attributes\/(\w+)"/)?.[1];
         return (
