@@ -15,6 +15,7 @@ Fixed, each one hit on a real app:
 - `build_and_archive` returns the `.ipa` this run produced, never an older one in the folder, and `pre_build_command` runs a generator such as `xcodegen generate` first.
 - `upload_screenshots` refuses a pixel size Apple will reject before reserving anything, `replace: true` swaps a whole set, and the reply reports Apple's processing state instead of assuming success.
 - A Pro key saved to `~/.asc-mcp/license.json` while the server is running is used on the next call, with no restart.
+- `app_details` now shows each version's copyright and the newest version's App Review contact, so a missing one is caught before submission instead of by Apple.
 - Error hints are matched to the kind of call that failed, so a signing or bundle id error no longer points at review status.
 
 Existing users need nothing from this release. Every new write previews without `confirm: true`.
