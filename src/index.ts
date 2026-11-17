@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { ASCClient } from "./client.js";
-import { explainError } from "./errors.js";
+import { explainErrorLive } from "./errors.js";
 import { LICENSE_API_URL, validateLicense, clearLicenseCache, lastLicenseStatus, saveLicenseKey, savedLicenseKey, savedLicenseKeyPath } from "./license.js";
 import { requestTrial } from "./trial.js";
 import { registerPrompts } from "./prompts.js";
@@ -408,7 +408,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
           // A preview call that failed is given back: a wrong app id or an
           // Apple outage should not spend it.
           takePreviewNotice()?.refund();
-          return { content: [{ type: "text" as const, text: explainError(err) }], isError: true };
+          return { content: [{ type: "text" as const, text: await explainErrorLive(err) }], isError: true };
         }
       });
   }
@@ -695,7 +695,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
           structuredContent: result as unknown as Record<string, unknown>,
         };
       } catch (err) {
-        return { content: [{ type: "text" as const, text: explainError(err) }], isError: true };
+        return { content: [{ type: "text" as const, text: await explainErrorLive(err) }], isError: true };
       }
     },
   );
@@ -725,7 +725,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
           structuredContent: result as unknown as Record<string, unknown>,
         };
       } catch (err) {
-        return { content: [{ type: "text" as const, text: explainError(err) }], isError: true };
+        return { content: [{ type: "text" as const, text: await explainErrorLive(err) }], isError: true };
       }
     },
   );

@@ -191,7 +191,7 @@ export class ASCClient {
 
     if (!response.ok) {
       const errBody = await response.text();
-      throw new ASCAPIError(response.status, path, errBody);
+      throw new ASCAPIError(response.status, path, errBody, true);
     }
 
     // 204 No Content (typical for DELETE / some PATCH) has no JSON body.
@@ -303,6 +303,8 @@ export class ASCAPIError extends Error {
     public status: number,
     public path: string,
     public body: string,
+    /** True for a POST/PATCH/DELETE: the change may have applied before Apple failed. */
+    public write = false,
   ) {
     const detail = tryParseErrorDetail(body);
     const hint = friendlyHint(status, body, path);

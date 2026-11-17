@@ -12,6 +12,8 @@ import { homedir } from "node:os";
 import { getToken, clearTokenCache } from "./auth.js";
 import { validateLicense, lastLicenseStatus, LICENSE_API_URL } from "./license.js";
 import { discoverPrivateKey } from "./setup.js";
+import { currentAscOutage, outageLine } from "./apple-status.js";
+import { ISSUES_URL } from "./errors.js";
 import { PRO_PRICE, UPGRADE_URL } from "./gate.js";
 
 export type CheckStatus = "ok" | "warn" | "fail";
@@ -139,12 +141,22 @@ export async function runDoctor(): Promise<DoctorReport> {
           detail: "Authenticated but not authorized (403).",
           fix: "The key's role is too low. Give it App Manager (or higher) at the Integrations page, or generate a new key with that role.",
         });
+      } else if (res.status >= 500) {
+        const outage = await currentAscOutage();
+        checks.push({
+          name: "Live connection",
+          status: "fail",
+          detail: `App Store Connect returned ${res.status}.`,
+          fix: outage
+            ? outageLine(outage)
+            : "This is Apple's side, not your key. Retry in a minute; Apple's status: https://developer.apple.com/system-status/",
+        });
       } else {
         checks.push({
           name: "Live connection",
           status: "fail",
           detail: `App Store Connect returned ${res.status}.`,
-          fix: "Transient Apple error or network issue. Retry; if it persists, regenerate the key.",
+          fix: "Unexpected answer from Apple. Retry; if it persists, check https://developer.apple.com/system-status/ or report it at " + ISSUES_URL + ".",
         });
       }
     } catch (err) {

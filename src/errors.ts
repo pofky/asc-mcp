@@ -11,6 +11,7 @@
 
 import { ASCAPIError, ASCWriteTimeoutError, isSigningFamily, isVersionFamily } from "./client.js";
 import { INTEGRATIONS_URL } from "./connect.js";
+import { currentAscOutage, outageLine, type AppleOutage } from "./apple-status.js";
 
 /** Where a person reports something the product got wrong. */
 export const ISSUES_URL = "https://github.com/pofky/asc-mcp/issues";
@@ -36,7 +37,7 @@ function isKeyFile(err: unknown): boolean {
   return /^ERR_OSSL|ERR_CRYPTO|DECODER|asn1|PEM|unsupported key|private key/i.test(`${code} ${err.message}`);
 }
 
-function nextForApple(status: number, path = ""): string {
+function nextForApple(status: number, path = "", outage?: AppleOutage | null, isWrite = false): string {
   if (status === 401 || status === 403) {
     return "Next: call asc_setup_check, which tests the key and Issuer ID against Apple and names the exact fix. If it says the key was revoked or lacks a role, the user creates a new key (App Manager or Admin) at " +
       `${INTEGRATIONS_URL}, then restarts the MCP client.`;
@@ -54,6 +55,10 @@ function nextForApple(status: number, path = ""): string {
   if (status === 422 || status === 400) return "Next: fix the value Apple names above and retry.";
   if (status === 429) return "Next: wait about a minute, then retry once.";
   if (status >= 500) {
+    if (outage) {
+      return `Next: ${outageLine(outage)}` +
+        (isWrite ? " If this call was a change, check first with the matching read tool, since Apple may have applied it before failing." : "");
+    }
     return "Next: retry in a minute. If this call was a change, check first with the matching read tool, since Apple may have applied it before failing. Apple's status: https://developer.apple.com/system-status/";
   }
   return "Next: call asc_setup_check; if it passes, the detail above is Apple's own reason.";
@@ -63,9 +68,9 @@ function nextForApple(status: number, path = ""): string {
  * The reply text for a tool call that threw. Always one paragraph of what
  * happened, then a `Next:` line.
  */
-export function explainError(err: unknown): string {
+export function explainError(err: unknown, outage?: AppleOutage | null): string {
   const msg = err instanceof Error ? err.message : String(err);
-  if (err instanceof ASCAPIError) return `Error: ${msg}\n\n${nextForApple(err.status, err.path)}`;
+  if (err instanceof ASCAPIError) return `Error: ${msg}\n\n${nextForApple(err.status, err.path, outage, err.write)}`;
   if (err instanceof ASCWriteTimeoutError) {
     return (
       `Error: ${msg}\n\n` +
@@ -89,4 +94,14 @@ export function explainError(err: unknown): string {
     `Error: ${msg}\n\n` +
     `Next: call asc_setup_check. If it passes, retry once. If the same error comes back, it is a bug in asc-mcp: the user can report it with this message at ${ISSUES_URL}.`
   );
+}
+
+/**
+ * explainError plus Apple's status feed. Kept as a wrapper so explainError stays
+ * synchronous and pure: only a 5xx pays for the (cached, 5 s capped, never
+ * throwing) feed lookup, and this is the one call every tool reply goes through.
+ */
+export async function explainErrorLive(err: unknown): Promise<string> {
+  const outage = err instanceof ASCAPIError && err.status >= 500 ? await currentAscOutage() : null;
+  return explainError(err, outage);
 }
