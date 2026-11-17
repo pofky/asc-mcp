@@ -9,7 +9,7 @@
  * The agent is told in the server instructions to follow that line.
  */
 
-import { ASCAPIError, isSigningFamily, isVersionFamily } from "./client.js";
+import { ASCAPIError, ASCWriteTimeoutError, isSigningFamily, isVersionFamily } from "./client.js";
 import { INTEGRATIONS_URL } from "./connect.js";
 
 /** Where a person reports something the product got wrong. */
@@ -66,6 +66,12 @@ function nextForApple(status: number, path = ""): string {
 export function explainError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (err instanceof ASCAPIError) return `Error: ${msg}\n\n${nextForApple(err.status, err.path)}`;
+  if (err instanceof ASCWriteTimeoutError) {
+    return (
+      `Error: ${msg}\n\n` +
+      "Next: do not repeat the change yet. Check what Apple has with the matching read tool (for example app_details, review_status or list_builds), and only retry if the change is not there. If it keeps timing out, check Apple's status: https://developer.apple.com/system-status/"
+    );
+  }
   if (isNetwork(err)) {
     return (
       `Error: could not reach App Store Connect from this computer (${msg}${codeOf(err) ? `, ${codeOf(err)}` : ""}).\n\n` +

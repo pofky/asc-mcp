@@ -4,6 +4,125 @@ import type { ASCConfig, ASCResponse } from "./types.js";
 const BASE_URL = "https://api.appstoreconnect.apple.com";
 
 /**
+ * How requests are timed and retried.
+ *
+ * Apple intermittently answers reads with HTTP 500 for long stretches, where the
+ * next identical read succeeds, and one call once hung 312 s with no timeout.
+ * So every request has a timeout, and idempotent reads retry transient failures.
+ * Writes are never retried: a repeated POST could create a second resource.
+ * Tests replace these through `setRetryPolicy`.
+ */
+export interface RetryPolicy {
+  /** Total tries for a read, first one included. */
+  attempts: number;
+  /** Delay before retry n (1-based) is baseDelayMs * 2^(n-1), plus up to 50% jitter. Worst case with 3 attempts: 1.5 s + 3 s. */
+  baseDelayMs: number;
+  /** A 429 Retry-After longer than this is not waited out; the 429 surfaces. */
+  maxRetryAfterMs: number;
+  /** Timeout for JSON API calls. Apple answers these in well under 10 s when healthy. */
+  timeoutMs: number;
+  /** Timeout for sales report downloads, which stream a gzipped file and are slower. */
+  reportTimeoutMs: number;
+}
+
+const DEFAULT_POLICY: RetryPolicy = {
+  attempts: 3,
+  baseDelayMs: 1000,
+  maxRetryAfterMs: 10_000,
+  timeoutMs: 60_000,
+  reportTimeoutMs: 120_000,
+};
+let policy: RetryPolicy = { ...DEFAULT_POLICY };
+
+/** Override the policy (tests). Call with no argument to restore the defaults. */
+export function setRetryPolicy(p?: Partial<RetryPolicy>): void {
+  policy = { ...DEFAULT_POLICY, ...p };
+}
+
+const TRANSIENT_STATUSES = new Set([500, 502, 503, 504]);
+
+/** A write whose request timed out: Apple may or may not have applied it. */
+export class ASCWriteTimeoutError extends Error {
+  constructor(
+    public method: string,
+    public path: string,
+    public timeoutMs: number,
+  ) {
+    super(
+      `${method} ${path} got no answer from App Store Connect within ${Math.round(timeoutMs / 1000)} s. ` +
+        "The change may or may not have been applied.",
+    );
+    this.name = "ASCWriteTimeoutError";
+  }
+}
+
+function isTimeout(err: unknown): boolean {
+  return err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+}
+
+const NETWORK_ERROR = /fetch failed|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ENETUNREACH|EHOSTUNREACH|UND_ERR|socket/i;
+function isTransientNetwork(err: unknown): boolean {
+  if (isTimeout(err)) return true;
+  if (!(err instanceof Error)) return false;
+  const code = String((err as { code?: unknown }).code ?? (err as { cause?: { code?: unknown } }).cause?.code ?? "");
+  return err instanceof TypeError || NETWORK_ERROR.test(`${code} ${err.message}`);
+}
+
+function sleep(ms: number): Promise<void> {
+  return ms > 0 ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve();
+}
+
+function backoffMs(retryNumber: number): number {
+  const base = policy.baseDelayMs * 2 ** (retryNumber - 1);
+  return Math.round(base * (1 + Math.random() * 0.5));
+}
+
+/** Seconds or HTTP-date Retry-After, in ms; null when absent or unreadable. */
+function retryAfterMs(res: Response): number | null {
+  const h = res.headers?.get?.("retry-after");
+  if (!h) return null;
+  const secs = Number(h);
+  if (Number.isFinite(secs)) return Math.max(0, secs * 1000);
+  const at = Date.parse(h);
+  return Number.isNaN(at) ? null : Math.max(0, at - Date.now());
+}
+
+/**
+ * fetch for an idempotent read: timeout on every try, and transient failures
+ * (500/502/503/504, network errors, timeouts, a 429 with a short Retry-After)
+ * are retried. The last failure is returned or thrown unchanged, so callers map
+ * it exactly as before.
+ */
+async function fetchRead(url: string, init: RequestInit, timeoutMs = policy.timeoutMs): Promise<Response> {
+  for (let attempt = 1; ; attempt++) {
+    const last = attempt >= policy.attempts;
+    let res: Response;
+    try {
+      res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+    } catch (err) {
+      if (last || !isTransientNetwork(err)) throw err;
+      await sleep(backoffMs(attempt));
+      continue;
+    }
+    if (last) return res;
+    if (TRANSIENT_STATUSES.has(res.status)) {
+      await res.text().catch(() => "");
+      await sleep(backoffMs(attempt));
+      continue;
+    }
+    if (res.status === 429) {
+      const wait = retryAfterMs(res);
+      if (wait !== null && wait <= policy.maxRetryAfterMs) {
+        await res.text().catch(() => "");
+        await sleep(wait);
+        continue;
+      }
+    }
+    return res;
+  }
+}
+
+/**
  * Low-level App Store Connect API client.
  * Handles authentication, pagination, and error mapping.
  */
@@ -25,7 +144,7 @@ export class ASCClient {
       this.config.privateKeyPath,
     );
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchRead(url.toString(), {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -52,14 +171,23 @@ export class ASCClient {
       this.config.privateKeyPath,
     );
 
-    const response = await fetch(`${BASE_URL}${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
+    // Never retried, whatever fails. A timeout is the one case worth naming:
+    // the request left, so Apple may have applied it.
+    let response: Response;
+    try {
+      response = await fetch(`${BASE_URL}${path}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: AbortSignal.timeout(policy.timeoutMs),
+      });
+    } catch (err) {
+      if (isTimeout(err)) throw new ASCWriteTimeoutError(method, path, policy.timeoutMs);
+      throw err;
+    }
 
     if (!response.ok) {
       const errBody = await response.text();
@@ -102,7 +230,7 @@ export class ASCClient {
         this.config.privateKeyPath,
       );
 
-      const response = await fetch(nextUrl, {
+      const response = await fetchRead(nextUrl, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -143,12 +271,16 @@ export class ASCClient {
       this.config.privateKeyPath,
     );
 
-    const response = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/a-gzip",
+    const response = await fetchRead(
+      url.toString(),
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/a-gzip",
+        },
       },
-    });
+      policy.reportTimeoutMs,
+    );
 
     if (!response.ok) {
       if (response.status === 404) {
