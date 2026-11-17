@@ -88,9 +88,16 @@ export function buildCheckoutUrl(tool?: string, email?: string): string {
  * grace costs nothing and prevents a support ticket, or a cancellation, over
  * our own webhook plumbing.
  *
+ * Matches the asc-mcp Polar org's `benefit_revocation_grace_period` (21 days,
+ * set 2026-11-17; read it at GET /v1/organizations/{id} subscription_settings).
+ * Polar retries a failed renewal for that long and sends `subscription.revoked`
+ * when it gives up, which ends access at once through `revoked_at`. A shorter
+ * window here cut a customer in card retry off on day 5 while Polar was still
+ * collecting. Change both together.
+ *
  * Exported for regression tests.
  */
-export const GRACE_DAYS = 4;
+export const GRACE_DAYS = 21;
 
 /**
  * Whether an inactive row is a paid subscription whose period has only just
@@ -141,7 +148,7 @@ export function isLicenseUsable(
   // the grace window was written for, and until 2026-08-31 it could never reach
   // it: `shouldBeActive` writes active = 0 the moment `current_period_end` is in
   // the past, and this function returned "inactive" before the grace branch. So
-  // the four days only ever applied when NO webhook arrived at all, which is
+  // the grace days only ever applied when NO webhook arrived at all, which is
   // the one situation where the customer is least likely to be mid-renewal.
   // The customer this hurts is the one in card retry, whose access
   // `DEAD_STATUSES` deliberately preserves by leaving `past_due` off the list.
@@ -168,14 +175,14 @@ export function isLicenseUsable(
   // The grace window exists for one reason: a renewal webhook that is late or
   // dropped must never demote someone who has paid. A trial has no renewal and
   // nothing to be late, so granting it grace would just silently turn every
-  // 7-day trial into an 11-day one. Anything that is not explicitly a trial
+  // 7-day trial into a 28-day one. Anything that is not explicitly a trial
   // keeps the paid behaviour, including the rows that predate this column.
   if (row.source === "trial") return { usable: false, reason: "trial_expired" };
 
   // Nor does a subscription the customer has already cancelled. Grace covers a
   // renewal webhook that is late; when renewal is switched off there is no
   // webhook coming, and the customer keeps exactly the time they paid for.
-  // Applied to every cancellation it was quietly giving away four extra days.
+  // Applied to every cancellation it was quietly giving away extra days.
   if (row.canceled_at) return { usable: false, reason: "canceled" };
 
   // Terminal, and checked here too: a revoked row can carry active = 1 only

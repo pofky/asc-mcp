@@ -230,7 +230,7 @@ candidateKeys(secret) =
 if (expiry >= now)           -> usable
 if (source === "trial")      -> unusable   // nothing to be late
 if (canceled_at)             -> unusable   // no renewal coming
-if (now &lt;= expiry + 4 days)  -> usable, in grace
+if (now &lt;= expiry + grace) -> usable, in grace  // 21 days, as long as Polar retries
                              -> expired</pre>
 <div class="rule"><span class="lbl">Rule</span><p>Grace compensates for a specific missing message. Apply it only where that message exists.</p></div>
 </section>

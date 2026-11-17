@@ -100,7 +100,7 @@ describe("isLicenseUsable", () => {
 
   // The bug this covers: `shouldBeActive` writes active = 0 the moment
   // `current_period_end` is in the past, and `isLicenseUsable` used to return
-  // "inactive" before it ever reached the grace branch. The four days were
+  // "inactive" before it ever reached the grace branch. The grace days were
   // therefore unreachable through the webhook path, which is the only path a
   // real customer arrives on. The customer it locked out is the one in card
   // retry, whose access `DEAD_STATUSES` deliberately preserves by leaving
@@ -113,7 +113,7 @@ describe("isLicenseUsable", () => {
   });
 
   it("stops at the edge of the window, deactivated or not", () => {
-    expect(isLicenseUsable(paid({ active: 0, expires_at: days(-5) }), NOW)).toEqual({
+    expect(isLicenseUsable(paid({ active: 0, expires_at: days(-GRACE_DAYS - 1) }), NOW)).toEqual({
       usable: false,
       reason: "inactive",
     });
@@ -178,7 +178,7 @@ describe("isLicenseUsable", () => {
     });
   });
 
-  it("never gives a trial grace, which would silently make every trial 11 days", () => {
+  it("never gives a trial grace, which would silently make every trial longer", () => {
     expect(isLicenseUsable(paid({ source: "trial", expires_at: days(-0.001) }), NOW)).toEqual({
       usable: false,
       reason: "trial_expired",
