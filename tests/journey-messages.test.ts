@@ -168,6 +168,23 @@ describe("submit_for_review", () => {
   });
 });
 
+describe("submit_for_review never leaves ready products behind", () => {
+  it("does not submit the version when a ready product is refused", async () => {
+    const calls: Call[] = [];
+    const { client } = fake({
+      "/v1/apps/1/appStoreVersions": version("DEVELOPER_REJECTED"),
+      "/v1/apps/1/inAppPurchasesV2": { data: [{ id: "i1", attributes: { productId: "com.x.tip", state: "READY_TO_SUBMIT" } }] },
+      "/v1/apps/1/subscriptionGroups": { data: [] },
+      "/v1/inAppPurchaseSubmissions": () => new ASCAPIError(409, "/v1/inAppPurchaseSubmissions", '{"errors":[{"code":"STATE_ERROR"}]}'),
+      "/v1/reviewSubmissions": { data: { id: "r1" } },
+    }, calls);
+    const out = await submitForReview(client, { app_id: "1", confirm: true }, "pro");
+    expect(out).toContain("NOT submitted");
+    expect(out).toContain("com.x.tip");
+    expect(calls.some((c) => c.method === "POST" && c.path === "/v1/reviewSubmissions")).toBe(false);
+  });
+});
+
 describe("sales_report empty replies", () => {
   it("is recognised as empty by the preview gate, so it is not charged", async () => {
     const client = { getReport: async () => "No report available for the requested date range." } as never;
