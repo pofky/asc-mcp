@@ -1,6 +1,6 @@
 {
   "name": "@pofky/asc-mcp",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "App Store Connect MCP server: your AI agent ships your iOS app, from a new bundle id to App Store review. A fastlane alternative for AI agents. 45 tools: register bundle ids, App Store signing profiles, Xcode archive and upload, TestFlight groups and testers, metadata, age rating, screenshots, in-app purchases and subscriptions, a preflight audit, submit and release, plus reviews and sales. asc_guide flags every step Apple's API cannot do before you reach it. Works with Claude Code, Claude Desktop, Cursor, Windsurf or any MCP client. Six tools free with no limit; 7-day trial of the rest, no card.",
   "homepage": "https://asc-mcp.pages.dev",
   "repository": {
