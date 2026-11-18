@@ -11,7 +11,7 @@ import { createIAP } from "../src/tools/iap.js";
 import { setAppAvailability } from "../src/tools/availability.js";
 import { discoverPrivateKey, keyIdFromPath } from "../src/setup.js";
 import { updateVersionMetadata } from "../src/tools/update-version-metadata.js";
-import { createVersion, submitForReview } from "../src/tools/version-control.js";
+import { createVersion, submitForReview, cancelSubmission } from "../src/tools/version-control.js";
 import { listBuilds, attachBuild } from "../src/tools/builds.js";
 import { uploadScreenshots } from "../src/tools/screenshots.js";
 import { releaseVersion, managePhasedRelease } from "../src/tools/release-control.js";
@@ -156,6 +156,35 @@ describe("submit_for_review requires explicit confirm", () => {
   it("refuses without confirm even on pro", async () => {
     const r = await submitForReview(stubClient, { app_id: "1" }, "pro");
     expect(r).toContain("confirm: true");
+  });
+});
+
+describe("cancel_submission", () => {
+  function client(states: string[]) {
+    const patched: Array<{ path: string; body: unknown }> = [];
+    const c = {
+      get: async () => ({ data: states.map((state, i) => ({ id: `sub${i}`, attributes: { state, platform: "IOS" } })) }),
+      patch: async (path: string, body: unknown) => { patched.push({ path, body }); return {}; },
+    } as never;
+    return { c, patched };
+  }
+  it("says so when nothing is open", async () => {
+    const { c, patched } = client([]);
+    expect(await cancelSubmission(c, { app_id: "1", confirm: true }, "pro")).toContain("nothing to withdraw");
+    expect(patched).toHaveLength(0);
+  });
+  it("previews without confirm and warns about first IAPs", async () => {
+    const { c, patched } = client(["WAITING_FOR_REVIEW"]);
+    const r = await cancelSubmission(c, { app_id: "1" }, "pro");
+    expect(r).toContain("confirm: true");
+    expect(r).toContain("first in-app purchases");
+    expect(patched).toHaveLength(0);
+  });
+  it("cancels the open submission with confirm", async () => {
+    const { c, patched } = client(["WAITING_FOR_REVIEW"]);
+    const r = await cancelSubmission(c, { app_id: "1", confirm: true }, "pro");
+    expect(r).toContain("Withdrew");
+    expect(patched).toEqual([{ path: "/v1/reviewSubmissions/sub0", body: { data: { type: "reviewSubmissions", id: "sub0", attributes: { canceled: true } } } }]);
   });
 });
 

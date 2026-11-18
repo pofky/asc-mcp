@@ -48,6 +48,7 @@ const TOOL_META = {
   update_version_metadata: ["Edit version metadata", "write"],
   create_version: ["Create a new app version", "write"],
   submit_for_review: ["Submit a version for App Review", "write"],
+  cancel_submission: ["Withdraw a submission from App Review", "write"],
   attach_build: ["Attach a build to a version", "write"],
   upload_screenshots: ["Upload screenshots", "write"],
   release_version: ["Release an approved version", "write"],

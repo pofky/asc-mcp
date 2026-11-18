@@ -101,6 +101,7 @@ const FLOWS: Record<Exclude<GuideTopic, "overview" | "limitations">, Flow> = {
       "Later IAPs/subscriptions (not the first ever) can be created and will submit via the API.",
       "`release_preflight` with `project_path` if you have the Xcode project - fix every FAIL, confirm anything UNKNOWN by hand, and re-run.",
       "`submit_for_review` confirm:true.",
+      "To change a version that is already Waiting for Review (swap the build, fix metadata): `cancel_submission` confirm:true, wait until review_status shows it editable, `attach_build`, then `submit_for_review` again. First-ever IAPs must be re-added to the version in the website.",
       "After approval: `release_version` confirm:true, or `manage_phased_release` start.",
       "Use `metadata_diff` any time to see exactly what changed between live and pending across locales.",
     ],

@@ -266,3 +266,54 @@ export async function submitForReview(
     "Typical review time: 24-48 hours. Track with review_status."
   );
 }
+
+/** Review submission states that can still be withdrawn by the developer. */
+const OPEN_SUBMISSION_STATES = ["WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_ISSUES"];
+
+/**
+ * Withdraw the app's open review submission, so the version becomes editable
+ * again (to swap the build, fix metadata) and can be resubmitted. Apple's API
+ * does this with PATCH /v1/reviewSubmissions/{id} canceled:true.
+ */
+export async function cancelSubmission(
+  client: ASCClient,
+  args: { app_id: string; platform?: Platform; confirm?: boolean },
+  tier: Tier,
+): Promise<string> {
+  const gate = requirePro(tier, "Withdrawing a review submission", "cancel_submission");
+  if (gate) return gate;
+
+  const res = await client.get<{ state: string; platform: string; submittedDate?: string }>("/v1/reviewSubmissions", {
+    "filter[app]": args.app_id,
+    "filter[state]": OPEN_SUBMISSION_STATES.join(","),
+    ...(args.platform ? { "filter[platform]": args.platform } : {}),
+    limit: "10",
+  });
+  const open = (Array.isArray(res.data) ? res.data : [res.data]).filter(Boolean);
+  if (open.length === 0) {
+    return "There is no submission waiting for or in review, so there is nothing to withdraw. review_status shows where the version stands.";
+  }
+  if (open.length > 1 && !args.platform) {
+    return (
+      `${open.length} submissions are open (${open.map((s) => `${s.attributes.platform} ${s.attributes.state}`).join(", ")}). ` +
+      "Nothing was changed. Pass platform to choose one."
+    );
+  }
+  const sub = open[0]!;
+  const what = `the ${sub.attributes.platform} submission (${sub.attributes.state})`;
+  if (!args.confirm) {
+    return (
+      `This withdraws ${what} from App Review. The version becomes editable again and goes to the back of the queue ` +
+      "when it is resubmitted. If the submission carried the app's first in-app purchases, they must be added to the " +
+      "version again in the website before resubmitting. Re-run with confirm: true to proceed."
+    );
+  }
+  await client.patch(`/v1/reviewSubmissions/${sub.id}`, {
+    data: { type: "reviewSubmissions", id: sub.id, attributes: { canceled: true } },
+  });
+  return (
+    `Withdrew ${what}. Apple takes a minute to move the version back to an editable state ` +
+    "(review_status shows Developer Rejected). Then attach_build, fix what you need, and submit_for_review again. " +
+    "If this app has never had an in-app purchase approved, add the products to the version in the website and submit there."
+  );
+}
