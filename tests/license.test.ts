@@ -215,7 +215,7 @@ describe("when the license server gives no answer", () => {
   });
 
   it("does not stretch past the grace", async () => {
-    const longAgo = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    const longAgo = new Date(Date.now() - 22 * 86_400_000).toISOString();
     mockFetchOnce({ valid: true, tier: "pro", expires: longAgo });
     await validateLicense("OLD-KEY");
     clearLicenseCache();
