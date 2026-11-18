@@ -149,7 +149,9 @@ export async function submitForReview(
   // the API). If we hit that, we abort WITHOUT submitting the version alone, so
   // the products are never orphaned.
   const productItems: string[] = [];
-  const FIRST_IAP_BLOCK = /MUST_BE_SUBMITTED_ON_VERSION/;
+  // Apple words the first-product block two ways: the documented code, and (after a
+  // withdrawn submission) "has no pending version for submission".
+  const FIRST_IAP_BLOCK = /MUST_BE_SUBMITTED_ON_VERSION|no pending version for submission/;
 
   const iapRes = await client.get<{ productId: string; state: string }>(
     `/v1/apps/${args.app_id}/inAppPurchasesV2`,
