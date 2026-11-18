@@ -49,7 +49,7 @@ function manualSteps(record: RecordSnapshot, project: ProjectInput): string[] {
       ? `privacy.checklist: your manifests declare these data types: ${types.join(", ")}. Confirm each is on the App Privacy page, which Apple's API cannot read: ${privacyUrl}`
       : `privacy.checklist: confirm the App Privacy page is complete, which Apple's API cannot read: ${privacyUrl} (set_privacy_nutrition has the steps).`,
   );
-  steps.push(`If you distribute in the EU, confirm your trader status on the App Information page: https://appstoreconnect.apple.com/apps/${record.appId}/distribution/info (set_eu_trader_status has the steps).`);
+  steps.push(`compliance.page: on the App Compliance page (App Store Connect > your app > General > App Compliance, linked from https://appstoreconnect.apple.com/apps/${record.appId}/distribution/info), declare whether the app is a regulated medical device (required to distribute in the EU/EEA, UK or US) and, if you distribute in the EU, your trader status (set_eu_trader_status has the steps).`);
   return steps;
 }
 
