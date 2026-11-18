@@ -640,3 +640,12 @@ describe("license key persistence advice depends on how it was installed", () =>
     expect(process.env.ASC_INSTALL === "mcpb").toBe(false);
   });
 });
+
+describe("the client's offline renewal grace matches the worker", () => {
+  it("uses GRACE_DAYS", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../src/license.ts", import.meta.url), "utf8");
+    const m = src.match(/const RENEWAL_GRACE_MS = (\d+) \*/);
+    expect(Number(m?.[1])).toBe(GRACE_DAYS);
+  });
+});
