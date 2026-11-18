@@ -66,7 +66,7 @@ const FLOWS: Record<Exclude<GuideTopic, "overview" | "limitations">, Flow> = {
       "`set_app_metadata` - primary/secondary category, copyright, content rights, export compliance (most apps: uses_non_exempt_encryption=false).",
       "`set_app_price` - price_usd:0 for free, or an exact USA price point. Required before submit. Changing a price the app already has needs confirm:true.",
       "`update_version_metadata` - description, keywords, what's-new (note: what's-new is NOT editable on a first 1.0 with no prior release; the tool drops it and reports it skipped), promo text, marketing/support/privacy-policy URLs, name, subtitle. Char limits validated.",
-      "`set_app_availability` - all_territories:true, or a list of territories. Turning territories off on an app already set up needs confirm:true.",
+      "`set_app_availability` - all_territories:true, or a list of territories. To sell everywhere you can without extra paperwork, pass all_territories:true with except_territories:[\"CHN\"]: mainland China needs an ICP filing, an AI-generated content (AIGC) declaration and a security assessment first. Turning territories off on an app already set up needs confirm:true.",
       "`set_age_rating` - pass only the declarations that apply; the tool fetches, merges the full V2 set, and submits (it is NOT a partial PATCH).",
       "`set_review_contact` - name, phone, email, demo account if the app needs login. Required before submit.",
       "`attach_build` - newest VALID build by default.",

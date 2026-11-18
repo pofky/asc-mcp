@@ -383,6 +383,22 @@ describe("set_app_availability territory semantics", () => {
     expect(out).toContain("3 of 3");
   });
 
+  it("sells everywhere except the listed territories", async () => {
+    const { client, patched } = stubClient(true);
+    const unconfirmed = await setAppAvailability(client, { app_id: "1", all_territories: true, except_territories: ["JPN"] }, "pro");
+    expect(unconfirmed).toContain("Nothing was changed");
+    const out = await setAppAvailability(client, { app_id: "1", all_territories: true, except_territories: ["JPN"], confirm: true }, "pro");
+    expect(patched).toEqual([{ path: "/v1/territoryAvailabilities/row2", available: false }]);
+    expect(out).toContain("2 of 3");
+  });
+
+  it("rejects an unknown excepted territory and except with a list", async () => {
+    const { client, patched } = stubClient(true);
+    expect(await setAppAvailability(client, { app_id: "1", all_territories: true, except_territories: ["XXX"] }, "pro")).toContain("XXX is not a territory");
+    expect(await setAppAvailability(client, { app_id: "1", territories: ["USA"], except_territories: ["JPN"] }, "pro")).toContain("Nothing was changed");
+    expect(patched).toHaveLength(0);
+  });
+
   it("patches the v1 territoryAvailabilities path, not v2", async () => {
     const { client, patched } = stubClient(true);
     await setAppAvailability(client, { app_id: "1", territories: ["USA"], confirm: true }, "pro");

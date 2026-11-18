@@ -18,6 +18,11 @@ export interface AppAvailabilityArgs {
    * that an app_id on its own can never widen where an app is sold.
    */
   all_territories?: boolean;
+  /**
+   * With all_territories: every territory except these (e.g. ["CHN"], which needs
+   * extra government filings). Saves listing ~174 codes to leave one out.
+   */
+  except_territories?: string[];
   /** Auto-include future new territories. Defaults to true. */
   available_in_new_territories?: boolean;
 }
@@ -57,6 +62,13 @@ export async function setAppAvailability(
     );
   }
 
+  if (args.except_territories?.length && args.territories !== undefined) {
+    return (
+      "Nothing was changed: except_territories works with all_territories: true, not with a territories list. " +
+      "Either list the territories to keep, or pass all_territories: true with the ones to leave out."
+    );
+  }
+
   const newTerr = args.available_in_new_territories ?? true;
 
   // Resolve the target territory set (all, unless a subset was given).
@@ -64,12 +76,15 @@ export async function setAppAvailability(
   const allIds = (Array.isArray(allTerrRes.data) ? allTerrRes.data : [allTerrRes.data])
     .filter(Boolean)
     .map((t) => (t as { id: string }).id);
-  const unknown = (args.territories ?? []).filter((t) => !allIds.includes(t));
+  const except = args.except_territories ?? [];
+  const unknown = [...(args.territories ?? []), ...except].filter((t) => !allIds.includes(t));
   if (unknown.length) {
     return `Nothing was changed: ${unknown.join(", ")} ${unknown.length === 1 ? "is not a territory" : "are not territories"} Apple knows. Use three-letter codes such as USA, GBR, JPN.`;
   }
   // An empty array is a real instruction ("nowhere"), not a missing argument.
-  const wanted = new Set(args.territories === undefined ? allIds : args.territories);
+  const wanted = new Set(
+    args.territories === undefined ? allIds.filter((id) => !except.includes(id)) : args.territories,
+  );
 
   // Does an availability already exist for this app?
   let availId: string | null = null;

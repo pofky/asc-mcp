@@ -1080,7 +1080,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
 
   tool(
     "set_app_availability",
-    "Set the app's country/region availability. Requires an explicit choice: a territories list, or all_territories:true, or [] to take the app off sale worldwide. Pro feature.",
+    "Set the app's country/region availability. Requires an explicit choice: a territories list, or all_territories:true (optionally with except_territories), or [] to take the app off sale worldwide. Pro feature.",
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       territories: z
@@ -1091,6 +1091,10 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
         .boolean()
         .optional()
         .describe("Put the app on sale in every App Store territory. Required when territories is omitted, so an app_id alone can never widen where an app is sold."),
+      except_territories: z
+        .array(z.string())
+        .optional()
+        .describe('With all_territories:true, leave these out, e.g. ["CHN"] (mainland China needs an ICP filing, an AIGC declaration and a security assessment).'),
       available_in_new_territories: z
         .boolean()
         .optional()
