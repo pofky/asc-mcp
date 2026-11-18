@@ -1,10 +1,10 @@
 # asc-mcp (App Store Connect MCP server)
 
-> An MCP server that lets an AI coding agent drive App Store Connect end to end, from a brand-new app's bundle id to App Store review: register the bundle id, create the App Store signing profile, edit version metadata, upload screenshots, build and upload a binary, run TestFlight, create in-app purchases and subscriptions, audit a version before submission, submit for review, and release. 45 tools, 6 slash-command prompts. Free 7-day trial of everything with no credit card, started from inside the agent; after that Pro is $9 per month (VAT included; in the US, Canada and India sales tax is added at checkout).
+> An MCP server that lets your AI coding agent take an iOS app from a new bundle id to App Store review: register the bundle id, create the App Store signing profile, edit version metadata, upload screenshots, build and upload a binary, run TestFlight, create in-app purchases and subscriptions, audit a version before submission, submit for review, and release. 45 tools, 6 slash-command prompts. Free 7-day trial of everything with no credit card, started from inside the agent. After that Pro is $9 per month (VAT included; in the US, Canada and India sales tax is added at checkout).
 
 ## Facts
 
-- Package: `@pofky/asc-mcp` on npm. Current version 1.13.0 (published 18 November 2026).
+- Package: `@pofky/asc-mcp` on npm. Current version 1.14.0 (published 18 November 2026).
 - Install: add `npx -y @pofky/asc-mcp` as an MCP server (Claude Code: `claude mcp add asc-mcp -- npx -y @pofky/asc-mcp`), then give the agent your Issuer ID: the `asc_connect` tool finds the downloaded `.p8`, files it in `~/.appstoreconnect/private_keys`, tests it against Apple and unlocks every tool in the running session, with no config file and no restart. From a terminal, `npx @pofky/asc-mcp init --write` writes the client config instead.
 - One-click install on Claude Desktop (macOS and Windows): download the `.mcpb` bundle from https://github.com/pofky/asc-mcp/releases/latest and open it. Claude installs it in one click and collects the Issuer ID and the `.p8` file natively, with no config file editing and no restart. Every other client uses the `npx` server above.
 - Tool count: 45 tools and 6 prompts. 6 tools are free with no limit. Of the other 38, 10 that only read work 5 times in total per machine with no license, as a preview; past that, all 38 require Pro or a running trial.
@@ -70,7 +70,7 @@ A: Wrappers map endpoints one to one, which can mean hundreds of tools and leave
 
 ## Citation
 
-asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.13.0, updated 18 November 2026).
+asc-mcp, App Store Connect MCP server, https://asc-mcp.pages.dev/ (v1.14.0, updated 18 November 2026).
 
 ## How it compares (verified 7 September 2026)
 

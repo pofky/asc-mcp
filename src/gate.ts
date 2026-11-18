@@ -128,7 +128,7 @@ export function takePreviewNotice(): { footer: string; refund: () => void } | nu
         ? `Free preview: ${preview.left} of ${PREVIEW_CALLS} Pro calls left on this machine.` +
           (preview.left === PREVIEW_CALLS - 1 ? ` ${price}` : "")
         : `That was the last of your ${PREVIEW_CALLS} free Pro calls. ${price}\n` +
-          "Or try everything free for 7 days, no card: call `asc_start_trial` with the user's email."),
+          "Want to keep going? Start the free 7-day trial, no card: call `asc_start_trial` with the user's email."),
     refund: () => {
       setPreviewUsed(Math.max(0, previewUsed() - 1));
     },
@@ -222,7 +222,7 @@ export function requirePro(
     (spent || lapsedPaid
       ? (spent
           ? "Your 7-day trial has ended. "
-          : "Your subscription is no longer active; a declined renewal is the usual cause. ") +
+          : "Your subscription is no longer active. A declined renewal is the usual cause, and it is quick to fix. ") +
         `Pro is ${PRO_PRICE}, cancel any time:\n` +
         `  ${upgradeUrl(tool)}\n` +
         `  (direct link: ${CHECKOUT_URL})\n\n` +
@@ -232,8 +232,8 @@ export function requirePro(
         `Pro is ${PRO_PRICE}, cancel any time:\n` +
         `  ${upgradeUrl(tool)}\n` +
         `  (direct link: ${CHECKOUT_URL})\n\n` +
-        "Or free for 7 days, no card: call the `asc_start_trial` tool with the user's email. " +
-        `It unlocks all ${TOOL_COUNT} tools in this session immediately, no restart.\n`) +
+        "Or try it free for 7 days, no card: call the `asc_start_trial` tool with the user's email. " +
+        `All ${TOOL_COUNT} tools unlock in this session right away, with no restart.\n`) +
     `\n${keyAdvice()}`
   );
 }

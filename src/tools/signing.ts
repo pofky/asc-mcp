@@ -11,6 +11,8 @@ interface ProfileAttrs {
   uuid: string;
   profileContent: string;
   profileType: string;
+  /** ACTIVE or INVALID. Apple invalidates a profile when a capability or certificate behind it changes. */
+  profileState?: string;
 }
 
 /**
@@ -130,7 +132,7 @@ export async function setupAppStoreSigning(
   }
 
   const profRes = await client.getAll<ProfileAttrs>("/v1/profiles", {
-    "fields[profiles]": "name,uuid,profileContent,profileType",
+    "fields[profiles]": "name,uuid,profileContent,profileType,profileState",
     limit: "200",
   });
   const profiles = (Array.isArray(profRes.data) ? profRes.data : [profRes.data]).filter(Boolean);
@@ -139,6 +141,10 @@ export async function setupAppStoreSigning(
   mkdirSync(dir, { recursive: true });
 
   const installed: Array<{ bundleId: string; name: string }> = [];
+  // The app's own App Store profiles Apple has marked INVALID (a capability or
+  // certificate changed). Installing one makes the export fail inside Xcode, so
+  // they are never installed; if they are all there is, they are replaced.
+  const invalid: Array<{ id: string; name: string }> = [];
   let teamId: string | undefined;
   for (const p of profiles) {
     if (p.attributes.profileType !== "IOS_APP_STORE") continue;
@@ -146,9 +152,28 @@ export async function setupAppStoreSigning(
     if (!meta.bundleId) continue;
     // Keep the main app bundle and any extension under it (e.g. .GlasynWidget).
     if (meta.bundleId !== appBundle && !meta.bundleId.startsWith(appBundle + ".")) continue;
+    if (p.attributes.profileState && p.attributes.profileState !== "ACTIVE") {
+      if (meta.bundleId === appBundle) invalid.push({ id: p.id, name: p.attributes.name });
+      continue;
+    }
     teamId = teamId ?? meta.teamId;
     writeFileSync(join(dir, `${p.attributes.uuid}.mobileprovision`), Buffer.from(p.attributes.profileContent, "base64"));
     installed.push({ bundleId: meta.bundleId, name: p.attributes.name });
+  }
+
+  if (!installed.some((i) => i.bundleId === appBundle) && invalid.length > 0) {
+    const names = invalid.map((i) => `"${i.name}"`).join(", ");
+    if (!args.confirm) {
+      return (
+        `The App Store profile for ${appBundle} (${names}) is no longer valid: Apple invalidates a profile when a capability or certificate behind it changes. ` +
+        "Confirming deletes it and creates a fresh one from your current distribution certificates, then installs it. Nothing was changed. " +
+        "The AI calls setup_app_store_signing again with the same arguments and confirm: true."
+      );
+    }
+    for (const p of invalid) await client.del(`/v1/profiles/${p.id}`);
+    const stop = await createAppStoreProfile(client, appBundle, true, new Date());
+    if (stop) return stop;
+    return setupAppStoreSigning(client, { ...args, confirm: false }, tier);
   }
 
   if (installed.length === 0) {

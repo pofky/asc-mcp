@@ -154,10 +154,12 @@ const SETUP_INSTRUCTIONS =
   `at ${INTEGRATIONS_URL} (Users and Access > Integrations > App Store Connect API), Generate API Key, any name, Access "App Manager", then Download (Apple allows one download). ` +
   "Then ask them to paste the Issuer ID shown above the keys list, and call asc_connect with it: it finds the downloaded .p8, files it, tests it against Apple and unlocks every tool in this session, with no config file, terminal or restart. " +
   "If they already have a key, skip straight to asking for the Issuer ID. asc_setup_check diagnoses anything that goes wrong. " +
-  "Once connected, the read tools work free, ten Pro read tools give 5 free calls, and the write and control tools need Pro, which asc_start_trial unlocks free for 7 days.";
+  `Once connected, six tools work free (list apps, app details, review status and the setup tools), ten Pro read tools give 5 free calls, and the write and control tools need Pro (${PRO_PRICE}), which asc_start_trial unlocks free for 7 days with no card. ` +
+  "If the user asks about price or the trial before connecting, tell them this: the trial starts in the chat once the key is connected, because it is tied to their Apple account.";
 
 const CONNECT_HINT =
-  "Fastest fix, no terminal or config file: give your agent the Issuer ID from the page above and it calls asc_connect, which finds the downloaded .p8, files it, tests it and unlocks every tool in this chat.";
+  "Fastest fix, no terminal or config file: give your agent the Issuer ID from the page above and it calls asc_connect, which finds the downloaded .p8, files it, tests it and unlocks every tool in this chat.\n" +
+  `Once you are connected, you can try every tool free for 7 days with no card (just ask your agent to start the asc-mcp trial). After that Pro is ${PRO_PRICE}, and six tools stay free for good.`;
 
 /**
  * Credential-less start: connect anyway with the two free orientation tools so
@@ -1117,12 +1119,13 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
 
   tool(
     "register_bundle_id",
-    "Register an explicit bundle id (App ID) in the Apple Developer account, the first step for a brand-new app before its app record and signing profile. Idempotent: an existing identifier is returned, not an error. Without confirm:true it only checks and says what it would register. Pro feature.",
+    "Register an explicit bundle id (App ID) in the Apple Developer account, the first step for a brand-new app before its app record and signing profile, and turn on its capabilities (push notifications, iCloud, Sign in with Apple and the rest). Idempotent: an existing identifier is returned, not an error, and capabilities already on are left alone. Without confirm:true it only checks and says what it would do. Pro feature.",
     {
       identifier: z.string().describe("Explicit reverse-DNS bundle id, e.g. app.example.ios (no wildcard)"),
       name: z.string().describe("Portal name: letters, digits and spaces only"),
       platform: z.enum(["IOS", "MAC_OS", "UNIVERSAL"]).optional().describe("Default IOS"),
-      confirm: z.boolean().optional().describe("Required. This registers a new identifier on your Apple Developer account."),
+      capabilities: z.array(z.string()).optional().describe("Apple capability types to turn on, e.g. [\"PUSH_NOTIFICATIONS\", \"ICLOUD\", \"APPLE_ID_AUTH\"]. Works on a new or an existing bundle id. In-App Purchase is already on for every explicit id."),
+      confirm: z.boolean().optional().describe("Required to write. Registers the identifier and/or turns on the capabilities on your Apple Developer account."),
     },
     safe((args) => registerBundleId(client, args, tier)),
   );
@@ -1133,7 +1136,7 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
     {
       app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
       output_plist: z.string().optional().describe("Where to write ExportOptions.plist (default ./ExportOptions.plist)"),
-      confirm: z.boolean().optional().describe("Needed only when the app has no App Store profile yet: confirm:true creates one on your Apple Developer account."),
+      confirm: z.boolean().optional().describe("Needed only when the app has no usable App Store profile (none yet, or Apple invalidated it after a capability or certificate change): confirm:true creates a fresh one on your Apple Developer account."),
     },
     safe((args) => setupAppStoreSigning(client, args, tier)),
   );

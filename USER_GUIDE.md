@@ -44,7 +44,7 @@ Manual interruptions you must do yourself:
 When: Brand-new app, never been on the store. The hardest flow because of first-time-only Apple constraints.
 
 Steps:
-1. `register_bundle_id` - registers the explicit bundle id in the Developer account (idempotent; confirm:true to create). The app record's bundle id picker only lists registered ids.
+1. `register_bundle_id` - registers the explicit bundle id in the Developer account (idempotent; confirm:true to create). The app record's bundle id picker only lists registered ids. Pass `capabilities` (e.g. PUSH_NOTIFICATIONS, ICLOUD, APPLE_ID_AUTH) to turn them on now; In-App Purchase is already on.
    MANUAL: the app RECORD must already exist. `POST /v1/apps` is forbidden for API keys, so create the app (name, bundle ID, SKU, primary language) once in App Store Connect > Apps > +. App Groups are portal-only too.
 2. `list_apps` to get the numeric app_id.
 3. Build + upload a binary so a build exists to attach (see topic:binary), or upload via Xcode/Transporter. Then `wait_for_build` until VALID.
@@ -179,7 +179,7 @@ Manual interruptions you must do yourself:
 When: You need a build on App Store Connect and want to do it from the agent.
 
 Steps:
-1. `register_bundle_id` - for a brand-new app, register its explicit bundle id first (idempotent; confirm:true to create). The app record and the profile both need it.
+1. `register_bundle_id` - for a brand-new app, register its explicit bundle id first (idempotent; confirm:true to create). The app record and the profile both need it. Adding a capability later (`capabilities`, on an existing id) invalidates the App Store profile; `setup_app_store_signing` with confirm:true replaces it.
    MANUAL: an Apple Distribution certificate must already exist in your login keychain. Certificate creation and cloud signing are not available to least-privilege API keys.
 2. `setup_app_store_signing` - downloads the app's IOS_APP_STORE provisioning profiles (app + extensions), installs them (a new app with none gets one created from the account's distribution certificates with confirm:true), and writes a manual-signing ExportOptions.plist. This sidesteps the cloud-signing permission most API keys lack.
 3. `build_and_archive` - xcodebuild archive + export using that ExportOptions.plist. Requires Xcode on this Mac. Give it the .xcodeproj/.xcworkspace, scheme, and the generated plist.

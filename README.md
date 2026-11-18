@@ -1,12 +1,12 @@
 # asc-mcp
 
-> **Ship your iOS app from your coding agent, from a new bundle id to App Store review.** An MCP server for App Store Connect: 45 tools that register the bundle id, create the signing profile, archive and upload the build, set up TestFlight, write the metadata, age rating and screenshots, create in-app purchases, submit and release, plus an intelligence layer that audits a version before you submit and summarizes your reviews. Every step Apple's API cannot do is flagged before you reach it. 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper. A fastlane alternative for AI agents.
+> **Ask your agent to ship your iOS app, from a new bundle id to App Store review.** asc-mcp is an App Store Connect MCP server with 45 tools. Your agent registers the bundle id, creates the signing profile, archives and uploads the build, sets up TestFlight, writes the metadata, age rating and screenshots, creates in-app purchases, then submits and releases. Before you submit, it audits the version and summarizes your reviews. When Apple's API cannot do a step, you hear about it before you reach it. It also comes with 6 slash-command workflows and a bundled Claude Skill. If you have been looking for a fastlane alternative for AI agents, this is it.
 
-**New in 1.12:** a brand-new app's first steps now run in the chat too: bundle id, App Store signing profile, TestFlight groups and internal testers. This release was built by taking a new iOS app from a new bundle id to TestFlight through asc-mcp itself; each Apple trap it hit on the way is fixed or named in the reply. Creating the app record itself stays on Apple's website, and `asc_guide` tells you when.
+**New in 1.12:** a brand-new app's first steps now happen in the chat too: bundle id, App Store signing profile, TestFlight groups and internal testers. We built this by taking a real new iOS app from bundle id to TestFlight through asc-mcp itself, so every Apple trap we hit is either fixed or named in the reply. Creating the app record stays on Apple's website, and `asc_guide` tells you when you get there.
 
 [asc-mcp.pages.dev](https://asc-mcp.pages.dev) &middot; [npm](https://www.npmjs.com/package/@pofky/asc-mcp) &middot; [Pricing: 7-day free trial, then $9/month, VAT included (sales tax added in the US, Canada and India)](https://asc-mcp.pages.dev/#pricing)
 
-**Claude Desktop, one click:** download the latest [`asc-mcp.mcpb`](https://github.com/pofky/asc-mcp/releases/latest) and open it. Claude asks for your Issuer ID and lets you pick your `.p8` with a file picker. No JSON, no restart hunt.
+**Claude Desktop, one click:** download the latest [`asc-mcp.mcpb`](https://github.com/pofky/asc-mcp/releases/latest) and open it. Claude asks for your Issuer ID and lets you pick your `.p8` in a file picker. No JSON to edit, no restart.
 
 **Everything else** (Claude Code, Cursor, Windsurf, Cline): add the server, then finish setup in the chat.
 
@@ -14,21 +14,21 @@
 claude mcp add asc-mcp -- npx -y @pofky/asc-mcp   # Claude Code. Other clients: the JSON block under "Manual config"
 ```
 
-Create an API key at [App Store Connect > Integrations](https://appstoreconnect.apple.com/access/integrations/api) and download it, then tell your agent: **"connect asc-mcp, my Issuer ID is <the UUID on that page>"**. It calls `asc_connect`, which finds the downloaded `.p8`, files it in Apple's standard folder, tests it against Apple and unlocks every tool in the same chat. No terminal, no config file, no restart. (`npx @pofky/asc-mcp init --write` does the same from a terminal.)
+Create an API key at [App Store Connect > Integrations](https://appstoreconnect.apple.com/access/integrations/api) and download it, then tell your agent: **"connect asc-mcp, my Issuer ID is <the UUID on that page>"**. It calls `asc_connect`, which finds the downloaded `.p8`, files it in Apple's standard folder, tests it against Apple and unlocks every tool in the same chat. You do not need a terminal, a config file or a restart. (`npx @pofky/asc-mcp init --write` does the same from a terminal.)
 
-Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 45 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month (VAT included; in the US, Canada and India sales tax is added at checkout). Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no license, as a preview.
+Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 45 tools unlock for 7 days. There is no card and nothing to cancel. The trial starts in the chat you are already in, so whatever you were blocked on works on your very next call. If you keep it, Pro is $9 a month (VAT included; in the US, Canada and India sales tax is added at checkout). Six tools stay free for good, and two of those (the setup check and the playbook) need nothing but Node. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no license, so you can see them on your own app first.
 
 ### In plain words
 
-You made a toy and you want it in a giant toy store, the App Store. The store has a strict office. Before your toy reaches the shelf, you fill out lots of forms, add pictures, set a price, and wait for a helper to check it all. Forget one thing and they say "no, try again", and days are gone.
+Say you made a toy and you want it on the shelves of a giant toy store, the App Store. The store has a strict office. Before your toy gets a place on the shelf, you fill out a lot of forms, add pictures, set a price and wait while someone checks it all. Forget one thing and they say "no, try again", and a few days are gone.
 
-asc-mcp is a helper robot for that office. It talks to your AI assistant, so you just say what you want:
+asc-mcp is a helper robot for that office. It works through your AI assistant, so you just say what you want:
 
 - **"How is my toy doing?"** It tells you whether the store said yes or no, and with Pro, what people wrote about your toy.
 - **"Is my toy ready?"** It checks your forms first, like a teacher reading your homework before you hand it in: "You forgot a picture, and this link is broken."
 - **"Fix it for me."** It fills in forms, adds pictures and sets prices. Before a big move, like changing a price or handing your toy to the store, it stops and asks: are you sure?
 
-Checking whether the store said yes or no is free, with no time limit. Everything else works free for 7 days, no card, then it's $9 a month, VAT included, with sales tax added in the US, Canada and India. The robot checks your homework, and the store still decides.
+Checking whether the store said yes or no is free, with no time limit. Everything else is free for 7 days with no card, then $9 a month, VAT included (sales tax is added in the US, Canada and India). The robot checks your homework. The store still makes the call.
 
 For the grown-ups: the toy is your app, the office is App Store Connect, and the robot is an MCP server running on your own computer.
 
@@ -41,13 +41,13 @@ For the grown-ups: the toy is your app, the office is App Store Connect, and the
 | "Show me 1-star reviews" | Customer reviews filtered by rating, territory, sorted by date |
 | "What were my downloads this week?" | Sales and revenue summary by territory |
 
-No context switching. No portal. Just ask.
+Ask in the chat you are already in. You do not have to open the portal.
 
 ## What Makes This Different
 
-Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Different angle, same API surface plus more.
+We maintain the successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Same API surface, plus more, from a different angle.
 
-Other ASC MCP servers wrap the API and give you 80 to 982 raw endpoints. This one gives you 45 opinionated tools, 6 slash-command Prompts, and a Claude Skill that all think. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
+Other ASC MCP servers wrap the API and hand your agent 80 to 982 raw endpoints to sort out. This one gives it 45 tools that each finish a job, plus 6 slash-command Prompts and a Claude Skill. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so this server adds no cost of its own.
 
 **Why full control is possible without fastlane:** per [fastlane's docs](https://docs.fastlane.tools/app-store-connect-api/), `deliver` and `pilot` can authenticate with an App Store Connect API key, the same kind of key this server uses with your `.p8`. The release steps you would script with them are tools here, no Ruby toolchain required. The only step that needs your Mac is building and signing the binary, which `build_and_archive` and `upload_binary` drive via Xcode.
 

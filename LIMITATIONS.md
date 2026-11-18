@@ -13,8 +13,12 @@ Why: DELETE /v1/apps is forbidden for API keys (probed live: apps allows GET and
 Do instead: First take it off sale everywhere, which IS automatable: set_app_availability with territories: [] and confirm: true turns all ~175 territories off (Apple requires this even for an app that was never released). Also remove any in-app purchases from sale. Then, in the ASC website: Apps > your app > App Information > Additional Information > Remove App. Needs the Account Holder or Admin role, and it will not appear while the app is in Ready for Review, Waiting for Review, In Review, Metadata Rejected or Rejected. Note the SKU can never be reused in the organisation, and the bundle ID cannot be reused if a build was ever uploaded.
 
 ### Create an App Group
-Why: Portal-only; no API.
-Do instead: Apple Developer portal > Identifiers.
+Why: Portal-only; no API. `register_bundle_id` can turn the App Groups capability on, but not create or assign the group.
+Do instead: Apple Developer portal > Identifiers > App Groups, then assign it on the app's identifier.
+
+### Capabilities that need settings (iCloud containers, Data Protection level, Sign in with Apple grouping)
+Why: `register_bundle_id` turns capabilities on without settings; Apple refuses a few that require them and the reply names each one.
+Do instead: Apple Developer portal > Identifiers > your app id > the capability's Configure button. Then `setup_app_store_signing` with confirm:true replaces the invalidated profile.
 
 ### App Privacy nutrition label
 Why: appDataUsages is not in the public API.
