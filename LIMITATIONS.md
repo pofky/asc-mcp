@@ -24,6 +24,10 @@ Do instead: ASC website. Run `set_privacy_nutrition` for the exact checklist + d
 Why: No public API attribute/resource.
 Do instead: ASC website. Run `set_eu_trader_status` for steps + deep link. Legal decision.
 
+### Regulated medical device declaration (EU/EEA, UK, US)
+Why: Not exposed by asc-mcp; Apple collects it on the App Compliance page.
+Do instead: ASC website: your app > General > App Compliance. Declare whether the app is a regulated medical device. Legal decision.
+
 ### Submit an app's FIRST in-app purchases / subscriptions
 Why: First products return FIRST_NON_CONSUMABLE_MUST_BE_SUBMITTED_ON_VERSION; only the website bundles them with the version.
 Do instead: ASC website: open the version, Add for Review, tick the products, submit together. `submit_for_review` aborts to avoid orphaning. Later products submit via API.

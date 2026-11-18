@@ -1,3 +1,20 @@
+# v1.13.0: from submit to Waiting for Review, through an Apple outage
+
+Built by taking a new app through its first App Store submission with asc-mcp itself, during a day-long App Store Connect outage. 45 tools, up from 44.
+
+New:
+- `cancel_submission` withdraws a submission that is waiting for or in review, so you can swap the build and submit again. It asks first (`confirm: true`) and warns when the app's first in-app purchases would have to be re-added on the website.
+- `review_status` shows the build the version carries and each in-app purchase and subscription's review state. When the version is in review without a product it offers, the reply says so, since Apple can reject it under guideline 3.1.1.
+- `set_app_availability` takes `except_territories` with `all_territories: true`, so "everywhere but mainland China" no longer means typing 174 territory codes. The guide names China's extra filings.
+
+Fixed, each one hit on a real app:
+- `submit_for_review` no longer sends a version to review without its in-app purchases. A product Apple refused used to be skipped silently; now it stops the submission and says which products went.
+- Reads retry Apple's transient 5xx and network errors with backoff, and every request has a timeout. One call used to hang for five minutes. A write is never retried, and a timed-out write says it may have applied and names the read that checks.
+- On a 5xx that survives the retries, errors and `asc_setup_check` read Apple's developer status page and name an ongoing outage. They no longer suggest regenerating a key that is fine.
+- The guide and `release_preflight` name Apple's App Compliance page: the regulated medical device declaration (EU/EEA, UK, US) and trader status.
+
+Existing users need nothing from this release.
+
 # v1.12.1: TestFlight review contact, caught before Apple refuses it
 
 Found by running 1.12.0 against a real app with no TestFlight information yet.

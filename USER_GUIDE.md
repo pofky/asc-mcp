@@ -51,13 +51,14 @@ Steps:
 4. `set_app_metadata` - primary/secondary category, copyright, content rights, export compliance (most apps: uses_non_exempt_encryption=false).
 5. `set_app_price` - price_usd:0 for free, or an exact USA price point. Required before submit. Changing a price the app already has needs confirm:true.
 6. `update_version_metadata` - description, keywords, what's-new (note: what's-new is NOT editable on a first 1.0 with no prior release; the tool drops it and reports it skipped), promo text, marketing/support/privacy-policy URLs, name, subtitle. Char limits validated.
-7. `set_app_availability` - all_territories:true, or a list of territories. Turning territories off on an app already set up needs confirm:true.
+7. `set_app_availability` - all_territories:true, or a list of territories. To sell everywhere you can without extra paperwork, pass all_territories:true with except_territories:["CHN"]: mainland China needs an ICP filing, an AI-generated content (AIGC) declaration and a security assessment first. Turning territories off on an app already set up needs confirm:true.
 8. `set_age_rating` - pass only the declarations that apply; the tool fetches, merges the full V2 set, and submits (it is NOT a partial PATCH).
 9. `set_review_contact` - name, phone, email, demo account if the app needs login. Required before submit.
 10. `attach_build` - newest VALID build by default.
 11. `upload_screenshots` per display type: APP_IPHONE_67 at minimum, plus APP_IPAD_PRO_3GEN_129 if the app runs on iPad. See topic:screenshots.
    MANUAL: App Privacy nutrition label. Not in the API. Run `set_privacy_nutrition` for the exact checklist + deep link, then set it in the ASC website.
    MANUAL: EU DSA trader status. Not in the API. Run `set_eu_trader_status` for steps + deep link; it's a legal decision, set it in the website.
+   MANUAL: Regulated medical device declaration, on the App Compliance page (General > App Compliance). Required to distribute in the EU/EEA, UK or US: say whether the app is a regulated medical device. A wellness or tracking app that gives no diagnosis or treatment answers no.
 12. If the app has in-app purchases or subscriptions, create them now (topic:iap / topic:subscriptions). The FIRST ones must be submitted WITH the version (next step).
 13. `release_preflight` with `project_path` if you have the Xcode project - fix every FAIL, confirm anything UNKNOWN by hand, and re-run. It ends with the manual steps for this app's state.
 14. MANUAL (if first IAPs exist): the app's very first in-app purchases CANNOT be bundled with the version via the API. In the ASC website, open the version, Add for Review, tick the products, and submit them together. `submit_for_review` detects this and ABORTS rather than orphaning the version. After the first release is live, later IAPs submit via the API fine.
@@ -86,8 +87,9 @@ Steps:
 6. Later IAPs/subscriptions (not the first ever) can be created and will submit via the API.
 7. `release_preflight` with `project_path` if you have the Xcode project - fix every FAIL, confirm anything UNKNOWN by hand, and re-run.
 8. `submit_for_review` confirm:true.
-9. After approval: `release_version` confirm:true, or `manage_phased_release` start.
-10. Use `metadata_diff` any time to see exactly what changed between live and pending across locales.
+9. To change a version that is already Waiting for Review (swap the build, fix metadata): `cancel_submission` confirm:true, wait until review_status shows it editable, `attach_build`, then `submit_for_review` again. First-ever IAPs must be re-added to the version in the website.
+10. After approval: `release_version` confirm:true, or `manage_phased_release` start.
+11. Use `metadata_diff` any time to see exactly what changed between live and pending across locales.
 
 Manual interruptions you must do yourself:
 - Still no API for nutrition label or trader status, but these persist from the first release; only revisit if your data practices changed.

@@ -82,7 +82,6 @@ describe("trial expiry arithmetic", () => {
 describe("renewal grace applies to subscriptions, never to trials", () => {
   const expired = "2026-08-01T00:00:00.000Z";
   const twoDaysLater = new Date("2026-08-03T00:00:00.000Z");
-  const sixDaysLater = new Date("2026-08-07T00:00:00.000Z");
 
   it("keeps a paid license alive inside the grace window", () => {
     const v = isLicenseUsable({ expires_at: expired, active: 1, source: "polar" }, twoDaysLater);
@@ -103,8 +102,11 @@ describe("renewal grace applies to subscriptions, never to trials", () => {
   });
 
   it("still ends a paid license once grace runs out", () => {
-    expect(isLicenseUsable({ expires_at: expired, active: 1, source: "polar" }, sixDaysLater).usable).toBe(false);
-    expect(GRACE_DAYS).toBe(4);
+    const dayAfterGrace = new Date(new Date(expired).getTime() + (GRACE_DAYS + 1) * 24 * 60 * 60 * 1000);
+    expect(isLicenseUsable({ expires_at: expired, active: 1, source: "polar" }, dayAfterGrace).usable).toBe(false);
+    // Pinned to the Polar orgs' benefit_revocation_grace_period (21 days, set 2026-11-17):
+    // change both together.
+    expect(GRACE_DAYS).toBe(21);
   });
 
   it("a live trial is usable", () => {
