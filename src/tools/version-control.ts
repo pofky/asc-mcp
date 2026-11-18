@@ -176,9 +176,14 @@ export async function submitForReview(
       return null;
     } catch (err) {
       if (err instanceof ASCAPIError && FIRST_IAP_BLOCK.test(err.body)) return "first-iap-block";
-      return null; // already submitted / not eligible - skip
+      // Any other failure used to be skipped silently, and the version then went
+      // to review without products its UI offers (a 3.1.1 rejection). A product
+      // that is READY_TO_SUBMIT and could not be sent stops the submission.
+      failedProducts.push(`${label}: ${err instanceof Error ? err.message : String(err)}`);
+      return null;
     }
   };
+  const failedProducts: string[] = [];
 
   for (const iap of pendingIaps) {
     const r = await submitProduct("/v1/inAppPurchaseSubmissions", "inAppPurchaseV2", "inAppPurchases", iap.id, iap.attributes.productId);
@@ -187,6 +192,18 @@ export async function submitForReview(
   for (const s of pendingSubs) {
     const r = await submitProduct("/v1/subscriptionSubmissions", "subscription", "subscriptions", s.id, s.attributes.productId);
     if (r === "first-iap-block") return firstIapGuidance(args.app_id, [...pendingIaps, ...pendingSubs].map((p) => p.attributes.productId));
+  }
+
+  if (failedProducts.length) {
+    const neverSent = [...pendingIaps, ...pendingSubs]
+      .map((p) => p.attributes.productId)
+      .filter((id) => !productItems.includes(id));
+    return (
+      firstIapGuidance(args.app_id, neverSent) +
+      `\n\nVersion ${target.attributes.versionString} was NOT submitted, because these products are ready to submit and Apple refused them through the API:\n` +
+      failedProducts.map((f) => `- ${f}`).join("\n") +
+      (productItems.length ? `\nAlready sent to review: ${productItems.join(", ")}.` : "")
+    );
   }
 
   // 1. Open a review submission for the app.
