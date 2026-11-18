@@ -36,7 +36,7 @@ function usableKey(key?: string): key is string {
 export const LICENSE_TIMEOUT_MS = 8_000;
 
 /** The worker's GRACE_DAYS: a renewal webhook running late must not cost access, online or off. */
-const RENEWAL_GRACE_MS = 4 * 24 * 60 * 60 * 1000;
+const RENEWAL_GRACE_MS = 21 * 24 * 60 * 60 * 1000; // license-worker/src/logic.ts GRACE_DAYS; change both together
 
 /**
  * Validate the license key against the remote license server.
