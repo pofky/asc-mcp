@@ -25,7 +25,7 @@ import { metadataDiff } from "./tools/metadata-diff.js";
 import { triageReviews, formatTriageForAgent } from "./tools/triage-reviews.js";
 import { draftReviewResponse, formatDraftForAgent } from "./tools/draft-review-response.js";
 import { updateVersionMetadata } from "./tools/update-version-metadata.js";
-import { createVersion, submitForReview } from "./tools/version-control.js";
+import { cancelSubmission, createVersion, submitForReview } from "./tools/version-control.js";
 import { listBuilds, attachBuild, waitForBuild } from "./tools/builds.js";
 import { uploadScreenshots } from "./tools/screenshots.js";
 import { releaseVersion, managePhasedRelease } from "./tools/release-control.js";
@@ -774,6 +774,17 @@ function registerFullTools(server: McpServer, config: ASCConfig, initialTier: Ti
       confirm: z.boolean().optional().describe("Must be true to actually submit to App Review."),
     },
     safe((args) => submitForReview(client, args, tier)),
+  );
+
+  tool(
+    "cancel_submission",
+    "Withdraw the app's submission that is waiting for or in App Review, so the version is editable again (swap the build, fix metadata) and can be resubmitted. Outward-facing: requires confirm:true. Pro feature.",
+    {
+      app_id: z.string().regex(/^\d+$/, "App ID must be numeric").describe("App Store Connect app ID"),
+      platform: z.enum(["IOS", "MAC_OS", "TV_OS", "VISION_OS"]).optional().describe("Needed only when more than one platform has a submission open"),
+      confirm: z.boolean().optional().describe("Must be true to actually withdraw the submission."),
+    },
+    safe((args) => cancelSubmission(client, args, tier)),
   );
 
   tool(
