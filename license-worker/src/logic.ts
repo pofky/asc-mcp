@@ -844,7 +844,7 @@ export function trialEmailContent(
   const html = `
     <div style="font-family:-apple-system,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
       <h1 style="font-size:20px">Your ${TRIAL_DAYS}-day asc-mcp Pro trial</h1>
-      <p>All 44 tools are unlocked on this key until <strong>${escapeHtml(ends)}</strong>. No card, nothing to cancel.</p>
+      <p>All 45 tools are unlocked on this key until <strong>${escapeHtml(ends)}</strong>. No card, nothing to cancel.</p>
       <div style="background:#f4f4fb;border:1px solid #ddd;border-radius:8px;padding:16px;font-family:monospace;font-size:18px;letter-spacing:1px;text-align:center">${safeKey}</div>
       <p>Your agent usually writes this into your MCP config for you, and tells you when it could not. Here it is either way, for a second machine or to paste in yourself:</p>
       <pre style="background:#f4f4fb;border-radius:8px;padding:14px;overflow-x:auto;font-size:13px">${configSnippet(safeKey)}</pre>
@@ -859,7 +859,7 @@ export function trialEmailContent(
   const text = [
     `Your ${TRIAL_DAYS}-day asc-mcp Pro trial`,
     "",
-    `All 44 tools are unlocked on this key until ${ends}. No card, nothing to cancel.`,
+    `All 45 tools are unlocked on this key until ${ends}. No card, nothing to cancel.`,
     "",
     `  ${key}`,
     "",

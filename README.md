@@ -1,6 +1,6 @@
 # asc-mcp
 
-> **Ship your iOS app from your coding agent, from a new bundle id to App Store review.** An MCP server for App Store Connect: 44 tools that register the bundle id, create the signing profile, archive and upload the build, set up TestFlight, write the metadata, age rating and screenshots, create in-app purchases, submit and release, plus an intelligence layer that audits a version before you submit and summarizes your reviews. Every step Apple's API cannot do is flagged before you reach it. 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper. A fastlane alternative for AI agents.
+> **Ship your iOS app from your coding agent, from a new bundle id to App Store review.** An MCP server for App Store Connect: 45 tools that register the bundle id, create the signing profile, archive and upload the build, set up TestFlight, write the metadata, age rating and screenshots, create in-app purchases, submit and release, plus an intelligence layer that audits a version before you submit and summarizes your reviews. Every step Apple's API cannot do is flagged before you reach it. 6 slash-command workflows and a bundled Claude Skill. Not another API wrapper. A fastlane alternative for AI agents.
 
 **New in 1.12:** a brand-new app's first steps now run in the chat too: bundle id, App Store signing profile, TestFlight groups and internal testers. This release was built by taking a new iOS app from a new bundle id to TestFlight through asc-mcp itself; each Apple trap it hit on the way is fixed or named in the reply. Creating the app record itself stays on Apple's website, and `asc_guide` tells you when.
 
@@ -16,7 +16,7 @@ claude mcp add asc-mcp -- npx -y @pofky/asc-mcp   # Claude Code. Other clients: 
 
 Create an API key at [App Store Connect > Integrations](https://appstoreconnect.apple.com/access/integrations/api) and download it, then tell your agent: **"connect asc-mcp, my Issuer ID is <the UUID on that page>"**. It calls `asc_connect`, which finds the downloaded `.p8`, files it in Apple's standard folder, tests it against Apple and unlocks every tool in the same chat. No terminal, no config file, no restart. (`npx @pofky/asc-mcp init --write` does the same from a terminal.)
 
-Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 44 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month (VAT included; in the US, Canada and India sales tax is added at checkout). Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no license, as a preview.
+Then ask your agent: **"start my asc-mcp trial, my email is you@example.com"**. All 45 tools unlock for 7 days, no card and nothing to cancel, and the trial activates in the session you are already in, so whatever you were blocked on works on the very next call. After that Pro is $9 a month (VAT included; in the US, Canada and India sales tax is added at checkout). Six tools stay free, and two of those (the setup check and the playbook) need nothing but Node. The Pro tools that only read (reviews, sales, builds, TestFlight groups, preflight, briefing, keywords, competitors, metadata diff, release notes) also work 5 times in total on your machine with no license, as a preview.
 
 ### In plain words
 
@@ -47,7 +47,7 @@ No context switching. No portal. Just ask.
 
 Maintained successor to [JoshuaRileyDev/app-store-connect-mcp-server](https://github.com/JoshuaRileyDev/app-store-connect-mcp-server) (archived Feb 2026). Different angle, same API surface plus more.
 
-Other ASC MCP servers wrap the API and give you 80 to 982 raw endpoints. This one gives you 44 opinionated tools, 6 slash-command Prompts, and a Claude Skill that all think. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
+Other ASC MCP servers wrap the API and give you 80 to 982 raw endpoints. This one gives you 45 opinionated tools, 6 slash-command Prompts, and a Claude Skill that all think. The read tools summarize and audit; the Pro control tools actually drive App Store Connect, from editing metadata to submitting and releasing, with the same API key. Two tools use MCP Sampling: your own client's model does the LLM work, so there is no extra cost from this server.
 
 **Why full control is possible without fastlane:** per [fastlane's docs](https://docs.fastlane.tools/app-store-connect-api/), `deliver` and `pilot` can authenticate with an App Store Connect API key, the same kind of key this server uses with your `.p8`. The release steps you would script with them are tools here, no Ruby toolchain required. The only step that needs your Mac is building and signing the binary, which `build_and_archive` and `upload_binary` drive via Xcode.
 
@@ -72,7 +72,7 @@ In Cursor, Windsurf, Cline or Claude Desktop, add the block under "Manual config
 
 Prefer a terminal? `npx @pofky/asc-mcp init --write` finds the key, asks for the Issuer ID and writes your Claude Desktop / Claude Code config (with a backup). `npx @pofky/asc-mcp doctor` checks the key, the Issuer ID, a live connection and your license; in the chat the same check is `asc_setup_check`.
 
-**Step 4. Start the trial.** Ask your agent: "start my asc-mcp trial" and give it your email. It calls `asc_start_trial`, which unlocks all 44 tools for 7 days with no card and nothing to cancel. The key works in the running session, so whatever you were blocked on works on the very next call, and it is saved on your machine, in `~/.asc-mcp/license.json` and in any MCP client config that already has an asc-mcp entry, so it survives a restart. One trial per Apple developer account. Without a trial, six tools stay free with no time limit, and most Pro tools that only read work 5 times in total as a preview.
+**Step 4. Start the trial.** Ask your agent: "start my asc-mcp trial" and give it your email. It calls `asc_start_trial`, which unlocks all 45 tools for 7 days with no card and nothing to cancel. The key works in the running session, so whatever you were blocked on works on the very next call, and it is saved on your machine, in `~/.asc-mcp/license.json` and in any MCP client config that already has an asc-mcp entry, so it survives a restart. One trial per Apple developer account. Without a trial, six tools stay free with no time limit, and most Pro tools that only read work 5 times in total as a preview.
 
 ### Other ways to install
 
@@ -122,7 +122,7 @@ Works with **Claude Code**, **Cursor**, **Windsurf**, **Cline**, and any MCP-com
 
 | Tool | What it does |
 |------|-------------|
-| `asc_start_trial` | **7 days of everything, no card.** Ask your agent to run it with your email. Unlocks all 44 tools in the running session, no restart, nothing to cancel. |
+| `asc_start_trial` | **7 days of everything, no card.** Ask your agent to run it with your email. Unlocks all 45 tools in the running session, no restart, nothing to cancel. |
 | `asc_connect` | **Setup from the chat.** Only present until you are connected. Takes your Issuer ID, finds the downloaded `.p8`, files it, tests it against Apple and unlocks every tool in the running session. |
 | `asc_setup_check` | **Run first if anything's off.** Checks your key, Issuer ID, a live App Store Connect connection, and license tier, and prints the exact fix for each failure. |
 | `asc_guide` | **Start here.** The in-agent playbook for every flow (first release, update, IAP, subscriptions, reviews, TestFlight, binary), with each manual App Store Connect website step flagged inline. See also [USER_GUIDE.md](USER_GUIDE.md) and [LIMITATIONS.md](LIMITATIONS.md). |
@@ -305,7 +305,7 @@ Lead with the most impactful change. Keep under 4000 chars.
 
 | | Raw API wrappers (free) | This server |
 |---|---|---|
-| **Tool count** | 80 to 982 | 44 opinionated tools (read + control) |
+| **Tool count** | 80 to 982 | 45 opinionated tools (read + control) |
 | **MCP Prompts (slash commands)** | No | Yes, 6 pre-built workflows |
 | **MCP Sampling (zero server-side LLM cost)** | No | Yes, review triage + response drafts |
 | **Claude Skill bundled** | No | Yes, one-line install |
