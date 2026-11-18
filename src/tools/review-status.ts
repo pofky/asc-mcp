@@ -15,7 +15,7 @@ interface SubmissionAttributes {
 export const reviewStatusDefinition = {
   name: "review_status",
   description:
-    "Check the current App Store review status for an app. Shows whether the app is in review, waiting for review, approved, or rejected.",
+    "Check the current App Store review status for an app. Shows whether the app is in review, waiting for review, approved, or rejected, which build the version carries, and each in-app purchase and subscription's review state, so you can see whether the products went with the version.",
   inputSchema: {
     type: "object" as const,
     properties: {
@@ -38,10 +38,13 @@ export async function reviewStatus(
     `/v1/apps/${args.app_id}/appStoreVersions`,
     {
       "fields[appStoreVersions]":
-        "versionString,platform,appStoreState,createdDate",
+        "versionString,platform,appStoreState,createdDate,build",
+      include: "build",
+      "fields[builds]": "version,processingState",
       limit: "5",
     },
   );
+  const buildNumbers = buildsByVersion(versionsResponse as unknown as RawVersionsResponse);
 
   const versions = Array.isArray(versionsResponse.data)
     ? versionsResponse.data
@@ -67,7 +70,9 @@ export async function reviewStatus(
   let result = `## Review Status for App ${args.app_id}\n\n`;
   result += `**Latest version**: v${latestVersion.attributes.versionString} (${latestVersion.attributes.platform})\n`;
   result += `**State**: ${formatReviewState(latestVersion.attributes.appStoreState)}\n`;
-  result += `**Created**: ${latestVersion.attributes.createdDate.split("T")[0]}\n\n`;
+  result += `**Created**: ${latestVersion.attributes.createdDate.split("T")[0]}\n`;
+  const shown = activeVersions[0] ?? latestVersion;
+  result += `**Build**: ${buildLine(buildNumbers.get(shown.id))}\n\n`;
 
   if (activeVersions.length > 0) {
     const active = activeVersions[0];
@@ -102,11 +107,97 @@ export async function reviewStatus(
   if (versions.length > 1) {
     result += "\n### All Recent Versions\n\n";
     for (const v of versions) {
-      result += `- v${v.attributes.versionString} (${v.attributes.platform}): ${formatReviewState(v.attributes.appStoreState)}\n`;
+      result += `- v${v.attributes.versionString} (${v.attributes.platform}): ${formatReviewState(v.attributes.appStoreState)}, build ${buildNumbers.get(v.id) ?? "none"}\n`;
     }
   }
 
+  result += await productsSection(client, args.app_id, shown.attributes.appStoreState);
   return result;
+}
+
+interface RawVersionsResponse {
+  data: Array<{ id: string; relationships?: { build?: { data?: { id: string } | null } } }> | { id: string; relationships?: { build?: { data?: { id: string } | null } } };
+  included?: Array<{ type: string; id: string; attributes?: { version?: string; processingState?: string } }>;
+}
+
+/** Version id to its attached build number, from `include=build`. */
+function buildsByVersion(res: RawVersionsResponse): Map<string, string> {
+  const builds = new Map<string, string>();
+  for (const b of res.included ?? []) {
+    if (b.type === "builds" && b.attributes?.version) builds.set(b.id, b.attributes.version);
+  }
+  const out = new Map<string, string>();
+  for (const v of Array.isArray(res.data) ? res.data : [res.data]) {
+    const id = v?.relationships?.build?.data?.id;
+    if (id) out.set(v.id, builds.get(id) ?? id);
+  }
+  return out;
+}
+
+function buildLine(build: string | undefined): string {
+  return build
+    ? `${build} attached`
+    : "none attached. Apple will not review a version without a build: the AI calls list_builds, then attach_build.";
+}
+
+/** Product states that mean the product is not in any review right now. */
+const NOT_SENT = new Set(["READY_TO_SUBMIT", "MISSING_METADATA", "WAITING_FOR_UPLOAD", "DEVELOPER_ACTIONS_NEEDED", "REJECTED"]);
+/** Product states that mean the product went to review. */
+const SENT = new Set(["WAITING_FOR_REVIEW", "IN_REVIEW", "PENDING_BINARY_APPROVAL"]);
+const IN_QUEUE = new Set(["WAITING_FOR_REVIEW", "IN_REVIEW"]);
+
+interface ProductRow { productId: string; state: string; kind: string }
+
+/**
+ * Each in-app purchase and subscription with its review state. Without this,
+ * "did the products go with the version?" needed a script: a version can sit in
+ * review while its first products stay READY_TO_SUBMIT, and Apple then rejects
+ * it under 3.1.1 for offering purchases it was not given to review.
+ * Each read is best effort: a product list that cannot be read is named, never
+ * reported as "no products".
+ */
+async function productsSection(client: ASCClient, appId: string, versionState: string): Promise<string> {
+  const rows: ProductRow[] = [];
+  const unread: string[] = [];
+  try {
+    const res = await client.get<{ productId: string; state: string }>(`/v1/apps/${appId}/inAppPurchasesV2`, {
+      "fields[inAppPurchases]": "productId,state",
+      limit: "200",
+    });
+    for (const i of (Array.isArray(res.data) ? res.data : [res.data]).filter(Boolean)) {
+      rows.push({ productId: i.attributes.productId, state: i.attributes.state, kind: "in-app purchase" });
+    }
+  } catch {
+    unread.push("in-app purchases");
+  }
+  try {
+    const res = (await client.get<Record<string, never>>(`/v1/apps/${appId}/subscriptionGroups`, {
+      include: "subscriptions",
+      "fields[subscriptions]": "productId,state",
+      limit: "50",
+    })) as unknown as { included?: Array<{ type: string; attributes: { productId: string; state: string } }> };
+    for (const s of (res.included ?? []).filter((x) => x.type === "subscriptions")) {
+      rows.push({ productId: s.attributes.productId, state: s.attributes.state, kind: "subscription" });
+    }
+  } catch {
+    unread.push("subscriptions");
+  }
+
+  if (rows.length === 0 && unread.length === 0) return "";
+  let out = "\n### In-app purchases and subscriptions\n\n";
+  for (const r of rows) out += `- ${r.productId} (${r.kind}): ${r.state}\n`;
+  if (unread.length) out += `- Could not read ${unread.join(" or ")} just now; call review_status again before concluding there are none.\n`;
+
+  if (IN_QUEUE.has(versionState)) {
+    const left = rows.filter((r) => NOT_SENT.has(r.state));
+    const went = rows.filter((r) => SENT.has(r.state));
+    if (left.length) {
+      out += `\n**Not in this review**: ${left.map((r) => r.productId).join(", ")}. The version is in review without them. If the app offers them, Apple can reject it (guideline 3.1.1). The AI calls cancel_submission with confirm: true once the human agrees, then submits again with the products; an app's first products are added to the version on the App Store Connect website.\n`;
+    } else if (went.length) {
+      out += `\nAll ${went.length} product(s) went to review with this version.\n`;
+    }
+  }
+  return out;
 }
 
 function formatReviewState(state: string): string {
