@@ -73,6 +73,7 @@ const FLOWS: Record<Exclude<GuideTopic, "overview" | "limitations">, Flow> = {
       "`upload_screenshots` per display type: APP_IPHONE_67 at minimum, plus APP_IPAD_PRO_3GEN_129 if the app runs on iPad. See topic:screenshots.",
       "MANUAL: App Privacy nutrition label. Not in the API. Run `set_privacy_nutrition` for the exact checklist + deep link, then set it in the ASC website.",
       "MANUAL: EU DSA trader status. Not in the API. Run `set_eu_trader_status` for steps + deep link; it's a legal decision, set it in the website.",
+      "MANUAL: Regulated medical device declaration, on the App Compliance page (General > App Compliance). Required to distribute in the EU/EEA, UK or US: say whether the app is a regulated medical device. A wellness or tracking app that gives no diagnosis or treatment answers no.",
       "If the app has in-app purchases or subscriptions, create them now (topic:iap / topic:subscriptions). The FIRST ones must be submitted WITH the version (next step).",
       "`release_preflight` with `project_path` if you have the Xcode project - fix every FAIL, confirm anything UNKNOWN by hand, and re-run. It ends with the manual steps for this app's state.",
       "MANUAL (if first IAPs exist): the app's very first in-app purchases CANNOT be bundled with the version via the API. In the ASC website, open the version, Add for Review, tick the products, and submit them together. `submit_for_review` detects this and ABORTS rather than orphaning the version. After the first release is live, later IAPs submit via the API fine.",
@@ -225,6 +226,11 @@ const LIMITATIONS: { item: string; why: string; doInstead: string }[] = [
     item: "EU DSA trader status",
     why: "No public API attribute/resource.",
     doInstead: "ASC website. Run `set_eu_trader_status` for steps + deep link. Legal decision.",
+  },
+  {
+    item: "Regulated medical device declaration (EU/EEA, UK, US)",
+    why: "Not exposed by asc-mcp; Apple collects it on the App Compliance page.",
+    doInstead: "ASC website: your app > General > App Compliance. Declare whether the app is a regulated medical device. Legal decision.",
   },
   {
     item: "Submit an app's FIRST in-app purchases / subscriptions",
