@@ -32,7 +32,7 @@ Do not invent either value. Ask the user.
 
 ## 3. Connect in the chat
 
-Call `asc_connect` with the Issuer ID. It finds the `.p8` in `~/.appstoreconnect/private_keys`, `~/Downloads` or `~/Desktop` and tests it against Apple before it touches anything. Then it moves the key into `~/.appstoreconnect/private_keys`, saves the Issuer ID in `~/.asc-mcp/credentials.json` and loads all 45 tools in the same session. A wrong Issuer ID is refused and nothing moves. If the key is somewhere else, pass its path as `key_path`.
+Call `asc_connect` with the Issuer ID. It finds the `.p8` in `~/.appstoreconnect/private_keys`, `~/Downloads` or `~/Desktop` and tests it against Apple before it touches anything. Then it moves a key found in `~/Downloads` or `~/Desktop` into `~/.appstoreconnect/private_keys` (a key anywhere else stays where it is), saves the Issuer ID in `~/.asc-mcp/credentials.json` and loads all 45 tools in the same session. A wrong Issuer ID is refused and nothing moves. If the key is somewhere else, pass its path as `key_path`.
 
 If the client still lists only the setup tools afterwards, restart the MCP server once. It starts connected.
 
