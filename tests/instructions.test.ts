@@ -6,7 +6,7 @@ import { BASE_INSTRUCTIONS, instructionsFor } from "../src/instructions.js";
  * They matter more than any single tool description: a free user who never asks
  * for something locked never sees a paywall message, never sees a tool
  * description for a tool that is not registered as usable, and until 1.9.9 was
- * told nothing at all about the other 35 tools. Roughly one install in forty
+ * told nothing at all about the Pro tools. Roughly one install in forty
  * started a trial. These tests lock both halves of the fix: the free tier says
  * what is locked and what unlocks it, and Pro never carries a word of it.
  */
@@ -76,5 +76,17 @@ describe("instructionsFor never pitches what the server will refuse", () => {
   });
   it("Pro is unchanged", () => {
     expect(instructionsFor("pro", undefined, false)).toBe(BASE_INSTRUCTIONS);
+  });
+});
+
+describe("Pro tool count in the instructions", () => {
+  // Shipped as a literal 35 while the server had 45 tools (seen on Glama, 22 Nov).
+  it("matches the registered tools minus the six free ones, in both free-tier texts", async () => {
+    const { TOOL_NAMES } = await import("../src/tool-meta.js");
+    const { ENDED_LICENSE_INSTRUCTIONS } = await import("../src/instructions.js");
+    const free = ["asc_setup_check", "asc_guide", "asc_start_trial", "list_apps", "app_details", "review_status"];
+    const pro = TOOL_NAMES.filter((n) => !free.includes(n)).length;
+    expect(FREE_TIER_INSTRUCTIONS).toContain(`The other ${pro} need Pro`);
+    expect(ENDED_LICENSE_INSTRUCTIONS).toContain(`The other ${pro} need Pro`);
   });
 });

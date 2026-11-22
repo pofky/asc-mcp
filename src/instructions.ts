@@ -8,6 +8,11 @@
 
 import { TOOL_COUNT } from "./tool-meta.js";
 
+/** The tools every tier keeps. Named once so the Pro count below cannot drift from TOOL_COUNT. */
+const FREE_TOOLS = ["asc_setup_check", "asc_guide", "asc_start_trial", "list_apps", "app_details", "review_status"];
+const FREE_LIST = FREE_TOOLS.join(", ");
+const PRO_ONLY_COUNT = TOOL_COUNT - FREE_TOOLS.length;
+
 /** What every client is told about this server, in both tiers. */
 export const BASE_INSTRUCTIONS =
   "asc-mcp, an MCP server for Apple's App Store Connect API. Tools query that API. " +
@@ -26,7 +31,7 @@ export const BASE_INSTRUCTIONS =
  * line in the product that a person who never trips a paywall will still hear
  * about. Until 1.9.9 it said nothing about tiers, so someone who installed the
  * server and asked it to read things got answers, learned nothing about the
- * other 35 tools, and never had a reason to try them. Roughly one install in
+ * Pro tools, and never had a reason to try them. Roughly one install in
  * forty started a trial.
  *
  * It tells the model to offer once, on intent, and then stop. Anything pushier
@@ -34,8 +39,8 @@ export const BASE_INSTRUCTIONS =
  * trust that makes the trial worth offering at all.
  */
 export const FREE_TIER_INSTRUCTIONS =
-  "\n\nTIER: free. Six tools work now with no limit (asc_setup_check, asc_guide, asc_start_trial, " +
-  "list_apps, app_details, review_status). The other 35 need Pro. Ten of those only read " +
+  `\n\nTIER: free. Six tools work now with no limit (${FREE_LIST}). ` +
+  `The other ${PRO_ONLY_COUNT} need Pro. Ten of those only read ` +
   "(list_reviews, sales_report, release_preflight, daily_briefing, release_notes, keyword_insights, " +
   "competitor_snapshot, metadata_diff, list_builds, list_beta_groups) and work 5 times in total on " +
   "this machine as a free preview with no license and no email: when the user asks for one, just " +
@@ -56,7 +61,7 @@ export const FREE_TIER_INSTRUCTIONS =
  */
 export const ENDED_LICENSE_INSTRUCTIONS =
   "\n\nTIER: free, because this machine's trial or subscription has ended. Six tools still work " +
-  "(asc_setup_check, asc_guide, asc_start_trial, list_apps, app_details, review_status). The other 35 " +
+  `(${FREE_LIST}). The other ${PRO_ONLY_COUNT} ` +
   "need Pro, and no free trial or preview is available here. When a call is refused, tell the user the " +
   "price it states. If they have already subscribed, asc_start_trial with their subscription's address " +
   "emails them their key.";
