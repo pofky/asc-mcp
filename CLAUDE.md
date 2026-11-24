@@ -1,5 +1,3 @@
-
-
 <!-- AUTOPILOT:BEGIN -->
 # Autopilot — Project Rules
 
@@ -43,6 +41,9 @@ Full docs: `/Volumes/T7/Projects/autopilot/docs/` — read on demand.
 9. **Commit hygiene** — rollback-safe splits, push main after gates
    pass. Details: `autopilot/docs/commit-hygiene.md`
 
+## One heavy job at a time (machine-wide)
+Heavy work never runs in parallel on this 8-core 8 GB Mac: app builds (xcodebuild, swift build, gradle), simulator sessions, Remotion renders, ffmpeg encodes, Playwright suites, docker builds, local TTS or whisper. One machine slot, `heavy` (the old `simulator` lease is the same slot). Scripts and batch jobs: `autopilot heavy run --name "<project>: <what>" -- <command>`; it queues, waits for load, runs, releases and cleans up. A heavy tool call without the slot is denied by `autopilot/hooks/heavy_guard.py`: queue with `autopilot heavy acquire --session <id> --wait 3600` in the background, do light work meanwhile, retry when it exits 0. Never detach heavy work with `&` or nohup. Check `autopilot heavy status` first and shut down what you started. Runbook: `autopilot/docs/heavy-queue.md`.
+
 ## Four stations, product features
 In a project with `[feature] mode = "boundary"`, product work is one feature: one worktree, one proof bundle, one scored review, one server-side merge. Runbook: `autopilot/docs/software-factory.md`.
 1. **Start.** `autopilot feature start <slug>` (skill `autopilot-feature-start`), then work only inside `.claude/worktrees/<slug>`.
@@ -78,7 +79,9 @@ Bugs are auto-drained after primary task completes.
 
 ## Stuck tools
 
-If an MCP tool or simulator hangs >60s, the watchdog kills it. If it
-persists, `pkill -9 -f idb_companion` or restart the simulator.
+If an MCP call hangs past its threshold (90s browser, 120s simulator,
+600s build or test), the watchdog recovers it inside this session's own
+processes and reports what it did next turn. It does not act on Bash or
+any other built-in tool. If the hang persists, `pkill -9 -f idb_companion` or restart the simulator.
 See `lessons-learned.md` L-007, L-010.
 <!-- AUTOPILOT:END -->
